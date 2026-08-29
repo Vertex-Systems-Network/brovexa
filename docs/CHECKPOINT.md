@@ -1,217 +1,155 @@
 # Brovexa Project Checkpoint
 
 ## State
-Planning baseline expanded. Feature development is **not yet approved**.
 
-## Verified repository baseline
-- Default branch: `main`
-- Original implementation state: only `README.md` with `# brovexa`
-- Original initial commit: `49673ebd8d40133eaa00d3bd8d760ce4b372fd5a`
-- No product implementation existed when planning began.
+Planning baseline has been materially expanded. **Feature development is not yet approved.**
 
-## Planning branch / PR
-Branch: `planning/brovexa-baseline`
+Original repository state before planning: default branch `main`, initial commit `49673ebd8d40133eaa00d3bd8d760ce4b372fd5a`, only README with `# brovexa`, no product implementation/issues.
 
+Planning branch: `planning/brovexa-baseline`
 Draft PR: https://github.com/Vertex-Systems-Network/brovexa/pull/1
 
-PR #1 remains documentation/planning only and must not be interpreted as development authorization.
+PR #1 is documentation/planning only. It is not development authorization.
 
-Planning docs now include:
+## Current product definition
+
+Brovexa is now planned as an AI-native global business discovery, research, opportunity and lead-intelligence platform with:
+- public website + auth/onboarding + pricing/billing
+- web operator app
+- Windows-first desktop client candidate
+- shared Chrome/Chromium + Firefox extension candidate
+- provider-neutral API/webhooks/integrations
+- AI Agent OS + durable memory
+- Global Acquisition Studio + background research jobs
+- universal business signal/opportunity ontology
+- BPO/service opportunity reasoning
+- Lead Intelligence Operating System + AI Lead Copilot
+- controlled outreach/CRM
+- 24-hour product/market research scout.
+
+## Planning documents
+
 - `docs/PROJECT_PLAN.md`
 - `docs/ENGINEERING_CONSTITUTION.md`
+- `docs/AI_AGENT_MEMORY_OS.md`
+- `docs/GLOBAL_ACQUISITION_STUDIO.md`
+- `docs/UNIVERSAL_SIGNAL_ONTOLOGY.md`
+- `docs/LEAD_INTELLIGENCE_OS.md`
 - `docs/CLIENT_SURFACES.md`
 - `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`
 - `docs/TECH_STACK_UI.md`
 - `docs/WEBSITE_AUTH_BILLING.md`
 - `docs/CHECKPOINT.md`
 
-## Linear project
-https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
+## Linear milestones
 
-### Milestones
-- M00 — Product, Compliance & Architecture Baseline
-- M01 — Platform Foundation & Developer Experience
-- M02 — Business Discovery & Source Connectors
-- M03 — Entity Resolution & Contact Enrichment
-- M04 — Website & Digital Presence Intelligence
-- M05 — Demand, Intent & Opportunity Signals
-- M06 — BPO Intelligence, Scoring & Explainability
-- M07 — Outreach Strategy, CRM & Compliance Controls
-- M08 — Dashboard, Search, Workflows & APIs
+Core: M00, M01, M02, M03, M04, M05, M06, M07, M08, M09, M10.
+
+Expansions:
+- M01A — AI Agent Runtime & Memory OS
+- M02A — Global Acquisition Studio & Background Research
+- M06A — Lead Intelligence Operating System
 - M08A — Desktop & Browser Clients
 - M08B — Public Website, Identity & Monetization
-- M09 — Security, Reliability, Scale & Cost Controls
-- M10 — Beta, Production Readiness & Launch
 - MX — Continuous Product & Market Intelligence
 
-### Planning issues
-Original planning: ABD-209 through ABD-225.
+## Planning issues
 
-Multi-client/continuous-research expansion:
-- ABD-226 — lock multi-client architecture for Web/Desktop/Chrome/Firefox
-- ABD-227 — Desktop app
-- ABD-228 — Chrome/Chromium extension
-- ABD-229 — Firefox extension
-- ABD-230 — cross-client auth/sync/deep links/capability contracts
-- ABD-231 — specify 24-hour market/competitor research workflow
-- ABD-232 — future implementation of daily GitHub research scout
-- ABD-233 — technology stack and operator UI architecture ADR
+Original/core: ABD-209–225.
+Multi-client/research/stack: ABD-226–233.
+Website/auth/monetization: ABD-234–240.
+AI-native maturity expansion:
+- ABD-241 — AI Agent OS + durable memory architecture
+- ABD-242 — global geography/taxonomy + Acquisition Job Builder contracts
+- ABD-243 — Lead Intelligence OS canonical model/lifecycle
+- ABD-244 — future Agent Runtime/Memory implementation
+- ABD-245 — future geography/taxonomy registry + Job Builder implementation
+- ABD-246 — future source/acquisition-mode catalog/router
+- ABD-247 — future durable background acquisition orchestration
+- ABD-248 — universal business signal/event/opportunity ontology
+- ABD-249 — future Lead OS workspace/lifecycle/routing
+- ABD-250 — future AI Lead Copilot/next-best-action
+- ABD-251 — CRM/inbound/import synchronization plan.
 
-Website/auth/monetization expansion:
-- ABD-234 — public website IA, landing page and visual product storytelling
-- ABD-235 — authentication, account recovery and onboarding lifecycle
-- ABD-236 — packages, entitlements, Research Credits and unit economics
-- ABD-237 — payment gateway ADR and checkout/subscription state machine
-- ABD-238 — pricing, checkout, billing portal and renewal UX
-- ABD-239 — taxes, invoices, refunds, dunning and billing records
-- ABD-240 — SEO, analytics, attribution and conversion measurement
+## AI Agent OS / memory state
 
-Linear document added: `Brovexa — Website, Authentication & Monetization Plan v1.0`.
+Architecture is planned but not implemented.
+
+Agent pattern: trigger → Orchestrator → Context Builder → bounded specialist agents → deterministic validators → Evidence Verifier → Independent Evaluator/Critic → canonical state + memory/checkpoint.
+
+Logical agents include control/compliance/security/cost/memory roles plus discovery, geo/source planning, entity/contact, website, signals, procurement, workforce, technology, CX, opportunity, lead qualification/scoring/routing, buying committee, next-best-action, outreach and market research roles.
+
+Memory types are explicit: working/run, semantic, episodic, procedural, entity, lead, research and workspace/user. Memory is not raw conversation history. It must be provenance-aware, versioned, scoped/ACL-controlled, stale/conflict-aware and deletable. Verified facts remain separate from AI memories.
+
+Long-running agents may not rely on transient LLM context as authoritative state. Jobs/plans/work units/handoffs/checkpoints are durable.
+
+## Global Acquisition Studio state
+
+Product/architecture is planned but no connector or acquisition runner exists.
+
+Research Job Builder:
+Objective → Geography → Industry/Niche → Business/Digital Filters → Contact Target → Signals → Sources → Depth → Quality → Output → Schedule → Budget → Preflight → Run.
+
+Geography design: World/UN M49 regions → ISO countries → subdivisions/admin hierarchy → cities/localities → postal/radius/polygon/custom territory; aliases/native names and dataset versions.
+
+Taxonomy design: Brovexa canonical taxonomy mapped to ISIC Rev.5, NAICS 2022/version-ready revisions, NACE Rev.2.1, Google Places/provider categories and custom niche keywords.
+
+Sources are individual policy/capability adapters: maps/local, registries/open data, directories, first-party sites, jobs, procurement/tenders, news/search, approved reviews/social, technical/technology, funding/company data, licensed B2B, CRM/customer first-party, manual/CSV/API/webhooks, future partner/MCP. `Internet` is never an unrestricted adapter.
+
+Background ResearchJobs are planned to shard into idempotent WorkUnits and support preview, pause/resume/cancel, recurring/continuous modes, budgets, source quotas, retries/dead-letter/review, exact progress, partial results and checkpoints.
+
+## Universal signal ontology state
+
+Ontology is planned/versioned rather than hardcoded. Families cover corporate lifecycle; funding/growth; workforce; procurement/RFI/RFP/RFQ/tenders; product/market; technology; digital presence; customer experience; operations; sales/GTM; BPO/support; back-office; security/risk; regulation/public record; facilities/property; events/media/community; competitor/market; customer-authorized first-party inbound; and custom future signals.
+
+`SignalDefinition` is separate from `SignalObservation`. Explicit requests remain distinct from inferred needs. Evidence, dates, freshness/decay, confidence, negative evidence and versions are required.
+
+## Lead Intelligence OS state
+
+Lead is planned as a first-class canonical commercial object distinct from Business, Contact, Signal, Opportunity and Deal.
+
+Default lifecycle: Candidate → Researching → Qualified/Disqualified → Ready for Review → Assigned → Contact Ready → Outreach Approved → Contacted → Engaged → Meeting/Discovery → Deal/Proposal → Won/Lost/Nurture/Suppressed.
+
+Planned features: Lead Inbox, qualification, score history, smart lists/audiences, tags/custom fields, ownership/territory/round-robin routing, buying committees, next-best-action, tasks/SLAs, aging/stale/research loops, nurture/reactivation, attribution, dashboards, bulk safety and provider-neutral CRM/import sync.
+
+AI Lead Copilot can explain/research/recommend/draft, but may not override compliance/suppression/ownership/human gates.
+
+## Public/commercial state
+
+Public visual landing/product site, auth/register/recovery/onboarding and package/payment planning exist. Package hypothesis remains provisional: Free $0, Launch $49/mo, Pro $149/mo, Growth $399/mo, Enterprise custom using subscription + Research Credits + top-ups. Exact credits/prices require unit-economics validation.
+
+Payment ADR candidates: Paddle MoR, Stripe Billing/direct processor, Lemon Squeezy MoR alternative. No provider is selected/activated; canonical entitlements remain provider-neutral.
+
+## Client state
+
+Desktop/browser extensions are clients of one backend. Candidate technology: Tauri 2 for Windows-first desktop and WXT/React/TypeScript shared Chrome/Firefox extension. No client code exists.
+
+## Technology hypothesis
+
+Not approved/implemented: Next.js/React/TypeScript; Tailwind/shadcn; NestJS modular monolith; PostgreSQL + pgvector initially; Redis/BullMQ initially; evaluate Temporal if durable multi-day orchestration complexity justifies it; S3-compatible object storage; OpenTelemetry; pnpm monorepo; Python only for AI/data workloads with concrete advantage.
+
+## 24-hour market intelligence scout
+
+Specified but not implemented. Planned GitHub daily scheduled research at off-hour minute plus manual dispatch, approved source registry, structured evidence, competitor/API/platform/security/UX/commercial deltas, Add/Experiment/Watch/Reject proposals, dedup/no-spam and hard budget. No auto-code/merge.
 
 ## Current approval gate
-`ABD-215 — M00 architecture/readiness approval gate` blocks feature implementation.
 
-ABD-215 now additionally requires review/approval of:
-- ABD-226 multi-client architecture
-- ABD-231 daily market-intelligence specification
-- ABD-233 technology/UI ADR
-- ABD-234 through ABD-240 website/auth/commercial planning
-- explicit owner consent after planning review
+`ABD-215` blocks development. It now requires review of source/compliance/data/AI/threat/architecture baseline plus multi-client, market scout, tech/UI, website/auth/billing, Agent OS/memory, global acquisition, Lead OS and universal signal ontology; then explicit owner consent.
 
-Planning/research/docs may continue. Feature code, payment-provider activation, GitHub daily-research workflow enablement and product implementation must not start before the gate and consent.
+Implementation issues ABD-244–247 and ABD-249–251 remain Planning Only.
 
-## Public website plan
-The public website is planned as a visual product-conversion surface rather than a generic brochure.
+## Known unverified/unimplemented
 
-Primary storytelling:
-1. Hero: geography/niche discovery → Business 360 → BPO opportunity score
-2. Discovery job visual
-3. Business 360
-4. Signals timeline
-5. Opportunity reasoning
-6. Evidence Inspector
-7. Lead Queue and Why Now
-8. Desktop + Chrome/Firefox workflow
-9. Continuous Market Intelligence
-10. Security/compliance
-11. Pricing and final CTA
+No production code; no DB schema/migrations; no CI/tests; no auth/payment/model provider selected; no Agent Runtime/memory store; no geography registry; no source connectors; no background ResearchJob runner; no signal engine; no Lead OS; no web/desktop/extensions; no payment integration; no daily GitHub scout; no production legal/compliance/tax sign-off.
 
-Visual rule: prefer real product screenshots/short UI videos/diagrams with synthetic demo data over generic stock imagery. Do not invent customer logos, metrics or integrations.
+## Next safe pre-development work
 
-Recommended domain split for ADR review:
-- `brovexa.com` — public marketing/product/pricing/resources
-- `app.brovexa.com` — authenticated operator application and auth lifecycle
-- documentation may use `/docs` initially; a separate docs host is optional later
-
-## Authentication plan
-Planned lifecycle:
-- Login with email/password plus evaluated Google/Microsoft OAuth
-- Register + policy-version acceptance + email verification
-- Forgot/reset password with enumeration-safe behavior, single-use expiring tokens and rate limits
-- MFA/passkey-ready session model
-- workspace creation/invitations
-- onboarding through use case → geography/niche → service taxonomy → Research Credits → guided first discovery → optional team/Desktop/extension setup
-
-No auth provider has been selected yet.
-
-## Package/pricing hypothesis
-Pricing remains provisional until unit-economics validation.
-
-- Free — $0, 1 seat, small monthly Research Credit pool
-- Launch — proposed $49/mo, 1 seat, full core intelligence + Desktop/extensions
-- Pro — proposed $149/mo, 3 seats, scheduled research + CRM/team workflows
-- Growth — proposed $399/mo, 10 seats, API/webhooks + larger pooled research + advanced governance
-- Enterprise — custom
-
-Model: **subscription + included Research Credits + optional top-ups**. Normal navigation/saved views/basic CRM operations should not consume Research Credits. Cost-bearing search/enrichment/AI work does.
-
-## Payment-provider plan
-Provider selection is intentionally pending ABD-237 and actual operating-entity eligibility.
-
-Candidates:
-- Paddle — Merchant of Record candidate for global SaaS
-- Stripe — direct processor/Billing candidate with Checkout/customer portal/tax tooling
-- Lemon Squeezy — Merchant of Record alternative with SaaS subscription and usage-based capabilities
-
-Canonical Brovexa entitlements remain independent from provider product/price IDs. Signed webhooks, idempotency, replay/reconciliation and server-side verification are mandatory. Browser checkout success alone never grants access.
-
-## Current technology recommendation for ADR validation
-Not yet final/implemented:
-- Web: Next.js App Router + React + TypeScript
-- UI: Tailwind CSS 4.x + shadcn/ui/Base UI + Brovexa tokens
-- Desktop: Tauri 2 + Vite/React
-- Extensions: WXT + React/TypeScript, shared Chrome/Firefox codebase with browser adapters
-- Core backend: NestJS/TypeScript modular monolith
-- Data: PostgreSQL + pgvector initially
-- Queue: Redis + BullMQ initially; Temporal re-evaluation threshold documented
-- Object storage: S3-compatible
-- Observability: OpenTelemetry-compatible
-- Monorepo: pnpm workspaces (+ Turborepo if justified)
-- Python: only for AI/data workloads that materially benefit
-
-## 24-hour research scout plan
-The scout is specified but **not implemented**.
-
-Recommended behavior after approval:
-- GitHub scheduled run once daily at a non-top-of-hour minute (e.g. 08:17 Asia/Karachi)
-- manual `workflow_dispatch`
-- approved source registry
-- competitor/API/platform/security/UX research
-- structured evidence and confidence
-- compare against existing Brovexa plan/backlog
-- classify proposals as Add / Experiment / Watch / Reject
-- deduplicate/no-spam
-- hard search/fetch/model/cost budgets
-- no auto-code, no auto-merge, no connector enablement
-
-Preferred first implementation option: deterministic GitHub Action + versioned Brovexa research runner. GitHub Agentic Workflows may be evaluated experimentally but should not be the sole dependency while preview status/fit remains a concern.
-
-## Multi-client product state
-Desktop and browser extensions are planned as clients of one canonical backend.
-
-Browser-extension principle:
-- focused side-panel helper, not a general-purpose hidden scraper
-- current company matching
-- evidence candidate capture
-- signal/opportunity/score summary
-- research trigger
-- lead/list/task actions
-- Web/Desktop handoff
-- least-privilege browser permissions
-
-Desktop principle:
-- persistent daily operator shell
-- Business 360/evidence/signals/opportunities/lead queue/research jobs
-- native notifications
-- secure deep links
-- bounded offline cache only where policy permits
-
-## Known unverified/unfinished items
-- No technology ADR has been approved.
-- No source connector exists.
-- No database/schema migration exists.
-- No auth provider has been selected.
-- No payment provider has been selected or activated.
-- Pricing has not passed unit-economics validation.
-- No final legal/tax billing model has been approved.
-- No queue/orchestrator has been implemented.
-- No Web/Desktop/extension code exists.
-- No public website/auth/billing code exists.
-- No GitHub daily research workflow exists.
-- No AI provider/model has been selected.
-- No CI/tests exist because implementation has not started.
-- No production legal/compliance sign-off exists.
-
-## Next safe action
-Complete M00 planning/ADR work, especially:
-1. ABD-210 source-policy/compliance matrix
-2. ABD-211 canonical data/evidence schemas
-3. ABD-212 AI contracts/evals
-4. ABD-213 threat model
-5. ABD-214 architecture ADRs
-6. ABD-226 multi-client architecture
-7. ABD-231 daily research workflow specification acceptance
-8. ABD-233 technology/UI ADR
-9. ABD-234–240 website/auth/monetization plan review, unit economics and payment-provider ADR
-
-Then run the ABD-215 readiness audit and request explicit owner development consent.
+1. Finish ABD-210 source/policy/privacy/outreach matrix.
+2. Expand ABD-211 canonical schemas to include AgentRun/Memory/Geo/ResearchJob/Lead objects.
+3. Reconcile ABD-212 AI contracts/evals with Agent OS roles.
+4. Expand ABD-213 threat model for memory poisoning, agent permissions and global acquisition.
+5. Finish ABD-214 architecture ADRs including durable workflow/memory choices.
+6. Review/approve ABD-241, ABD-242, ABD-243 and ABD-248 specs.
+7. Close ABD-226, ABD-231, ABD-233 and ABD-234–240 remaining M00 decisions.
+8. Run full contradiction/gap/readiness audit.
+9. Present explicit development-consent gate; do not infer consent from `continue`.
