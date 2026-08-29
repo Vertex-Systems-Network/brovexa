@@ -1,230 +1,200 @@
 # Brovexa Project Plan
 
-## Product mission
-Brovexa is an AI-native global business intelligence platform that discovers target businesses, resolves trustworthy canonical entities, enriches public/authorized business information, verifies digital presence, detects explicit and implicit demand signals, identifies BPO/service opportunities, scores those opportunities transparently, and prepares compliant human-reviewable outreach.
+Status: **Planning Only — feature development is not authorized until M00/ABD-215 and explicit owner consent.**
 
-Brovexa must remain source-agnostic and must not depend on unrestricted copying of any single provider's dataset.
+## Product mission
+
+Brovexa is an AI-native global business discovery, research, opportunity and lead-intelligence platform. It discovers businesses from approved sources, resolves canonical entities, enriches public/authorized information, verifies digital presence, detects explicit and implicit business signals, reasons about BPO/service opportunities, creates evidence-backed leads, and helps users prioritize and act while preserving compliance and human control.
+
+Brovexa is source-agnostic. It must not depend on unrestricted copying of any one provider dataset.
 
 ## Product surfaces
-Brovexa is planned as one canonical platform with four first-class clients:
+
+- Public marketing/pricing/auth website
 - Web operator application
 - Desktop operator application
 - Chrome/Chromium extension
 - Firefox extension
+- API/webhooks/integration surface
+- AI Agent OS + durable memory
+- Background Global Acquisition Studio
+- Lead Intelligence Operating System
 
-Clients share versioned API/domain contracts. Canonical business facts, evidence, signals, opportunities, scores, compliance state and audit history remain backend-owned.
-
-Detailed client plan: `docs/CLIENT_SURFACES.md`.
+Clients share versioned domain/API contracts. Canonical facts, evidence, memory, signals, opportunities, leads, compliance state and audit history remain backend-owned.
 
 ## Canonical intelligence pipeline
-Discovery → Source Normalization → Entity Resolution → Contact Enrichment → Website Intelligence → Demand/Intent Signals → Evidence Verification → Opportunity Reasoning → Lead Scoring → Decision-Maker Routing → Outreach Strategy → CRM/Feedback
 
-Each stage must be independently retryable, idempotent, versioned, observable and policy-aware.
+Research Intent → Job Preflight → Global/Source Plan → Background Acquisition → Source Normalization → Entity Resolution → Contact Enrichment → Website Intelligence → Signal Detection → Evidence Verification → Opportunity Reasoning → Lead Qualification/Scoring → Lead OS → Decision-Maker/Buying Committee → Next Best Action → Outreach Review → CRM/Outcome Feedback → Memory/Eval Updates.
 
-## Milestones
+Each asynchronous stage must be independently retryable, idempotent, versioned, observable, budgeted and policy-aware.
 
-### M00 — Product, Compliance & Architecture Baseline
-Feature development is blocked until this milestone and the explicit owner-consent gate are approved.
+## M00 — Product, Compliance & Architecture Baseline
 
-Linear gates:
-- ABD-209 — Product scope, personas, workflows, service taxonomy
-- ABD-210 — Source-policy, privacy, outreach compliance matrix
-- ABD-211 — Canonical data, evidence, provenance, lifecycle schemas
-- ABD-212 — AI agent contracts, structured outputs, evaluation gates
-- ABD-213 — Threat model including web fetching, AI and tenant boundaries
-- ABD-214 — System architecture, deployment, queues, storage and cost model
-- ABD-226 — Multi-client architecture for Web/Desktop/Chrome/Firefox
-- ABD-231 — 24-hour market/competitor research workflow specification
-- ABD-233 — Production technology stack and operator UI architecture
-- ABD-215 — Explicit M00 architecture/readiness + owner-consent gate
+Development is blocked until this milestone and explicit owner consent are approved.
 
-### M01 — Platform Foundation & Developer Experience
+Current required Linear gates include:
+- ABD-209 product scope/personas/workflows/service taxonomy
+- ABD-210 source/privacy/outreach compliance matrix
+- ABD-211 canonical data/evidence schemas
+- ABD-212 AI contracts/evals
+- ABD-213 threat model
+- ABD-214 architecture/deployment/queues/storage/cost
+- ABD-226 Web/Desktop/Chrome/Firefox architecture
+- ABD-231 24-hour market-research workflow specification
+- ABD-233 production stack/UI ADR
+- ABD-234–240 public website/auth/packages/payment/billing/SEO planning
+- ABD-241 AI Agent OS + durable memory architecture
+- ABD-242 global geography/taxonomy/Research Job Builder contracts
+- ABD-243 Lead Intelligence OS canonical model/lifecycle
+- ABD-248 universal signal/event/opportunity ontology
+- ABD-215 final readiness + explicit owner-consent gate
+
+Core expansion documents:
+- `docs/AI_AGENT_MEMORY_OS.md`
+- `docs/GLOBAL_ACQUISITION_STUDIO.md`
+- `docs/UNIVERSAL_SIGNAL_ONTOLOGY.md`
+- `docs/LEAD_INTELLIGENCE_OS.md`
+- `docs/CLIENT_SURFACES.md`
+- `docs/WEBSITE_AUTH_BILLING.md`
+- `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`
+- `docs/TECH_STACK_UI.md`
+
+## M01 — Platform Foundation & Developer Experience
 Linear: ABD-216
 
-Establish repository standards, environment boundaries, secrets, migrations, queues/workers, API conventions, auth/RBAC/tenant primitives, test/eval harnesses, CI quality/security gates, observability, health checks, ADRs, runbooks and checkpoints.
+Repository/runtime foundation, environments/secrets, PostgreSQL migrations, API conventions, auth/RBAC/tenant primitives, queue/worker/scheduler foundation, test/eval harness, CI/security gates, observability, health checks, ADRs/runbooks/checkpoints.
 
-### M02 — Business Discovery & Source Connectors
+## M01A — AI Agent Runtime & Memory OS
+Linear: ABD-244; architecture gate ABD-241.
+
+Implement a governed Agent Registry, planner/orchestrator, Context Builder, specialist workers, verifier/evaluator separation, model routing, tool permissions, budgets, pause/resume/review, durable checkpoints and memory stores.
+
+Memory types: working/run, semantic, episodic, procedural, entity, lead, research and workspace/user memory. Memory is versioned, provenance-aware, scoped and auditable; verified facts remain separate from AI memory. Context retrieval considers task scope, authority, freshness, confidence and relevance rather than vector similarity alone.
+
+## M02 — Business Discovery & Source Connectors
 Linear: ABD-217
 
-Create the source-adapter framework and compliant geography/niche discovery with provider policy contracts, quotas, costs, attribution, provenance, pagination, resume coverage and connector health.
+Provider-neutral source-adapter framework and compliant discovery with policy contracts, quota/cost, provenance, pagination, coverage and connector health.
 
-### M03 — Entity Resolution & Contact Enrichment
+## M02A — Global Acquisition Studio & Background Research
+Linear: ABD-245, ABD-246, ABD-247; architecture gate ABD-242.
+
+### Global geography
+World/UN M49 region/subregion → country (ISO 3166-1) → administrative divisions (ISO 3166-2 and deeper gazetteer mappings) → locality/city → postal/radius/polygon/custom territory. Support aliases/native names, saved sales territories and versioned geography datasets.
+
+### Industry/niche
+Brovexa canonical taxonomy with mappings to ISIC Rev.5, NAICS 2022/version-ready revisions, NACE Rev.2.1, Google Places/source categories plus custom keywords/exclusions.
+
+### Research Job Builder
+Objective → Geography → Industry/Niche → Business/Digital Filters → Contact Target → Signals → Sources → Depth → Quality → Output → Schedule → Budget → Preflight → Run.
+
+Objectives include business/location discovery, websites, contacts/decision makers, jobs/hiring, RFI/RFP/RFQ/tenders, vendor/outsourcing/partner/distributor/franchise needs, funding/expansion, technology changes, website/digital gaps, CX/reputation pain, operational/back-office/support capacity, news/events/regulatory/security, competitor/market research and custom conditions.
+
+### Source classes
+Maps/local APIs; official registries/open data; trade/industry directories; company first-party sites; jobs/careers; procurement/tender portals; news/search indexes; approved reviews/social; technical/technology; funding/company intelligence; licensed B2B; CRM/customer first-party; CSV/manual/API/webhook; future partner/MCP connectors.
+
+`Internet` is not a catch-all source. Every adapter needs SourceCapability + ConnectorPolicy.
+
+### Background execution
+ResearchJob → plan → sharded WorkUnits → source tasks → normalization → resolution/enrichment/signals/verification/opportunities/leads → checkpoint. Jobs support preview, start, pause, resume, cancel, once/scheduled/continuous modes, budgets, per-source quota/circuit breakers, retries, dead-letter/review, partial state, exact progress and kill switches. Long-running work survives model/context/process restarts.
+
+## M03 — Entity Resolution & Contact Enrichment
 Linear: ABD-218
 
-Build canonical business identity, deterministic and AI-assisted matching, confidence/review thresholds, reversible merge/split history, domain verification and approved public business contact enrichment.
+Canonical identity, deterministic + structured AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
 
-### M04 — Website & Digital Presence Intelligence
+## M04 — Website & Digital Presence Intelligence
 Linear: ABD-219
 
-Verify domains/sites, classify digital maturity and capabilities, inspect approved technical/business indicators, and run all fetching through SSRF-safe bounded web acquisition.
+Verify websites and classify digital capabilities/gaps through bounded SSRF-safe acquisition with evidence and uncertainty.
 
-### M05 — Demand, Intent & Opportunity Signals
-Linear: ABD-220
+## M05 — Demand, Intent & Opportunity Signals
+Linear: ABD-220; ontology gate ABD-248.
 
-Detect hiring, expansion, RFP/RFQ/tender, vendor requests, support pressure, review pain, multilingual growth, ecommerce/order pressure and other approved explicit/implicit signals with freshness and evidence.
+Signal engine uses a versioned ontology rather than a small fixed list. Families include corporate lifecycle; finance/growth; workforce; procurement/explicit demand; product/market; technology/digital transformation; website/digital presence; CX/reputation; operations/capacity; sales/GTM; BPO/support; back-office; security/risk; regulatory/public record; facilities/property; events/media/community; competitive/market; authorized first-party inbound; and custom future signals.
 
-### M06 — BPO Intelligence, Scoring & Explainability
+SignalDefinition is separate from SignalObservation. Explicit requests remain distinct from inferred needs. Observations retain evidence, dates, confidence, freshness/decay, negative evidence and versions.
+
+## M06 — BPO Intelligence, Scoring & Explainability
 Linear: ABD-221
 
-Map evidence-backed signals to configurable service opportunities and transparent score components: intent, fit, urgency, value, reachability, evidence confidence, freshness and compliance/contactability.
+Map verified signals to configurable service opportunities; transparent score components include fit, intent, urgency, value, reachability, evidence confidence, freshness and compliance/contactability. Store reason codes, negative evidence and rule/model versions.
 
-### M07 — Outreach Strategy, CRM & Compliance Controls
+## M06A — Lead Intelligence Operating System
+Linear: ABD-249, ABD-250, ABD-251; model gate ABD-243.
+
+Canonical distinctions: Account/Business, Location, Contact, Evidence, Signal, Opportunity, Lead and Deal.
+
+Default lead lifecycle: Candidate → Researching → Qualified/Disqualified → Ready for Review → Assigned → Contact Ready → Outreach Approved → Contacted → Engaged → Meeting/Discovery → Deal/Proposal → Won/Lost/Nurture/Suppressed.
+
+Capabilities: lead inbox, qualification, component scoring/history, smart lists/audiences, tags/custom fields, owner/team/territory/round-robin routing, buying committee, next-best-action, tasks/SLAs/follow-up, aging/stale detection/re-research, nurture/reactivation, attribution, bulk safety controls, dashboards and provider-neutral CRM/import sync.
+
+AI Lead Copilot can explain why a lead exists, summarize changes, find research gaps, identify buying roles, recommend service/offer and next action, propose tasks and re-research, monitor stale/nurture conditions and draft outreach under approval. It cannot bypass suppression/compliance/ownership/human gates.
+
+## M07 — Outreach Strategy, CRM & Compliance Controls
 Linear: ABD-222
 
-Build decision-maker routing, grounded outreach drafting, human approval, suppression/opt-out, frequency caps, jurisdiction-aware channel rules, CRM state, duplicate prevention and outcome feedback.
+Grounded outreach drafting, human review, suppression/opt-out, channel/jurisdiction rules, duplicate prevention and outcome feedback. Initial release remains human-approval-first for external outreach.
 
-### M08 — Dashboard, Search, Workflows & APIs
+## M08 — Dashboard, Search, Workflows & APIs
 Linear: ABD-223
 
-Deliver global search, discovery jobs, Business 360, evidence timeline, signals/opportunities, lead queue, outreach review, CRM, connector health, AI quality, compliance administration and provider-agnostic APIs.
+Operator UI: Command Center, Acquisition/Discover, Research Jobs, Businesses, Business 360, Evidence, Signals, Opportunities, Lead OS, Outreach Review, CRM/Pipeline, Agent Center, Memory Inspector, Market Intelligence, Connectors, Compliance, AI Quality/Evals, Usage/Cost, Team/Roles, Settings.
 
-### M08A — Desktop & Browser Clients
-Linear:
-- ABD-227 — Desktop operator application
-- ABD-228 — Chrome/Chromium extension
-- ABD-229 — Firefox extension
-- ABD-230 — Cross-client auth/sync/deep links/capability contracts
+## M08A — Desktop & Browser Clients
+Linear: ABD-227–230
 
-Deliver installable clients using shared backend/domain contracts, least-privilege browser permissions, secure desktop storage/deep links, browser-to-desktop handoff, native notifications and cross-client version compatibility.
+Windows-first Tauri desktop candidate and shared Chrome/Firefox extension candidate, using canonical backend contracts, secure auth/deep links, evidence capture, notifications and capability/version negotiation. See `docs/CLIENT_SURFACES.md`.
 
-Detailed plan: `docs/CLIENT_SURFACES.md`.
+## M08B — Public Website, Identity & Monetization
+Linear: ABD-234–240
 
-### M09 — Security, Reliability, Scale & Cost Controls
+Public visual product site, login/register/recovery/onboarding, package entitlements/Research Credits, payment-provider ADR, checkout/subscription/billing portal, tax/invoices/refunds/dunning, SEO/analytics/conversion. Pricing/payment remain provisional until unit economics/entity eligibility. See `docs/WEBSITE_AUTH_BILLING.md`.
+
+## M09 — Security, Reliability, Scale & Cost Controls
 Linear: ABD-224
 
-Harden ASVS controls, tenant boundaries, SSRF/prompt-injection/tool abuse defenses, supply chain, queue recovery, source failures, load/performance, cost budgets, SLOs, observability, backup/restore and disaster recovery.
+ASVS-oriented verification, tenant/memory isolation, SSRF/network egress, prompt injection/memory poisoning/tool abuse, supply chain, queue recovery, source failures, load/performance, AI/search/API budgets, SLOs, observability, backup/restore and disaster recovery.
 
-### M10 — Beta, Production Readiness & Launch
+## M10 — Beta, Production Readiness & Launch
 Linear: ABD-225
 
-Run end-to-end acceptance, AI/data-quality evals, security/adversarial review, compliance review, migration/rollback drills, load/cost validation, production config review, monitoring/runbooks, retention/deletion/suppression verification and controlled go/no-go launch.
+End-to-end acceptance/evals/security/compliance, migration/rollback/restore, load/cost, production config, monitoring/runbooks, retention/deletion/suppression and controlled go/no-go.
 
-### MX — Continuous Product & Market Intelligence
-Linear:
-- ABD-231 — Specification/evidence contract
-- ABD-232 — Future implementation after development approval
+## MX — Continuous Product & Market Intelligence
+Linear: ABD-231/232
 
-Run a governed 24-hour research scout that monitors competitors, APIs/data sources, AI/data techniques, browser/desktop changes, security/privacy policy and UX/commercial patterns. It produces evidence-backed Add / Experiment / Watch / Reject proposals while never auto-coding or auto-merging.
+Governed 24-hour research scout monitors competitors/APIs/AI techniques/client platforms/security/privacy/UX/commercial patterns and creates evidence-backed Add/Experiment/Watch/Reject proposals without auto-coding/merging. See `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`.
 
-Detailed plan: `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`.
+## Technology recommendation for ADR validation
 
-## Technology/UI recommendation for M00 ADR validation
-Detailed recommendation: `docs/TECH_STACK_UI.md`.
+Current hypothesis, not implementation authorization: Next.js/React/TypeScript; Tailwind/shadcn UI; NestJS modular monolith; PostgreSQL + pgvector initially; Redis/BullMQ initially with Temporal reevaluation if durable multi-day workflow complexity justifies it; Tauri 2; WXT; S3-compatible storage; OpenTelemetry; pnpm monorepo; Python only for AI/data workloads with concrete advantage.
 
-Current baseline to validate, not yet approved/implemented:
-- Web: Next.js App Router + React + TypeScript
-- UI: Tailwind CSS 4.x + shadcn/ui/Base UI + Brovexa design tokens
-- Desktop: Tauri 2 + Vite/React
-- Extensions: WXT + React/TypeScript
-- Core backend: NestJS modular monolith
-- AI/data workers: Python only where materially justified
-- Transactional data: PostgreSQL
-- Vector/semantic: pgvector initially
-- Queue: Redis + BullMQ initially; Temporal re-evaluation threshold
-- Object storage: S3-compatible
-- Observability: OpenTelemetry-compatible
-- API contracts: OpenAPI/JSON Schema + generated clients
-- Monorepo: pnpm workspaces; Turborepo if justified
+Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely because the project is AI-native.
 
-Do not introduce OpenSearch, Temporal, Kubernetes, microservices or other operational layers without measured requirements/ADR justification.
+## AI-native non-negotiables
 
-## Main operator information architecture
-Planned primary navigation:
-1. Command Center / Today
-2. Discover
-3. Businesses
-4. Business 360
-5. Evidence
-6. Signals
-7. Opportunities
-8. Lead Queue
-9. Outreach Review
-10. CRM / Pipeline
-11. Research Jobs
-12. Market Intelligence
-13. Connectors
-14. Compliance / Suppression
-15. AI Quality / Evals
-16. Usage & Cost
-17. Team / Roles
-18. Settings
-
-The UI must be evidence-first, keyboard-friendly, accessible, explainable and explicit about confidence/freshness/partial data.
-
-## Data architecture principles
-Canonical records distinguish:
-- facts
-- source evidence
-- inference
-- verification state
-- freshness
-- confidence
-- source policy
-- model/rule/prompt versions
-
-Material entities include Business, BusinessLocation, Domain, ContactChannel, SourceReference, Evidence, Signal, Opportunity, Score, OutreachRecord, SuppressionRecord, ConnectorPolicy, JobRun and AuditEvent.
-
-## AI-native requirements
-- LLM outputs use validated structured schemas.
-- Web/document content is untrusted data, never instructions.
-- Material AI claims require evidence IDs.
-- Low-confidence or contradictory results move to review.
-- Model/prompt changes require versioned evaluations.
-- Deterministic rules are preferred where sufficient.
-- AI/search/API costs are budgeted and observable.
-- Historical decisions are not silently overwritten.
-
-## Multi-client requirements
-- business rules stay canonical in backend/domain modules
-- clients share versioned generated contracts
-- extension permissions are least-privilege and user-benefit justified
-- content scripts never receive reusable backend credentials
-- deep links are untrusted navigation input, never authorization
-- offline/local cache obeys source/privacy retention rules
-- browser runtime differences are isolated and tested
-- client releases are signed/provenanced and declare backend compatibility
-
-## Continuous research requirements
-- approved/public/authorized sources only
-- official/primary sources preferred
-- finding includes URL/date/confidence
-- compare against prior state and current backlog
-- meaningful-delta threshold prevents issue spam
-- bounded search/fetch/model/runtime budget
-- external content remains untrusted
-- no auto-feature implementation or merge
-- safe GitHub outputs only
-
-## Compliance requirements
-Every connector must declare allowed use, access method, field-level storage/retention, attribution, geographic restrictions, quota/rate limits, refresh/deletion rules, terms/policy version and review owner.
-
-Outreach must enforce jurisdiction/business-type rules, suppression, opt-out/unsubscribe, frequency limits, identity disclosure and applicable lawful-basis/consent records. Initial releases remain human-approval-first.
-
-## Security baseline
-- OWASP ASVS 5.0 as the application-security verification baseline appropriate to risk
-- NIST SSDF 1.1 for secure development practices
-- SLSA 1.2-aligned supply-chain provenance/hardening where practical
-- least privilege and tenant isolation
-- secure secret management
-- SSRF/network egress controls
-- prompt-injection/tool-abuse defenses
-- dependency/SBOM/vulnerability controls
-- auditable privileged operations
+- structured agent contracts and outputs
+- evidence IDs for material AI claims
+- untrusted web content is data, not instruction
+- least-privilege agent tools/memory
+- durable state outside model context
+- independent verifier/evaluator for high-impact reasoning
+- model/prompt/tool/memory versioning
+- low confidence/contradictions → review
+- source/cost budgets and kill switches
+- no silent production self-training from feedback
+- memory provenance/retention/conflict handling
+- human approval for high-impact external/irreversible actions.
 
 ## Definition of Ready
-A feature is ready only when product behavior, affected source/data policies, architecture/integration impact, security/privacy/compliance implications, acceptance criteria, test strategy, AI evals where relevant, and migration/rollback behavior are sufficiently defined.
 
-Client features additionally require permission/runtime/compatibility contracts. Scheduled research automation additionally requires source registry, output schema, cost budgets, safe outputs and no-spam/dedup behavior.
+A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and UI failure/partial states are defined. Acquisition work additionally needs geography/taxonomy/source capability/preflight. Lead work additionally needs lifecycle/scoring/routing/compliance semantics.
 
 ## Definition of Done
-Done requires implementation, appropriate automated tests/evals, required quality/security checks, resilient error handling, data integrity, understood performance/cost implications, observability, documentation/ADRs/checkpoint, meaningful Git history and visible known limitations.
 
-If important items remain incomplete, report PARTIALLY COMPLETE rather than DONE.
+Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
 
 ## Development authorization
-Planning, audits, research, documentation and ADR preparation may proceed.
 
-Feature implementation, GitHub research-workflow enablement and product-code changes begin only after:
-1. M00 requirements are internally consistent and accepted
-2. ABD-215 is explicitly approved
-3. the owner explicitly consents to development after reviewing the current planning artifacts
+Planning, research, audits, documentation and ADR preparation may proceed. Feature code, connectors, payment activation, scheduled research workflow and product implementation begin only after M00 is internally consistent, ABD-215 is explicitly approved, and the owner explicitly consents to development.
