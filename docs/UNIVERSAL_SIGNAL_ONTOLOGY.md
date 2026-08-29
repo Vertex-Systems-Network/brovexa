@@ -79,7 +79,131 @@ Each definition owns freshness/decay. Explicit demand and inferred need remain s
 
 ## Opportunity mapping
 
-Signals may map to configurable services: BPO/support, sales/lead generation, HR/recruitment ops, finance/back-office, IT/helpdesk, AI/automation, web/ecommerce, marketing/SEO/content, data/research, localization, procurement/operations, partnerships/channel, consulting or custom services.
+Signals map to the versioned Service Catalog (`SERVICE_TAXONOMY_REGISTRY.md`). Opportunities reference canonical service ID + service version + mapping reason; custom workspace services are explicitly registered.
+
+## Canonical `SignalDefinition` contract
+
+Each version stores:
+- `signalDefinitionId`, semantic version, lifecycle state
+- family/subfamily and stable machine key
+- display labels/translations
+- subject type: Business / Location / Domain / Contact / Product / Market / Technology / Job / Tender / other canonical entity
+- observation type: event / state / absence / trend / sequence / relationship / threshold / geospatial
+- explicitness classification: `EXPLICIT_DEMAND`, `DIRECT_FACT`, `INFERRED_NEED`, `RISK`, `DISQUALIFIER`, `FIRST_PARTY_INTENT`
+- conditions/operators/thresholds
+- evidence requirements by source class and count
+- minimum source quality/verification
+- geography applicability
+- lookback and observation window
+- freshness/decay function
+- recurrence/deduplication key
+- contradiction/negative-evidence rules
+- minimum confidence/review threshold
+- allowed detection engines: deterministic rule / parser / AI extractor / model classifier / change detector / first-party event
+- prohibited sources/uses
+- mapped ServiceDefinition IDs + default fit weights
+- default recommended actions, if any
+- eval suite/version and owner
+
+A definition can be Draft, Review, Active, Deprecated or Blocked. Historical observations retain the definition version used at detection time.
+
+## Canonical `SignalObservation` contract
+
+Each observation stores:
+- immutable observation ID
+- subject canonical ID(s)
+- signal-definition ID/version
+- normalized value/magnitude/unit
+- observedAt, occurredAt/validFrom/validTo where known
+- firstSeenAt/lastSeenAt
+- source/evidence IDs
+- extraction/detection method and model/rule version
+- explicitness/polarity
+- confidence and evidence-quality components
+- freshness/decay score
+- verification state: Candidate / Verified / Contradicted / Superseded / Expired / Rejected
+- contradiction and supporting observation links
+- geography/context
+- job/run/provenance links
+- policy/storage state
+
+Observations are append/version based. A later source update may supersede an observation; it does not erase historical evidence silently.
+
+## Evidence requirements
+
+Different signal types require different proof strength:
+- `EXPLICIT_DEMAND` such as an RFP/vendor request should point to the actual allowed tender/request source and relevant dates/issuer.
+- `DIRECT_FACT` such as branch opening should use first-party/official or corroborated evidence where available.
+- `INFERRED_NEED` may combine weaker observations but must remain visibly inferred.
+- `ABSENCE` signals (for example `no website`) require positive search/verification methodology and uncertainty handling; a blank provider field alone is insufficient.
+- high-impact contact/outreach recommendations can require independent evaluator review even when the signal itself is verified.
+
+## Deduplication and event identity
+
+The engine derives a signal-event fingerprint from subject + definition + normalized event key + time window + source semantics. Multiple sources can corroborate one logical observation cluster rather than creating duplicate commercial events. Separate repeated real-world events remain distinct.
+
+## Contradiction handling
+
+Examples:
+- Source A says `closed`; official registry says `active` → do not collapse to one fact; mark contradiction and source authority.
+- Job posting removed → does not prove role filled; observation may become stale/expired.
+- Website unavailable once → not immediately `broken website`; require retry/temporal rule.
+- Review complaint → not automatically company-wide operational failure; use trend/minimum-volume rules.
+
+Contradictions may lower confidence, pause Opportunity promotion or require review.
+
+## Freshness and decay
+
+SignalDefinitions specify one of:
+- fixed TTL
+- linear/exponential decay
+- event-validity range
+- `until superseded`
+- `continuous current-state verification`
+
+Lead/Opportunity score reads the current decayed value while historical score versions retain the original inputs.
+
+## Compound signals
+
+A `CompoundSignalDefinition` may reference child definitions with AND/OR/NOT, sequence and time constraints, for example:
+
+`new_location_opened` AND (`receptionist_hiring` OR `support_hiring`) AND `booking_gap` within 120 days.
+
+Compound results remain explainable by listing every child observation and missing/negative condition.
+
+## Custom signal compiler
+
+Natural-language custom signals produce a **draft structured definition**, never directly executable unrestricted browsing instructions. Compiler output includes:
+- normalized subject/event
+- selected operators and thresholds
+- proposed sources
+- evidence requirements
+- time/geography
+- refresh schedule
+- expected cost/coverage
+- policy risks
+- service mappings
+- generated test examples
+
+Material/high-cost/custom source definitions require human review before Active state.
+
+## Opportunity promotion
+
+A SignalObservation does not automatically become an Opportunity. Promotion checks:
+1. service is enabled in workspace;
+2. required positive evidence exists;
+3. disqualifiers/negative evidence;
+4. freshness;
+5. account/industry/geography fit;
+6. evidence confidence;
+7. source/contact policy implications;
+8. duplication with existing Opportunity/Lead.
+
+Opportunity keeps the exact signal/evidence IDs used so `Why now?` is reproducible.
+
+## Initial launch vs future extensibility
+
+Launch must support the full ontology contract and custom-definition extension point, but not every theoretical source/detector must ship on day one. Unsupported detectors are explicitly `DEFERRED`/unavailable rather than silently approximated by AI.
 
 ## Gate
 
