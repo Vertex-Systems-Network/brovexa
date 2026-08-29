@@ -14,7 +14,7 @@ Branch: `planning/brovexa-baseline`
 
 Draft PR: https://github.com/Vertex-Systems-Network/brovexa/pull/1
 
-As of this checkpoint, PR #1 is open, draft, unmerged and mergeable. It remains documentation/planning only.
+PR #1 remains documentation/planning only and must not be interpreted as development authorization.
 
 Planning docs now include:
 - `docs/PROJECT_PLAN.md`
@@ -22,12 +22,13 @@ Planning docs now include:
 - `docs/CLIENT_SURFACES.md`
 - `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`
 - `docs/TECH_STACK_UI.md`
+- `docs/WEBSITE_AUTH_BILLING.md`
 - `docs/CHECKPOINT.md`
 
 ## Linear project
 https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
 
-### Core milestones
+### Milestones
 - M00 — Product, Compliance & Architecture Baseline
 - M01 — Platform Foundation & Developer Experience
 - M02 — Business Discovery & Source Connectors
@@ -38,6 +39,7 @@ https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
 - M07 — Outreach Strategy, CRM & Compliance Controls
 - M08 — Dashboard, Search, Workflows & APIs
 - M08A — Desktop & Browser Clients
+- M08B — Public Website, Identity & Monetization
 - M09 — Security, Reliability, Scale & Cost Controls
 - M10 — Beta, Production Readiness & Launch
 - MX — Continuous Product & Market Intelligence
@@ -45,7 +47,7 @@ https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
 ### Planning issues
 Original planning: ABD-209 through ABD-225.
 
-Expansion:
+Multi-client/continuous-research expansion:
 - ABD-226 — lock multi-client architecture for Web/Desktop/Chrome/Firefox
 - ABD-227 — Desktop app
 - ABD-228 — Chrome/Chromium extension
@@ -55,16 +57,83 @@ Expansion:
 - ABD-232 — future implementation of daily GitHub research scout
 - ABD-233 — technology stack and operator UI architecture ADR
 
+Website/auth/monetization expansion:
+- ABD-234 — public website IA, landing page and visual product storytelling
+- ABD-235 — authentication, account recovery and onboarding lifecycle
+- ABD-236 — packages, entitlements, Research Credits and unit economics
+- ABD-237 — payment gateway ADR and checkout/subscription state machine
+- ABD-238 — pricing, checkout, billing portal and renewal UX
+- ABD-239 — taxes, invoices, refunds, dunning and billing records
+- ABD-240 — SEO, analytics, attribution and conversion measurement
+
+Linear document added: `Brovexa — Website, Authentication & Monetization Plan v1.0`.
+
 ## Current approval gate
 `ABD-215 — M00 architecture/readiness approval gate` blocks feature implementation.
 
-ABD-215 now also requires:
-- ABD-226 complete
-- ABD-231 complete
-- ABD-233 approved
+ABD-215 now additionally requires review/approval of:
+- ABD-226 multi-client architecture
+- ABD-231 daily market-intelligence specification
+- ABD-233 technology/UI ADR
+- ABD-234 through ABD-240 website/auth/commercial planning
 - explicit owner consent after planning review
 
-Planning/research/docs may continue. Feature code, workflow enablement and product implementation must not start before the gate and consent.
+Planning/research/docs may continue. Feature code, payment-provider activation, GitHub daily-research workflow enablement and product implementation must not start before the gate and consent.
+
+## Public website plan
+The public website is planned as a visual product-conversion surface rather than a generic brochure.
+
+Primary storytelling:
+1. Hero: geography/niche discovery → Business 360 → BPO opportunity score
+2. Discovery job visual
+3. Business 360
+4. Signals timeline
+5. Opportunity reasoning
+6. Evidence Inspector
+7. Lead Queue and Why Now
+8. Desktop + Chrome/Firefox workflow
+9. Continuous Market Intelligence
+10. Security/compliance
+11. Pricing and final CTA
+
+Visual rule: prefer real product screenshots/short UI videos/diagrams with synthetic demo data over generic stock imagery. Do not invent customer logos, metrics or integrations.
+
+Recommended domain split for ADR review:
+- `brovexa.com` — public marketing/product/pricing/resources
+- `app.brovexa.com` — authenticated operator application and auth lifecycle
+- documentation may use `/docs` initially; a separate docs host is optional later
+
+## Authentication plan
+Planned lifecycle:
+- Login with email/password plus evaluated Google/Microsoft OAuth
+- Register + policy-version acceptance + email verification
+- Forgot/reset password with enumeration-safe behavior, single-use expiring tokens and rate limits
+- MFA/passkey-ready session model
+- workspace creation/invitations
+- onboarding through use case → geography/niche → service taxonomy → Research Credits → guided first discovery → optional team/Desktop/extension setup
+
+No auth provider has been selected yet.
+
+## Package/pricing hypothesis
+Pricing remains provisional until unit-economics validation.
+
+- Free — $0, 1 seat, small monthly Research Credit pool
+- Launch — proposed $49/mo, 1 seat, full core intelligence + Desktop/extensions
+- Pro — proposed $149/mo, 3 seats, scheduled research + CRM/team workflows
+- Growth — proposed $399/mo, 10 seats, API/webhooks + larger pooled research + advanced governance
+- Enterprise — custom
+
+Model: **subscription + included Research Credits + optional top-ups**. Normal navigation/saved views/basic CRM operations should not consume Research Credits. Cost-bearing search/enrichment/AI work does.
+
+## Payment-provider plan
+Provider selection is intentionally pending ABD-237 and actual operating-entity eligibility.
+
+Candidates:
+- Paddle — Merchant of Record candidate for global SaaS
+- Stripe — direct processor/Billing candidate with Checkout/customer portal/tax tooling
+- Lemon Squeezy — Merchant of Record alternative with SaaS subscription and usage-based capabilities
+
+Canonical Brovexa entitlements remain independent from provider product/price IDs. Signed webhooks, idempotency, replay/reconciliation and server-side verification are mandatory. Browser checkout success alone never grants access.
 
 ## Current technology recommendation for ADR validation
 Not yet final/implemented:
@@ -95,7 +164,7 @@ Recommended behavior after approval:
 - hard search/fetch/model/cost budgets
 - no auto-code, no auto-merge, no connector enablement
 
-Preferred first implementation option: deterministic GitHub Action + versioned Brovexa research runner. GitHub Agentic Workflows may be evaluated experimentally but are currently public preview and should not be the sole dependency.
+Preferred first implementation option: deterministic GitHub Action + versioned Brovexa research runner. GitHub Agentic Workflows may be evaluated experimentally but should not be the sole dependency while preview status/fit remains a concern.
 
 ## Multi-client product state
 Desktop and browser extensions are planned as clients of one canonical backend.
@@ -117,21 +186,17 @@ Desktop principle:
 - secure deep links
 - bounded offline cache only where policy permits
 
-## Research-backed technical notes
-- Tauri 2 provides a cross-platform native shell and WebView-based frontend model; Windows uses WebView2.
-- WXT targets Chrome/Firefox/Chromium from a shared extension codebase.
-- Chrome Manifest V3 uses service-worker background execution and removes remotely hosted executable extension code.
-- Firefox Manifest V3 background behavior differs; browser-specific adapters/tests are required.
-- GitHub scheduled workflows run from the default branch and can be delayed during high load, especially near the start of an hour.
-- GitHub Agentic Workflows are public preview and support declared permissions/safe outputs.
-
 ## Known unverified/unfinished items
 - No technology ADR has been approved.
 - No source connector exists.
 - No database/schema migration exists.
 - No auth provider has been selected.
+- No payment provider has been selected or activated.
+- Pricing has not passed unit-economics validation.
+- No final legal/tax billing model has been approved.
 - No queue/orchestrator has been implemented.
 - No Web/Desktop/extension code exists.
+- No public website/auth/billing code exists.
 - No GitHub daily research workflow exists.
 - No AI provider/model has been selected.
 - No CI/tests exist because implementation has not started.
@@ -147,5 +212,6 @@ Complete M00 planning/ADR work, especially:
 6. ABD-226 multi-client architecture
 7. ABD-231 daily research workflow specification acceptance
 8. ABD-233 technology/UI ADR
+9. ABD-234–240 website/auth/monetization plan review, unit economics and payment-provider ADR
 
 Then run the ABD-215 readiness audit and request explicit owner development consent.
