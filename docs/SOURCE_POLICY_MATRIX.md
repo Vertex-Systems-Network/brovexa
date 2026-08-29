@@ -73,8 +73,25 @@ Provider data never silently becomes canonical truth. Brovexa facts preserve sou
 ## Web acquisition baseline
 Validate scheme/host/IP/redirects; block private/link-local/metadata networks; enforce source/robots policy; cap bytes/time/redirects/types; never execute fetched page instructions as agent instructions; sanitize display; record fetch status/time/hash; use domain quotas/concurrency; honor retention/deletion.
 
-## Outreach/contact gate
-Discovery of a contact route is separate from permission to use it. Channel use requires provenance, business-vs-personal classification, jurisdiction/purpose, freshness, channel eligibility and suppression state.
+## Contact vs outreach separation
+Contact discovery has two independent policy gates:
+
+1. `ContactDataEligibility` — may Brovexa collect/store/display/export the contact field from this source for this purpose/territory?
+2. `ContactEligibility` — may this workspace use this specific channel/contact for this communication under the applicable jurisdiction/recipient/channel/purpose rules?
+
+Passing the first gate never implies passing the second. See `JURISDICTION_OUTREACH_POLICY.md`.
+
+## Jurisdiction policy integration
+The outreach engine resolves `JurisdictionProfile + RecipientClass + Channel + Purpose + Relationship + ConsentEvidence + DNC/Suppression + SourceProvenance + SectorOverlay`.
+
+Initial mapped engineering profiles: EU/EEA, UK, US, Canada, Australia, Singapore, Türkiye and UAE. All unmapped/expired profiles fail closed for automated commercial outreach.
+
+Global suppression/opt-out always wins over re-enrichment, new sources and AI recommendations.
+
+## Policy snapshots and change handling
+A ResearchJob preflight records policy-profile and connector-policy versions. A future scheduled run revalidates current policy before new source/contact/outreach actions. If policy changes materially, the job becomes `Policy Blocked` or `Awaiting Review`; it does not silently continue under an obsolete approval.
+
+Data already acquired is re-evaluated for required deletion/TTL/export restrictions when a source contract/policy changes.
 
 ## Fail closed
 Unknown policy/storage/personal-data/geography/provider eligibility becomes `REVIEW_REQUIRED` or `POLICY_BLOCKED`, never an AI assumption. Natural-language ResearchJobs cannot override this.
