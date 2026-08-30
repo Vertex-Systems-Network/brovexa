@@ -14,6 +14,7 @@
     "dev:api": "node scripts/dev-api.mjs",
     "verify:dev-api": "node scripts/verify-dev-api.mjs",
     "verify:db": "pnpm --filter @brovexa/db build && node scripts/verify-db.mjs",
+    "verify:identity": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && node scripts/verify-identity.mjs",
     "verify:queue:foundation": "node scripts/verify-queue-foundation.mjs",
     "verify:queue": "pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
