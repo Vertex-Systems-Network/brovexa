@@ -23,6 +23,7 @@ const fixtureFiles = [
   'docs/DEVELOPMENT.md',
   'apps/api/package.json',
   'apps/api/tsconfig.json',
+  'apps/api/tsconfig.build.json',
   'apps/api/src/main.ts',
   'apps/web/package.json',
   'packages/config/package.json',
@@ -107,6 +108,14 @@ try {
     );
     writeFileSync(entrypointPath, entrypoint);
     assertFailure('discarded API bootstrap promise', runVerifier(root), 'API entrypoint must not discard the bootstrap promise.');
+  }
+  {
+    const root = makeFixture();
+    const apiBuildPath = join(root, 'apps/api/tsconfig.build.json');
+    const apiBuildConfig = JSON.parse(readFileSync(apiBuildPath, 'utf8'));
+    apiBuildConfig.exclude = ['src/**/*.spec.ts'];
+    writeFileSync(apiBuildPath, `${JSON.stringify(apiBuildConfig, null, 2)}\n`);
+    assertFailure('API production build includes test sources', runVerifier(root), 'API production build must exclude spec/test source files.');
   }
   {
     const root = makeFixture();
