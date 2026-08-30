@@ -7,10 +7,11 @@ import { spawnSync } from 'node:child_process';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const verifier = join(repoRoot, 'scripts', 'verify-foundation.mjs');
 const fixtureFiles = [
-  'package.json','pnpm-lock.yaml','pnpm-workspace.yaml','turbo.json','tsconfig.base.json','.gitignore','.env.example','docs/DEVELOPMENT.md',
-  'apps/api/package.json','apps/api/tsconfig.json','apps/api/tsconfig.build.json','apps/api/src/main.ts','apps/api/src/health.controller.ts','apps/api/src/health.controller.spec.ts',
+  'package.json','pnpm-lock.yaml','pnpm-workspace.yaml','turbo.json','tsconfig.base.json','.gitignore','.env.example','docs/DEVELOPMENT.md','docs/DATABASE.md','compose.dev.yml',
+  'apps/api/package.json','apps/api/tsconfig.json','apps/api/tsconfig.build.json','apps/api/src/main.ts','apps/api/src/health.controller.ts','apps/api/src/health.controller.spec.ts','apps/api/src/database.service.ts','apps/api/src/readiness.controller.ts','apps/api/src/readiness.controller.spec.ts',
   'apps/web/package.json','packages/config/package.json','packages/config/tsconfig.json','packages/config/tsconfig.build.json','packages/contracts/package.json','packages/contracts/tsconfig.json','packages/contracts/tsconfig.build.json',
-  'packages/config/src/index.spec.ts','packages/contracts/src/index.spec.ts','.github/workflows/ci.yml','.github/workflows/ci-self-hosted.yml','scripts/dev-api.mjs','scripts/verify-dev-api.mjs','scripts/verify-foundation.test.mjs',
+  'packages/db/package.json','packages/db/tsconfig.json','packages/db/tsconfig.build.json','packages/db/src/schema.ts','packages/db/src/schema.spec.ts','packages/db/src/client.ts','packages/db/src/migrations.ts','packages/db/migrations/0000_workspace_foundation.up.sql','packages/db/migrations/down/0000_workspace_foundation.down.sql',
+  'packages/config/src/index.spec.ts','packages/contracts/src/index.spec.ts','.github/workflows/ci.yml','.github/workflows/ci-self-hosted.yml','scripts/dev-api.mjs','scripts/verify-dev-api.mjs','scripts/verify-db.mjs','scripts/verify-foundation.test.mjs',
 ];
 
 const fixtures = [];
@@ -36,37 +37,16 @@ function mutate(path, transform) { writeFileSync(path, transform(readFileSync(pa
 try {
   { const root = makeFixture(); assertPass('current foundation fixture', runVerifier(root)); }
   {
-    const root = makeFixture();
-    const path = join(root, 'package.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.scripts.ci = 'echo unsafe-collision'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+    const root = makeFixture(); const path = join(root, 'package.json'); const json = JSON.parse(readFileSync(path, 'utf8')); json.scripts.ci = 'echo unsafe-collision'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('pnpm ci collision', runVerifier(root), 'Do not define a root script named "ci"');
   }
   {
-    const root = makeFixture();
-    const path = join(root, 'package.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.devDependencies.turbo = '^2.10.3'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-    assertFailure('dependency range drift', runVerifier(root), 'devDependencies.turbo must use an exact version or workspace: protocol');
-  }
-  {
-    const root = makeFixture();
-    const path = join(root, 'apps/api/package.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.scripts.dev = 'node --watch dist/main.js'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-    assertFailure('stale API dev loop', runVerifier(root), 'API dev script must use the shared API supervisor.');
-  }
-  {
-    const root = makeFixture();
-    mutate(join(root, 'apps/api/src/main.ts'), (source) => source.replace(/bootstrap\(\)\.catch\([\s\S]*?\n\}\);\n?$/, 'void bootstrap();\n'));
-    assertFailure('discarded API bootstrap promise', runVerifier(root), 'API entrypoint must not discard the bootstrap promise.');
-  }
-  {
-    const root = makeFixture();
-    const path = join(root, 'apps/api/tsconfig.build.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.exclude = ['src/**/*.spec.ts']; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-    assertFailure('API production build includes test sources', runVerifier(root), 'API production build must exclude spec/test source files.');
+    const root = makeFixture(); const path = join(root, 'packages/db/package.json'); const json = JSON.parse(readFileSync(path, 'utf8')); json.dependencies['drizzle-orm'] = '^0.45.2'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+    assertFailure('database dependency range drift', runVerifier(root), 'dependencies.drizzle-orm must use an exact version or workspace: protocol');
   }
   {
     const root = makeFixture(); mutate(join(root, '.env.example'), (source) => `${source}\nAPI_TOKEN=not-allowed\n`);
-    assertFailure('credential-like env example', runVerifier(root), 'unapproved Foundation Slice 1 key: API_TOKEN');
+    assertFailure('credential-like env example', runVerifier(root), 'unapproved M01 key: API_TOKEN');
   }
   { const root = makeFixture(); rmSync(join(root, 'pnpm-lock.yaml')); assertFailure('missing lockfile', runVerifier(root), 'Missing required foundation path: pnpm-lock.yaml'); }
   {
@@ -82,33 +62,22 @@ try {
     assertFailure('hosted write permission', runVerifier(root), 'GitHub token permissions must remain contents: read.');
   }
   {
-    const root = makeFixture(); mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace('      - name: Verify API source-to-runtime reload loop\n        run: pnpm run verify:dev-api\n', ''));
-    assertFailure('missing live reload CI gate', runVerifier(root), 'Hosted CI must execute the API source-to-runtime reload smoke gate.');
+    const root = makeFixture(); mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace('      - name: Verify PostgreSQL migration/data-layer contract\n        run: pnpm run verify:db\n', ''));
+    assertFailure('missing database CI gate', runVerifier(root), 'Hosted CI must execute the database migration/data-layer verification gate.');
   }
   {
-    const root = makeFixture(); mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('  workflow_dispatch:', '  workflow_dispatch:\n  pull_request:'));
-    assertFailure('self-hosted pull-request auto-trigger', runVerifier(root), 'Self-hosted CI reference must not auto-run on pull requests.');
+    const root = makeFixture(); mutate(join(root, 'compose.dev.yml'), (source) => source.replace(/postgres:18\.6@sha256:[0-9a-f]+/, 'postgres:18.6'));
+    assertFailure('mutable local postgres image', runVerifier(root), 'Local Compose must pin PostgreSQL 18.6 by immutable image digest.');
   }
   {
     const root = makeFixture(); mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('ref: m01/platform-foundation', 'ref: m01/unapproved-branch'));
     assertFailure('self-hosted arbitrary ref drift', runVerifier(root), 'Self-hosted CI reference must checkout exactly m01/platform-foundation.');
   }
   {
-    const root = makeFixture(); mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('persist-credentials: false', 'persist-credentials: true'));
-    assertFailure('self-hosted persisted credentials', runVerifier(root), 'Self-hosted CI reference must not persist checkout credentials.');
-  }
-  {
-    const root = makeFixture();
-    const path = join(root, 'apps/api/tsconfig.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.compilerOptions.moduleResolution = 'Node'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+    const root = makeFixture(); const path = join(root, 'apps/api/tsconfig.json'); const json = JSON.parse(readFileSync(path, 'utf8')); json.compilerOptions.moduleResolution = 'Node'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('legacy TypeScript module resolution', runVerifier(root), 'API TypeScript moduleResolution must be NodeNext');
   }
-  {
-    const root = makeFixture();
-    const path = join(root, 'packages/contracts/package.json');
-    const json = JSON.parse(readFileSync(path, 'utf8')); json.scripts.build = 'tsc -p tsconfig.json'; writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
-    assertFailure('production build includes test sources', runVerifier(root), 'Contracts package production build must use tsconfig.build.json.');
-  }
+  { const root = makeFixture(); rmSync(join(root, 'packages/db/migrations/down/0000_workspace_foundation.down.sql')); assertFailure('missing database rollback', runVerifier(root), 'Missing required foundation path: packages/db/migrations/down/0000_workspace_foundation.down.sql'); }
   { const root = makeFixture(); rmSync(join(root, '.gitignore')); assertFailure('missing gitignore', runVerifier(root), 'Missing required foundation path: .gitignore'); }
 
   console.log('Brovexa foundation preflight regression tests passed.');

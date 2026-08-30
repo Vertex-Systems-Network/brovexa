@@ -29,7 +29,7 @@ async function resetTestDatabase() {
 }
 
 try {
-  const identity = await pool.query<{ name: string }>('SELECT current_database() AS name');
+  const identity = await pool.query('SELECT current_database() AS name');
   const databaseName = identity.rows[0]?.name;
   assert.ok(databaseName?.endsWith('_test'), `Refusing destructive verification against database: ${databaseName}`);
 
@@ -52,16 +52,20 @@ try {
   await db.insert(workspacePreferences).values({ workspaceId, timezone: 'UTC', locale: 'en' });
 
   await assert.rejects(
-    db.insert(workspaces).values({ slug: 'm01-verification', displayName: 'Duplicate' }),
+    async () => {
+      await db.insert(workspaces).values({ slug: 'm01-verification', displayName: 'Duplicate' });
+    },
     /unique|duplicate/i,
   );
 
   await assert.rejects(
-    db.insert(workspacePreferences).values({
-      workspaceId: randomUUID(),
-      timezone: 'UTC',
-      locale: 'en',
-    }),
+    async () => {
+      await db.insert(workspacePreferences).values({
+        workspaceId: randomUUID(),
+        timezone: 'UTC',
+        locale: 'en',
+      });
+    },
     /foreign key/i,
   );
 
@@ -89,11 +93,11 @@ try {
   const rolledBack = await rollbackLatestMigration(pool, migrationsDir);
   assert.equal(rolledBack, '0000_workspace_foundation');
 
-  const afterRollback = await pool.query<{ workspaces: string | null; preferences: string | null }>(
-    `SELECT
+  const afterRollback = await pool.query(`
+    SELECT
       to_regclass('public.workspaces')::text AS workspaces,
-      to_regclass('public.workspace_preferences')::text AS preferences`,
-  );
+      to_regclass('public.workspace_preferences')::text AS preferences
+  `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
   assert.equal(afterRollback.rows[0]?.preferences, null);
 
