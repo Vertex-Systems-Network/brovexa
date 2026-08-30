@@ -45,6 +45,8 @@ if (failures.length === 0) {
   check(workflow.includes('name: Canonical worker + Valkey integration'), 'Hosted CI must include queue/worker integration verification.');
   check(workflow.includes('pnpm run verify:queue'), 'Hosted CI must execute canonical worker/queue verification.');
   check(!workflow.includes('dangerouslyAllowAllBuilds'), 'Broad package lifecycle-script execution must remain forbidden.');
+  check(workspace.includes("'msgpackr-extract@3.0.4': true"), 'BullMQ native helper allowBuilds entry must remain exact to msgpackr-extract@3.0.4.');
+  check(!/msgpackr-extract@[^'\n]*\|\|/.test(workspace), 'msgpackr-extract lifecycle trust must not expand to multiple/future versions implicitly.');
   check(workspace.includes('apps/*') && workspace.includes('packages/*'), 'Workspace globs must include worker and queue packages.');
 }
 
