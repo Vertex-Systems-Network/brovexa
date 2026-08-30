@@ -46,12 +46,13 @@ const children = [];
 function shutdown(code) {
   if (shuttingDown) return;
   shuttingDown = true;
+  process.exitCode = code;
 
   for (const child of children) {
     if (!child.killed) child.kill();
   }
 
-  setTimeout(() => process.exit(code), 50).unref();
+  setTimeout(() => process.exit(code), 100);
 }
 
 function startChild(label, args) {
@@ -74,7 +75,7 @@ function startChild(label, args) {
     console.error(
       `[dev:api] ${label} exited unexpectedly (code=${String(code)}, signal=${String(signal)}).`,
     );
-    shutdown(code ?? 1);
+    shutdown(typeof code === 'number' && code !== 0 ? code : 1);
   });
 }
 
