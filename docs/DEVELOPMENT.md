@@ -167,6 +167,24 @@ Required safety properties for the operational dispatcher/reference contract:
 
 If manually dispatched, preserve the exact workflow run/job evidence. A self-hosted PASS may provide M01 verification evidence, but it does not prove GitHub-hosted runner allocation is fixed.
 
+### Runner diagnostics / recovery
+
+Current evidence shows the historical trusted Windows probe still queued, which is consistent with no online/idle runner matching all required labels.
+
+Use the dedicated recovery runbook:
+
+```text
+docs/SELF_HOSTED_RUNNER_RECOVERY.md
+```
+
+Safe read-only Windows diagnostic command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-runner.ps1
+```
+
+The script checks service/process/registration-file presence, runner binary metadata, diagnostic-log location, and representative outbound TCP/443 connectivity. It never starts, stops, installs, removes, registers, or reconfigures the runner and does not read/print runner token material.
+
 ## 10. Failure classification
 
 When a check fails, record the actual category:
