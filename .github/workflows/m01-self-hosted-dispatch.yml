@@ -1,0 +1,65 @@
+name: M01 Self-hosted Verification Dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Trusted M01 branch/ref to verify
+        required: true
+        default: m01/platform-foundation
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m01-self-hosted-${{ inputs.target_ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Verify trusted M01 ref on Windows x64
+    if: startsWith(inputs.target_ref, 'm01/')
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout trusted target ref
+        # actions/checkout v7.0.1 — immutable commit pin.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.target_ref }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up approved Node.js
+        # actions/setup-node v7.0.0 — immutable commit pin.
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+
+      - name: Verify foundation contract before dependency install
+        shell: pwsh
+        run: node scripts/verify-foundation.mjs
+
+      - name: Test foundation guardrails before dependency install
+        shell: pwsh
+        run: node scripts/verify-foundation.test.mjs
+
+      - name: Install pinned pnpm
+        shell: pwsh
+        run: npm install --global pnpm@11.23.0
+
+      - name: Install dependencies using lockfile-aware mode
+        shell: pwsh
+        run: |
+          if (Test-Path pnpm-lock.yaml) {
+            pnpm install --frozen-lockfile
+          } else {
+            pnpm install --no-frozen-lockfile
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run explicit Brovexa quality gate
+        shell: pwsh
+        run: pnpm run quality
