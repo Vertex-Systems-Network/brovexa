@@ -60,6 +60,34 @@ CREATE UNIQUE INDEX workspace_roles_single_owner_role_unique
 CREATE INDEX workspace_roles_workspace_kind_idx
   ON workspace_roles (workspace_id, kind);
 --> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.enforce_owner_role_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.kind = 'owner' AND (
+    NEW.kind <> 'owner'
+    OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+    OR NEW.key IS DISTINCT FROM OLD.key
+  ) THEN
+    RAISE EXCEPTION 'owner role identity is immutable'
+      USING ERRCODE = '23514', CONSTRAINT = 'workspace_owner_role_identity_immutable';
+  END IF;
+
+  IF OLD.kind <> 'owner' AND NEW.kind = 'owner' THEN
+    RAISE EXCEPTION 'custom roles cannot be promoted to owner kind'
+      USING ERRCODE = '23514', CONSTRAINT = 'workspace_owner_role_identity_immutable';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER workspace_roles_owner_identity_immutable
+BEFORE UPDATE OF workspace_id, key, kind ON workspace_roles
+FOR EACH ROW
+EXECUTE FUNCTION brovexa_internal.enforce_owner_role_identity();
+--> statement-breakpoint
 CREATE TABLE workspace_role_permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role_id uuid NOT NULL REFERENCES workspace_roles(id) ON DELETE CASCADE,
