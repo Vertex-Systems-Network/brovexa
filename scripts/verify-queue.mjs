@@ -44,6 +44,13 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS authorization_audit_events CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_membership_roles CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_role_permissions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_roles CASCADE');
+  await pool.query('DROP TABLE IF EXISTS permissions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_memberships CASCADE');
+  await pool.query('DROP TABLE IF EXISTS users CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_effects CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_checkpoints CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_work_units CASCADE');
@@ -63,6 +70,7 @@ try {
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
     '0000_workspace_foundation',
     '0001_job_execution_foundation',
+    '0002_identity_authorization_foundation',
   ]);
 
   const workspace = await pool.query(
