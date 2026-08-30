@@ -92,6 +92,12 @@ jobs:
           DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
           BROVEXA_DB_TEST_ALLOW_RESET: "true"
 
+      - name: Verify tenant isolation and RBAC contract
+        run: pnpm run verify:identity
+        env:
+          DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
+          BROVEXA_DB_TEST_ALLOW_RESET: "true"
+
   queue:
     name: Canonical worker + Valkey integration
     needs: database
