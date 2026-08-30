@@ -36,9 +36,7 @@ function compileOnce(label, configPath) {
   }
 }
 
-for (const [label, configPath] of projects) {
-  compileOnce(label, configPath);
-}
+for (const [label, configPath] of projects) compileOnce(label, configPath);
 
 let shuttingDown = false;
 const children = [];
@@ -72,9 +70,7 @@ function startChild(label, args) {
 
   child.on('exit', (code, signal) => {
     if (shuttingDown) return;
-    console.error(
-      `[dev:api] ${label} exited unexpectedly (code=${String(code)}, signal=${String(signal)}).`,
-    );
+    console.error(`[dev:api] ${label} exited unexpectedly (code=${String(code)}, signal=${String(signal)}).`);
     shutdown(typeof code === 'number' && code !== 0 ? code : 1);
   });
 }
@@ -86,6 +82,10 @@ for (const [label, configPath] of projects) {
     configPath,
     '--watch',
     '--preserveWatchOutput',
+    '--watchFile',
+    'fixedPollingInterval',
+    '--watchDirectory',
+    'fixedPollingInterval',
   ]);
 }
 
