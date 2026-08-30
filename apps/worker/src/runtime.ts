@@ -142,6 +142,9 @@ export async function createCanonicalWorkerRuntime(options: CanonicalWorkerOptio
         );
 
         if (failure.status === 'retry_wait') {
+          const deliveryDelayMs = failure.nextAttemptAt
+            ? Math.max(0, failure.nextAttemptAt.getTime() - Date.now())
+            : 0;
           await ensureWorkDelivery(
             queue,
             {
@@ -149,7 +152,7 @@ export async function createCanonicalWorkerRuntime(options: CanonicalWorkerOptio
               correlationId: claimed.correlationId,
               deliveryAttempt: failure.attemptCount + 1,
             },
-            Math.max(0, failure.nextAttemptAt?.getTime() ?? Date.now() - Date.now()),
+            deliveryDelayMs,
           );
         }
 
