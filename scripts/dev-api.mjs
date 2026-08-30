@@ -16,12 +16,15 @@ if (!existsSync(tscBin)) {
 const projects = [
   ['Config', 'packages/config/tsconfig.build.json'],
   ['Contracts', 'packages/contracts/tsconfig.build.json'],
+  ['DB', 'packages/db/tsconfig.build.json'],
   ['API', 'apps/api/tsconfig.build.json'],
 ];
 
 const watchRoots = [
   'packages/config/src',
   'packages/contracts/src',
+  'packages/db/src',
+  'packages/db/migrations',
   'apps/api/src',
 ];
 
@@ -65,7 +68,7 @@ async function collectFiles(relativeDirectory, files) {
     const relativePath = join(relativeDirectory, entry.name);
     if (entry.isDirectory()) {
       await collectFiles(relativePath, files);
-    } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+    } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.sql'))) {
       files.push(relativePath);
     }
   }
@@ -161,7 +164,7 @@ async function pollForChanges() {
     if (!snapshotsDiffer(sourceSnapshot, nextSnapshot)) return;
 
     sourceSnapshot = nextSnapshot;
-    console.log('[dev:api] Source change detected; rebuilding Config, Contracts and API.');
+    console.log('[dev:api] Source change detected; rebuilding Config, Contracts, DB and API.');
 
     if (!compileAll(false)) {
       console.error('[dev:api] Reload compile failed; keeping the last-good API runtime alive.');
@@ -199,4 +202,4 @@ pollTimer = setInterval(() => { void pollForChanges(); }, pollIntervalMs);
 process.on('SIGINT', () => { void shutdown(130); });
 process.on('SIGTERM', () => { void shutdown(143); });
 
-console.log('[dev:api] Polling Config, Contracts and API sources; last-good runtime stays active across compile errors. Press Ctrl+C to stop.');
+console.log('[dev:api] Polling Config, Contracts, DB and API sources; last-good runtime stays active across compile errors. Press Ctrl+C to stop.');
