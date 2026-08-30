@@ -66,14 +66,28 @@ Each domain must map to canonical issue/document, current decision state and the
 | Canonical service IDs/versioning/custom-service model | `LOCKED` | `SERVICE_TAXONOMY_REGISTRY.md` | individual signal/evidence weights/evals mature with ABD-212/221 |
 | Source policy contract/storage classes | `PROVISIONAL` | `SOURCE_POLICY_MATRIX.md` | connector-by-connector license/field/retention matrix as providers are selected |
 | Jurisdiction/channel outreach decision engine | `PROVISIONAL` | `JURISDICTION_OUTREACH_POLICY.md` | production legal review; national EU/ePrivacy profiles; more countries/channels |
-| Global geography hierarchy contract | `PROVISIONAL` | `GLOBAL_ACQUISITION_STUDIO.md` | dataset/licensing/import/update ADR and canonical schema ABD-211/214 |
-| Industry/niche taxonomy mapping architecture | `PROVISIONAL` | `GLOBAL_ACQUISITION_STUDIO.md` | exact registry/version import/mapping decisions |
-| ResearchJob field/version/preflight contract | `LOCKED` | `GLOBAL_ACQUISITION_STUDIO.md` | SourceCapability mappings + DB/API schema implementation design |
+| Global geography hierarchy/classification contract | `LOCKED` | `GLOBAL_GEOGRAPHY_CLASSIFICATION_REGISTRY.md` | exact import/license/storage/index ADR + schema validation |
+| ResearchJob field/version/preflight contract | `LOCKED` | `GLOBAL_ACQUISITION_STUDIO.md` | SourceCapability mappings + DB/API implementation design |
 | Universal SignalDefinition/Observation contract | `LOCKED` | `UNIVERSAL_SIGNAL_ONTOLOGY.md` | initial active definition catalog/evals/detectors mature in ABD-212/220 |
 | All theoretical source/detector implementations | `DEFERRED` | ontology/source extension points | added by adapter/definition without schema rewrite |
-| Unmapped-jurisdiction automated outreach | `BLOCKED` | `JURISDICTION_OUTREACH_POLICY.md` | versioned approved jurisdiction/channel profile required |
+| Unmapped-jurisdiction automated outreach | `BLOCKED` | `JURISDICTION_OUTREACH_POLICY.md` | approved versioned jurisdiction/channel profile required |
 
-`LOCKED` above means product/domain contract is stable enough for downstream M00 work; it does **not** mean feature implementation or legal production approval.
+## Day-2 early progress snapshot — 2026-08-30
+
+| Domain | State | Durable artifact | Remaining before gate |
+|---|---|---|---|
+| Canonical data domains + lineage | `LOCKED` | `CANONICAL_DATA_MODEL.md` | physical ER/table/index/partition ADR |
+| Evidence vs FactObservation vs Inference | `LOCKED` | `CANONICAL_DATA_MODEL.md` | detector/eval integration |
+| ResearchJob/Run/WorkUnit/SourceTask/Checkpoint model | `LOCKED` | `CANONICAL_DATA_MODEL.md` | orchestration technology ADR |
+| AgentRun/ToolCall/Handoff/Evaluation logical model | `LOCKED` | `CANONICAL_DATA_MODEL.md`, `AI_AGENT_MEMORY_OS.md` | individual agent schemas/eval thresholds |
+| Durable memory namespaces/authority/promotion/context/delete | `LOCKED` | `AI_AGENT_MEMORY_OS.md` | physical storage/index ADR + threat tests |
+| Lead pursuit/lifecycle/qualification/score/routing/nurture | `LOCKED` | `LEAD_INTELLIGENCE_OS.md` | physical schema + agent eval mapping |
+| CRM/import/integration sync semantics | `LOCKED` | `CRM_INTEGRATION_SYNC.md` | provider-specific adapter research/order |
+| Physical DB/index/storage choices | `PROVISIONAL` | ABD-214 | Day-4 ADR |
+| AI AgentDefinition permissions/eval thresholds | `PROVISIONAL` | ABD-212 | Day-3 contract matrix |
+| Data/memory/sync threat controls | `PROVISIONAL` | ABD-213 | Day-3 threat model |
+
+`LOCKED` means the product/domain contract is stable enough for downstream M00 work; it does **not** mean implementation, connector enablement or legal production approval.
 
 ## Mandatory traceability columns for final matrix
 `Capability / Option / User / Surface / Input / Preconditions / Source-or-Agent / Canonical Data / State Changes / Permissions / Cost-Budget / Compliance / Happy Path / Failure-Edge Cases / Tests-Evals / Documentation / Owning Issue / Build-Defer-Reject / Rationale`.
@@ -103,6 +117,10 @@ Every domain review must test at least:
 - policy version expires between scheduled job runs
 - multi-location account returned multiple times by overlapping geography/source work
 - absence signal created from missing data rather than verified absence
+- CRM/provider stage trying to bypass canonical transition guards
+- source delete/retention change after a Lead used derived intelligence
+- user deletion with memories/vector/search index remnants
+- concurrent Lead assignment/routing race
 
 ## Control rule
 A feature idea can be added quickly, but it is not considered planned until it has an owner and maps through this matrix. Non-launch work must be explicitly `DEFERRED` with rationale and extension point rather than forgotten.
