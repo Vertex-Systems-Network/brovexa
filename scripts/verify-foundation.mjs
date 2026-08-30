@@ -45,6 +45,7 @@ function verifyWorkflow(workflow, label) {
   check(/uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/setup-node must be pinned to an immutable commit SHA.`);
   check(workflow.includes('permissions:\n  contents: read'), `${label}: GitHub token permissions must remain contents: read.`);
   check(workflow.includes('pnpm install --frozen-lockfile'), `${label}: must install from the committed lockfile with \`pnpm install --frozen-lockfile\`.`);
+  check(!workflow.includes('--no-frozen-lockfile'), `${label}: bootstrap/non-frozen dependency installation is forbidden after lockfile adoption.`);
   check(!workflow.includes('run: pnpm ci'), `${label}: must not use bare \`pnpm ci\` as the quality gate.`);
 }
 
