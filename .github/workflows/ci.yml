@@ -34,6 +34,9 @@ jobs:
       - name: Test foundation guardrails
         run: node scripts/verify-foundation.test.mjs
 
+      - name: Verify queue foundation contract
+        run: node scripts/verify-queue-foundation.mjs
+
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.23.0
 
@@ -87,4 +90,60 @@ jobs:
         run: pnpm run verify:db
         env:
           DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
+          BROVEXA_DB_TEST_ALLOW_RESET: "true"
+
+  queue:
+    name: Canonical worker + Valkey integration
+    needs: database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_DB: brovexa_queue_test
+          POSTGRES_USER: brovexa
+          POSTGRES_PASSWORD: brovexa-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brovexa -d brovexa_queue_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      valkey:
+        image: ghcr.io/valkey-io/valkey:9.1.1-alpine3.24@sha256:de31910896150d5e754a07d57d227cfdde4e258ddd0d1aa4607f2d2f95843715
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+
+      - name: Verify queue foundation contract
+        run: node scripts/verify-queue-foundation.mjs
+
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.23.0
+
+      - name: Install dependencies from committed lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify canonical worker/queue contract
+        run: pnpm run verify:queue
+        env:
+          DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_queue_test
+          QUEUE_REDIS_URL: redis://127.0.0.1:6379
           BROVEXA_DB_TEST_ALLOW_RESET: "true"

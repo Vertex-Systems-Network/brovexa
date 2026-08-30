@@ -51,7 +51,11 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
     SELECT
       current_setting('server_version') AS server_version,
       current_setting('server_version_num') AS server_version_num,
-      to_regclass('public.workspaces') IS NOT NULL AS schema_ready
+      to_regclass('public.workspaces') IS NOT NULL
+        AND to_regclass('public.job_runs') IS NOT NULL
+        AND to_regclass('public.job_work_units') IS NOT NULL
+        AND to_regclass('public.job_effects') IS NOT NULL
+        AS schema_ready
   `);
 
   const row = result.rows[0];

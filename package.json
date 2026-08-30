@@ -14,10 +14,12 @@
     "dev:api": "node scripts/dev-api.mjs",
     "verify:dev-api": "node scripts/verify-dev-api.mjs",
     "verify:db": "pnpm --filter @brovexa/db build && node scripts/verify-db.mjs",
+    "verify:queue:foundation": "node scripts/verify-queue-foundation.mjs",
+    "verify:queue": "pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
     "verify:foundation:test": "node scripts/verify-foundation.test.mjs",
     "quality:runtime": "pnpm run build && pnpm run typecheck && pnpm run test",
-    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run quality:runtime"
+    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run verify:queue:foundation && pnpm run quality:runtime"
   },
   "devDependencies": {
     "@types/node": "24.13.0",
