@@ -35,6 +35,7 @@ const requiredPaths = [
   '.gitignore',
   '.env.example',
   'docs/DEVELOPMENT.md',
+  'apps/api/src/main.ts',
   'apps/api/src/health.controller.spec.ts',
   'packages/config/src/index.spec.ts',
   'packages/contracts/src/index.spec.ts',
@@ -96,6 +97,7 @@ if (failures.length === 0) {
   const envExample = read('.env.example');
   const developmentRunbook = read('docs/DEVELOPMENT.md');
   const apiDevSupervisor = read('scripts/dev-api.mjs');
+  const apiEntrypoint = read('apps/api/src/main.ts');
 
   for (const [path, manifest] of Object.entries(manifests)) verifyDependencyPins(path, manifest);
   for (const [name, path] of nodeTsconfigs) verifyNodeTsconfig(name, path);
@@ -142,6 +144,11 @@ if (failures.length === 0) {
   }
   check(apiDevSupervisor.includes("'--watch'"), 'API dev supervisor must use Node/TypeScript watch mode.');
   check(apiDevSupervisor.includes("'--env-file-if-exists=.env'"), 'API dev supervisor runtime must load repo-root .env safely.');
+
+  check(!apiEntrypoint.includes('void bootstrap();'), 'API entrypoint must not discard the bootstrap promise.');
+  check(apiEntrypoint.includes('bootstrap().catch('), 'API entrypoint must handle startup rejection explicitly.');
+  check(apiEntrypoint.includes("console.error('Brovexa API failed to start.');"), 'API startup failure must use the safe generic error message.');
+  check(apiEntrypoint.includes('process.exitCode = 1;'), 'API startup failure must set a non-zero process exit code.');
 
   verifyWorkflow(hostedWorkflow, 'Hosted CI');
   verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI reference');

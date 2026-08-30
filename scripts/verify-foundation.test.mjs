@@ -23,6 +23,7 @@ const fixtureFiles = [
   'docs/DEVELOPMENT.md',
   'apps/api/package.json',
   'apps/api/tsconfig.json',
+  'apps/api/src/main.ts',
   'apps/web/package.json',
   'packages/config/package.json',
   'packages/config/tsconfig.json',
@@ -96,6 +97,16 @@ try {
     apiPackage.scripts.dev = 'node --watch dist/main.js';
     writeFileSync(apiPath, `${JSON.stringify(apiPackage, null, 2)}\n`);
     assertFailure('stale API dev loop', runVerifier(root), 'API dev script must use the shared API supervisor.');
+  }
+  {
+    const root = makeFixture();
+    const entrypointPath = join(root, 'apps/api/src/main.ts');
+    const entrypoint = readFileSync(entrypointPath, 'utf8').replace(
+      /bootstrap\(\)\.catch\([\s\S]*?\n\}\);\n?$/,
+      'void bootstrap();\n',
+    );
+    writeFileSync(entrypointPath, entrypoint);
+    assertFailure('discarded API bootstrap promise', runVerifier(root), 'API entrypoint must not discard the bootstrap promise.');
   }
   {
     const root = makeFixture();
