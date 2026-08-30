@@ -22,6 +22,28 @@ const migrationsDir = resolve('packages/db/migrations');
 const pool = createPgPool({ connectionString, max: 4 });
 const db = createDatabase(pool);
 
+function findPostgresError(error) {
+  let current = error;
+
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!current || typeof current !== 'object') return null;
+    if (typeof current.code === 'string' && /^[0-9A-Z]{5}$/.test(current.code)) return current;
+    current = current.cause;
+  }
+
+  return null;
+}
+
+function expectPostgresConstraint(expectedCode, expectedConstraint) {
+  return (error) => {
+    const postgresError = findPostgresError(error);
+    assert.ok(postgresError, `Expected nested PostgreSQL error ${expectedCode}.`);
+    assert.equal(postgresError.code, expectedCode);
+    assert.equal(postgresError.constraint, expectedConstraint);
+    return true;
+  };
+}
+
 async function resetTestDatabase() {
   await pool.query('DROP TABLE IF EXISTS workspace_preferences CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspaces CASCADE');
@@ -55,7 +77,7 @@ try {
     async () => {
       await db.insert(workspaces).values({ slug: 'm01-verification', displayName: 'Duplicate' });
     },
-    /unique|duplicate/i,
+    expectPostgresConstraint('23505', 'workspaces_slug_unique'),
   );
 
   await assert.rejects(
@@ -66,7 +88,7 @@ try {
         locale: 'en',
       });
     },
-    /foreign key/i,
+    expectPostgresConstraint('23503', 'workspace_preferences_workspace_id_workspaces_id_fk'),
   );
 
   await assert.rejects(
