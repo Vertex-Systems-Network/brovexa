@@ -54,11 +54,12 @@ const verifyWorkflow = (workflow, label) => {
   check(/uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/checkout must be pinned to an immutable commit SHA.`);
   check(/uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/setup-node must be pinned to an immutable commit SHA.`);
   check(workflow.includes('permissions:\n  contents: read'), `${label}: GitHub token permissions must remain contents: read.`);
-  check(workflow.includes('pnpm run quality'), `${label}: must execute the explicit root quality script.`);
+  check(workflow.includes('pnpm run quality:runtime'), `${label}: must execute the runtime-only quality gate after dependency installation.`);
+  check(!/^\s*run:\s*pnpm run quality\s*$/m.test(workflow), `${label}: must not rerun the full preflight quality gate after bootstrap installation.`);
   check(!workflow.includes('run: pnpm ci'), `${label}: must not use bare \`pnpm ci\` as the quality gate.`);
 
   const installCommand = existsSync('pnpm-lock.yaml') ? 'pnpm install --frozen-lockfile' : 'pnpm install --no-frozen-lockfile';
-  check(workflow.includes(installCommand), `${label}: install mode must match lockfile state: expected \`${installCommand}\`.`);
+  check(workflow.includes(installCommand), `${label}: install mode must match committed lockfile state before install: expected \`${installCommand}\`.`);
 };
 
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -109,13 +110,13 @@ if (failures.length === 0) {
   check(root.engines?.node === '>=24.20.0 <25', 'Node engine must remain pinned to the approved Node 24 line.');
   check(root.engines?.pnpm === '11.23.0', 'pnpm engine must remain exactly 11.23.0.');
   check(!Object.hasOwn(root.scripts ?? {}, 'ci'), 'Do not define a root script named "ci"; pnpm 11 owns `pnpm ci` as a built-in clean-install command.');
+  check(root.scripts?.['quality:runtime'] === 'pnpm run build && pnpm run typecheck && pnpm run test', 'Root `quality:runtime` must be the post-install build/typecheck/test gate.');
   check(typeof root.scripts?.quality === 'string', 'Root `quality` script is required.');
+  check(root.scripts?.quality?.includes('verify:foundation'), 'Root quality script must include verify:foundation.');
+  check(root.scripts?.quality?.includes('verify:foundation:test'), 'Root quality script must include verify:foundation:test.');
+  check(root.scripts?.quality?.includes('quality:runtime'), 'Root quality script must delegate post-install checks to quality:runtime.');
   check(root.scripts?.['dev:api'] === 'node scripts/dev-api.mjs', 'Root dev:api script must use the dependency-free API supervisor.');
   check(apiPackage.scripts?.dev === 'node ../../scripts/dev-api.mjs', 'API dev script must use the shared API supervisor.');
-
-  for (const command of ['verify:foundation', 'verify:foundation:test', 'build', 'typecheck', 'test']) {
-    check(root.scripts?.quality?.includes(command), `Root quality script must include ${command}.`);
-  }
 
   for (const [name, manifest] of [['API', apiPackage], ['Config', configPackage], ['Contracts', contractsPackage]]) {
     check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
@@ -157,6 +158,8 @@ if (failures.length === 0) {
 
   verifyWorkflow(hostedWorkflow, 'Hosted CI');
   verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI reference');
+  check(/uses:\s*actions\/upload-artifact@[0-9a-f]{40}\b/.test(hostedWorkflow), 'Hosted CI: actions/upload-artifact must be pinned to an immutable commit SHA.');
+  check(hostedWorkflow.includes('path: pnpm-lock.yaml'), 'Hosted CI: bootstrap lockfile must be captured as an artifact after dependency installation.');
   check(selfHostedWorkflow.includes('workflow_dispatch:'), 'Self-hosted CI reference must remain manual-only.');
   check(!selfHostedWorkflow.includes('pull_request:'), 'Self-hosted CI reference must not auto-run on pull requests.');
   check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI reference must not auto-run on push.');

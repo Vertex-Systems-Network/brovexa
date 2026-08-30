@@ -43,5 +43,14 @@ jobs:
         # Temporary until the first verified install produces the committed pnpm-lock.yaml.
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run quality gate
-        run: pnpm run quality
+      - name: Capture generated lockfile
+        # actions/upload-artifact v4.6.2 — immutable commit pin.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: m01-pnpm-lock
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Run runtime quality gate
+        run: pnpm run quality:runtime

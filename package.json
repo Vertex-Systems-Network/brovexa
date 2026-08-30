@@ -14,7 +14,8 @@
     "dev:api": "node scripts/dev-api.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
     "verify:foundation:test": "node scripts/verify-foundation.test.mjs",
-    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run build && pnpm run typecheck && pnpm run test"
+    "quality:runtime": "pnpm run build && pnpm run typecheck && pnpm run test",
+    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run quality:runtime"
   },
   "devDependencies": {
     "@types/node": "24.13.0",
