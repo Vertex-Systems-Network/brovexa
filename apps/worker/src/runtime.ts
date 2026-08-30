@@ -14,7 +14,9 @@ import {
   getTransportMetrics,
   isWorkDeliveryJob,
   type QueueConnectionOptions,
+  type TransportMetrics,
   type WorkDeliveryEnvelope,
+  type WorkQueue,
 } from '@brovexa/queue';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
 
@@ -48,6 +50,22 @@ export interface CanonicalWorkerOptions {
   retryMaxDelayMs?: number;
 }
 
+export interface CanonicalWorkerReadiness {
+  ready: boolean;
+  database: Awaited<ReturnType<typeof probeDatabase>>;
+  queue: {
+    ready: true;
+    metrics: TransportMetrics;
+  };
+}
+
+export interface CanonicalWorkerRuntime {
+  queue: WorkQueue;
+  reconcile(): Promise<number>;
+  readiness(): Promise<CanonicalWorkerReadiness>;
+  close(): Promise<void>;
+}
+
 export function calculateRetryDelayMs(
   workUnitId: string,
   attempt: number,
@@ -71,7 +89,9 @@ function classifyWorkError(error: unknown): {
   return { errorClass: 'permanent', code: 'UNCLASSIFIED_WORK_ERROR' };
 }
 
-export async function createCanonicalWorkerRuntime(options: CanonicalWorkerOptions) {
+export async function createCanonicalWorkerRuntime(
+  options: CanonicalWorkerOptions,
+): Promise<CanonicalWorkerRuntime> {
   const queue = createWorkQueue(options.connection);
   const leaseSeconds = options.leaseSeconds ?? 30;
   const retryBaseDelayMs = options.retryBaseDelayMs ?? 500;
@@ -186,7 +206,7 @@ export async function createCanonicalWorkerRuntime(options: CanonicalWorkerOptio
     return enqueued;
   }
 
-  async function readiness() {
+  async function readiness(): Promise<CanonicalWorkerReadiness> {
     const database = await probeDatabase(options.pool);
     await queue.waitUntilReady();
     const metrics = await getTransportMetrics(queue);
@@ -202,5 +222,5 @@ export async function createCanonicalWorkerRuntime(options: CanonicalWorkerOptio
     await queue.close();
   }
 
-  return { queue, worker, reconcile, readiness, close };
+  return { queue, reconcile, readiness, close };
 }
