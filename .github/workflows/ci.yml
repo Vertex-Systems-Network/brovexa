@@ -14,8 +14,6 @@ concurrency:
 jobs:
   quality:
     name: Build, typecheck, test
-    # Foundation Slice 1 is lightweight and does not require Docker/service containers.
-    # ubuntu-slim is the lower-cost standard private-repository runner for this gate.
     runs-on: ubuntu-slim
     timeout-minutes: 15
 
@@ -23,6 +21,8 @@ jobs:
       - name: Checkout
         # actions/checkout v7.0.1 — immutable commit pin.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         # actions/setup-node v7.0.0 — immutable commit pin.
@@ -39,71 +39,8 @@ jobs:
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.23.0
 
-      - name: Install dependencies
-        # Temporary until the first verified install produces the committed pnpm-lock.yaml.
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Capture generated lockfile
-        # actions/upload-artifact v4.6.2 — immutable commit pin.
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: m01-pnpm-lock
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 1
+      - name: Install dependencies from committed lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Run runtime quality gate
         run: pnpm run quality:runtime
-
-  persist-bootstrap-lockfile:
-    name: Persist bootstrap lockfile
-    needs: quality
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.actor == 'wpessential' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'm01/platform-foundation'
-    permissions:
-      contents: write
-    runs-on: ubuntu-slim
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout exact approved implementation branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: m01/platform-foundation
-          fetch-depth: 1
-
-      - name: Set up approved Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 24.20.0
-
-      - name: Install pinned pnpm
-        run: npm install --global pnpm@11.23.0
-
-      - name: Generate and commit lockfile once
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if git ls-files --error-unmatch pnpm-lock.yaml >/dev/null 2>&1; then
-            echo 'pnpm-lock.yaml is already tracked; bootstrap persistence is complete.'
-            exit 0
-          fi
-
-          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
-
-          unexpected="$(git status --porcelain | grep -v '^?? pnpm-lock.yaml$' || true)"
-          if [ -n "$unexpected" ]; then
-            echo 'Unexpected repository changes while generating pnpm-lock.yaml:' >&2
-            printf '%s\n' "$unexpected" >&2
-            exit 1
-          fi
-
-          git add pnpm-lock.yaml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'build(m01): lock workspace dependencies'
-          git push origin HEAD:m01/platform-foundation
