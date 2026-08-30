@@ -20,16 +20,13 @@ const nodeTsconfigs = [
   ['Contracts', 'packages/contracts/tsconfig.json'],
 ];
 
-const sharedBuildConfigs = [
-  ['Config', 'packages/config/tsconfig.build.json'],
-  ['Contracts', 'packages/contracts/tsconfig.build.json'],
-];
-
 const requiredPaths = [
   ...packageManifests,
   ...nodeTsconfigs.map(([, path]) => path),
-  ...sharedBuildConfigs.map(([, path]) => path),
   'apps/api/tsconfig.build.json',
+  'packages/config/tsconfig.build.json',
+  'packages/contracts/tsconfig.build.json',
+  'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
@@ -50,41 +47,44 @@ for (const path of requiredPaths) {
   check(existsSync(path), `Missing required foundation path: ${path}`);
 }
 
-const verifyWorkflow = (workflow, label) => {
-  check(/uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/checkout must be pinned to an immutable commit SHA.`);
-  check(/uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/setup-node must be pinned to an immutable commit SHA.`);
-  check(workflow.includes('permissions:\n  contents: read'), `${label}: GitHub token permissions must remain contents: read.`);
-  check(workflow.includes('pnpm run quality:runtime'), `${label}: must execute the runtime-only quality gate after dependency installation.`);
-  check(!/^\s*run:\s*pnpm run quality\s*$/m.test(workflow), `${label}: must not rerun the full preflight quality gate after bootstrap installation.`);
-  check(!workflow.includes('run: pnpm ci'), `${label}: must not use bare \`pnpm ci\` as the quality gate.`);
-
-  const installCommand = existsSync('pnpm-lock.yaml') ? 'pnpm install --frozen-lockfile' : 'pnpm install --no-frozen-lockfile';
-  check(workflow.includes(installCommand), `${label}: install mode must match committed lockfile state before install: expected \`${installCommand}\`.`);
-};
-
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-const verifyDependencyPins = (path, manifest) => {
+
+function verifyDependencyPins(path, manifest) {
   for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
     for (const [name, spec] of Object.entries(manifest[section] ?? {})) {
-      check(spec.startsWith('workspace:') || exactVersion.test(spec), `${path}: ${section}.${name} must use an exact version or workspace: protocol, found ${spec}.`);
+      check(
+        spec.startsWith('workspace:') || exactVersion.test(spec),
+        `${path}: ${section}.${name} must use an exact version or workspace: protocol, found ${spec}.`,
+      );
     }
   }
-};
+}
 
-const verifyNodeTsconfig = (name, path) => {
+function verifyNodeTsconfig(name, path) {
   const config = JSON.parse(read(path));
   const moduleKind = String(config.compilerOptions?.module ?? '').toLowerCase();
   const resolution = String(config.compilerOptions?.moduleResolution ?? '').toLowerCase();
   check(moduleKind === 'nodenext', `${name} TypeScript module must be NodeNext for the pinned TypeScript 7 / modern Node runtime.`);
   check(resolution === 'nodenext', `${name} TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`);
-};
+}
 
-const verifySharedBuild = (name, manifest, buildConfigPath) => {
+function verifyBuildExcludes(name, manifest, path) {
   check(manifest.scripts?.build === 'tsc -p tsconfig.build.json', `${name} package production build must use tsconfig.build.json.`);
-  const buildConfig = JSON.parse(read(buildConfigPath));
-  const excludes = new Set(buildConfig.exclude ?? []);
+  const config = JSON.parse(read(path));
+  const excludes = new Set(config.exclude ?? []);
   check(excludes.has('src/**/*.spec.ts') && excludes.has('src/**/*.test.ts'), `${name} production build must exclude spec/test source files.`);
-};
+}
+
+function verifyWorkflow(workflow, label) {
+  check(/uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/checkout must be pinned to an immutable commit SHA.`);
+  check(/uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/setup-node must be pinned to an immutable commit SHA.`);
+  check(workflow.includes('permissions:\n  contents: read'), `${label}: GitHub token permissions must remain contents: read.`);
+  check(workflow.includes('pnpm install --frozen-lockfile'), `${label}: must install from the committed lockfile with \`pnpm install --frozen-lockfile\`.`);
+  check(!workflow.includes('--no-frozen-lockfile'), `${label}: bootstrap/non-frozen dependency installation is forbidden after lockfile adoption.`);
+  check(workflow.includes('pnpm run quality:runtime'), `${label}: must execute the runtime quality gate after dependency installation.`);
+  check(!/^\s*run:\s*pnpm run quality\s*$/m.test(workflow), `${label}: must not rerun the preflight quality gate after dependency installation.`);
+  check(!workflow.includes('run: pnpm ci'), `${label}: must not use bare \`pnpm ci\` as the quality gate.`);
+}
 
 if (failures.length === 0) {
   const manifests = Object.fromEntries(packageManifests.map((path) => [path, JSON.parse(read(path))]));
@@ -100,7 +100,6 @@ if (failures.length === 0) {
   const developmentRunbook = read('docs/DEVELOPMENT.md');
   const apiDevSupervisor = read('scripts/dev-api.mjs');
   const apiEntrypoint = read('apps/api/src/main.ts');
-  const apiBuildConfig = JSON.parse(read('apps/api/tsconfig.build.json'));
 
   for (const [path, manifest] of Object.entries(manifests)) verifyDependencyPins(path, manifest);
   for (const [name, path] of nodeTsconfigs) verifyNodeTsconfig(name, path);
@@ -111,7 +110,6 @@ if (failures.length === 0) {
   check(root.engines?.pnpm === '11.23.0', 'pnpm engine must remain exactly 11.23.0.');
   check(!Object.hasOwn(root.scripts ?? {}, 'ci'), 'Do not define a root script named "ci"; pnpm 11 owns `pnpm ci` as a built-in clean-install command.');
   check(root.scripts?.['quality:runtime'] === 'pnpm run build && pnpm run typecheck && pnpm run test', 'Root `quality:runtime` must be the post-install build/typecheck/test gate.');
-  check(typeof root.scripts?.quality === 'string', 'Root `quality` script is required.');
   check(root.scripts?.quality?.includes('verify:foundation'), 'Root quality script must include verify:foundation.');
   check(root.scripts?.quality?.includes('verify:foundation:test'), 'Root quality script must include verify:foundation:test.');
   check(root.scripts?.quality?.includes('quality:runtime'), 'Root quality script must delegate post-install checks to quality:runtime.');
@@ -122,25 +120,23 @@ if (failures.length === 0) {
     check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
   }
 
-  verifySharedBuild('Config', configPackage, 'packages/config/tsconfig.build.json');
-  verifySharedBuild('Contracts', contractsPackage, 'packages/contracts/tsconfig.build.json');
-  const apiBuildExcludes = new Set(apiBuildConfig.exclude ?? []);
-  check(apiPackage.scripts?.build === 'tsc -p tsconfig.build.json', 'API production build must use tsconfig.build.json.');
-  check(apiBuildExcludes.has('src/**/*.spec.ts') && apiBuildExcludes.has('src/**/*.test.ts'), 'API production build must exclude spec/test source files.');
+  verifyBuildExcludes('API', apiPackage, 'apps/api/tsconfig.build.json');
+  verifyBuildExcludes('Config', configPackage, 'packages/config/tsconfig.build.json');
+  verifyBuildExcludes('Contracts', contractsPackage, 'packages/contracts/tsconfig.build.json');
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');
+  check(workspace.includes("minimumReleaseAgeExclude:\n  - 'zod@4.5.4'"), 'pnpm workspace must explicitly document the exact zod@4.5.4 release-age exception used by the locked bootstrap.');
   check(gitignore.includes('.env'), '.gitignore must exclude local .env files.');
   check(gitignore.includes('!.env.example'), '.gitignore must explicitly allow the secrets-free .env.example template.');
 
   const exampleKeys = envExample.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#')).map((line) => line.split('=', 1)[0]);
   const allowedFoundationKeys = new Set(['NODE_ENV', 'HOST', 'PORT']);
   for (const key of exampleKeys) check(allowedFoundationKeys.has(key), `.env.example contains an unapproved Foundation Slice 1 key: ${key}`);
-  for (const requiredKey of allowedFoundationKeys) check(exampleKeys.includes(requiredKey), `.env.example is missing ${requiredKey}.`);
-
+  for (const key of allowedFoundationKeys) check(exampleKeys.includes(key), `.env.example is missing ${key}.`);
   check(!/(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|ACCESS_KEY)\s*=\s*\S+/i.test(envExample), '.env.example must not contain credential-like values.');
-  check(developmentRunbook.includes('pnpm run quality'), 'Development runbook must document the canonical quality gate.');
-  check(developmentRunbook.includes('pnpm install --frozen-lockfile'), 'Development runbook must document frozen-lockfile mode after bootstrap.');
+
+  check(developmentRunbook.includes('pnpm install --frozen-lockfile'), 'Development runbook must document frozen-lockfile installs as the steady-state path.');
   check(developmentRunbook.includes('.github/workflows/m01-self-hosted-dispatch.yml'), 'Development runbook must identify the default-branch self-hosted dispatcher.');
   check(developmentRunbook.includes('reference mirror'), 'Development runbook must distinguish the branch-local self-hosted workflow as a reference mirror.');
   check(developmentRunbook.includes('pnpm run dev:api'), 'Development runbook must document the canonical API development loop.');
@@ -158,8 +154,9 @@ if (failures.length === 0) {
 
   verifyWorkflow(hostedWorkflow, 'Hosted CI');
   verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI reference');
-  check(/uses:\s*actions\/upload-artifact@[0-9a-f]{40}\b/.test(hostedWorkflow), 'Hosted CI: actions/upload-artifact must be pinned to an immutable commit SHA.');
-  check(hostedWorkflow.includes('path: pnpm-lock.yaml'), 'Hosted CI: bootstrap lockfile must be captured as an artifact after dependency installation.');
+  check(hostedWorkflow.includes('persist-credentials: false'), 'Hosted CI checkout must not persist GitHub credentials.');
+  check(!hostedWorkflow.includes('contents: write'), 'Hosted CI must not retain bootstrap write permission after lockfile adoption.');
+  check(!hostedWorkflow.includes('upload-artifact'), 'Hosted CI must not retain bootstrap lockfile artifact machinery after lockfile adoption.');
   check(selfHostedWorkflow.includes('workflow_dispatch:'), 'Self-hosted CI reference must remain manual-only.');
   check(!selfHostedWorkflow.includes('pull_request:'), 'Self-hosted CI reference must not auto-run on pull requests.');
   check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI reference must not auto-run on push.');
