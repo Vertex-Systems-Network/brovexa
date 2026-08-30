@@ -4,7 +4,7 @@ import type { DatabaseService } from './database.service';
 import { ReadinessController } from './readiness.controller';
 
 function controllerWith(readiness: DatabaseService['readiness']) {
-  return new ReadinessController({ readiness } as DatabaseService);
+  return new ReadinessController({ readiness } as unknown as DatabaseService);
 }
 
 describe('ReadinessController', () => {
