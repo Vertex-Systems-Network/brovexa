@@ -11,6 +11,8 @@ const requiredPaths = [
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
+  '.env.example',
+  'docs/DEVELOPMENT.md',
   'apps/api/package.json',
   'apps/web/package.json',
   'packages/config/package.json',
@@ -60,6 +62,9 @@ if (failures.length === 0) {
   const hostedWorkflow = read('.github/workflows/ci.yml');
   const selfHostedWorkflow = read('.github/workflows/ci-self-hosted.yml');
   const workspace = read('pnpm-workspace.yaml');
+  const gitignore = read('.gitignore');
+  const envExample = read('.env.example');
+  const developmentRunbook = read('docs/DEVELOPMENT.md');
 
   check(root.private === true, 'Root package must remain private.');
   check(root.packageManager === 'pnpm@11.23.0', 'Root packageManager must pin pnpm@11.23.0.');
@@ -80,6 +85,43 @@ if (failures.length === 0) {
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');
+
+  check(gitignore.includes('.env'), '.gitignore must exclude local .env files.');
+  check(
+    gitignore.includes('!.env.example'),
+    '.gitignore must explicitly allow the secrets-free .env.example template.',
+  );
+
+  const exampleKeys = envExample
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => line.split('=', 1)[0]);
+  const allowedFoundationKeys = new Set(['NODE_ENV', 'HOST', 'PORT']);
+
+  for (const key of exampleKeys) {
+    check(
+      allowedFoundationKeys.has(key),
+      `.env.example contains an unapproved Foundation Slice 1 key: ${key}`,
+    );
+  }
+
+  for (const requiredKey of allowedFoundationKeys) {
+    check(exampleKeys.includes(requiredKey), `.env.example is missing ${requiredKey}.`);
+  }
+
+  check(
+    !/(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|ACCESS_KEY)\s*=\s*\S+/i.test(envExample),
+    '.env.example must not contain credential-like values.',
+  );
+  check(
+    developmentRunbook.includes('pnpm run quality'),
+    'Development runbook must document the canonical quality gate.',
+  );
+  check(
+    developmentRunbook.includes('pnpm install --frozen-lockfile'),
+    'Development runbook must document frozen-lockfile mode after bootstrap.',
+  );
 
   verifyWorkflow(hostedWorkflow, 'Hosted CI');
   verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI');
