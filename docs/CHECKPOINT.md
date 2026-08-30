@@ -1,6 +1,6 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 ## Project state
 
@@ -10,36 +10,27 @@ M01 — Platform Foundation & Developer Experience is explicitly approved and ac
 
 ## Authorization
 
-Approved scope: **M01 milestone**.
+Approved implementation scope: **M01 milestone**.
 
-Still separately gated: production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive data actions, and later legal/provider/commercial decisions.
+Still separately gated: production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and later legal/provider/commercial decisions.
 
 ## VCS state
 
 - default branch: `main`
-- current `main`: `198eec6ddc582e07a78c72d3bd8c88b05a0a5b75`
+- current `main`: `69dd5adc3a509aa35b0be46f4e0124d15dc8de3c`
 - planning PR #1: draft/unmerged
 - M01 implementation branch: `m01/platform-foundation`
 - M01 implementation PR #2: draft/unmerged
-- current implementation head before this checkpoint: `401c7936381f02ddf84b09a47a16a411f574b7b7`
-- initial runtime foundation: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
-- TypeScript 7 NodeNext compatibility: `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`
-- API `.env` loading: `8c939b90f874dfc5f68afba1c64faae450ffd584`
-- self-hosted contract/reference alignment: `23c7803c8081ba9732dc098d66491387df1a674c`
-- API dev supervisor + lifecycle correction: `3eb242b33ade7602d4585bd6852a3986c5b201a5` / `a67daca7fa7825b07864af8ad2931551184b6e34`
-- safe API startup failure handling: `489fbc417fcb411478d0d47ba9e6bb43119a8f5f`
-- API startup regression guard: `8a1c7618c22f0323d7e79bf7404c89df9cf32359`
-- API production test-source exclusion: `265bc2d4a43f162d5222c949c8669f3541f2e801`
-- API build-exclusion verifier: `f893b796f9c745f7b0b33f73963bd9d7c6ddd32f`
-- API build-exclusion negative regression: `401c7936381f02ddf84b09a47a16a411f574b7b7`
+- current verified implementation head before this checkpoint: `014b1a847391df7cab7eb5a9a7f91065aa5f1ab4`
+- final ABD-260 verification run: `33333195961`
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes are being made through remote GitHub tooling.
 
 ## Default-branch security
 
-`main` remains verified `protected:false` with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` is the compensating control and Linear `ABD-266` remains open through the M01 FULL GATE.
+`main` remains verified `protected:false` with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control and Linear `ABD-266` remains open through the M01 FULL GATE.
 
-Owner-approved least-privilege dispatcher hardening is integrated on `main` through replacement PR #6. Operational `.github/workflows/m01-self-hosted-dispatch.yml` is:
+Owner-approved least-privilege default-branch self-hosted dispatcher remains:
 
 - manual-only
 - `contents: read`
@@ -49,78 +40,85 @@ Owner-approved least-privilege dispatcher hardening is integrated on `main` thro
 - fixed checkout to exactly `m01/platform-foundation`
 - no caller-controlled target ref
 
-## M01 Foundation Slice 1
+## M01 verification state
 
-State: `IMPLEMENTED BUT NOT VERIFIED`.
+### ABD-259 — monorepo foundation / executable CI
 
-The static/repository foundation is now considered **READY FOR EXECUTABLE VERIFICATION**. No dependency-gated downstream platform work should start until `ABD-259` passes.
+State: **VERIFIED / DONE**.
 
-Implemented foundation includes:
+Final hosted evidence: run `33312134186`, job `99258997531`.
 
-- pnpm/Turborepo/TypeScript monorepo metadata
-- exact runtime/dependency pins
-- shared contracts/config packages
-- NestJS API with `/health`
-- minimal Next.js Web shell
-- hosted CI and controlled self-hosted verification path
-- zero-dependency foundation verifier + negative regression suite
-- development/verification runbook
-- default-branch integration policy
-- NodeNext compatibility for TypeScript 7
-- production build/test-source separation for shared packages and API
-- repo-root `.env` loading for API runtime
-- cross-platform dependency-free API development supervisor
-- deterministic safe API startup failure path
+Verified under Node `24.20.0` + pnpm `11.23.0`:
 
-## Static hardening resolved
+- zero-dependency foundation preflight
+- negative regression guardrails
+- committed `pnpm-lock.yaml`
+- frozen-lockfile installation
+- Config/Contracts/API builds
+- Next.js production build
+- TypeScript 7 typecheck
+- Vitest foundation suite
+- deterministic API source → compile → runtime reload smoke
 
-1. pnpm `ci` command collision removed; canonical gate is `pnpm run quality`.
-2. direct dependency pins and GitHub Action references are exact/immutable.
-3. Config/Contracts/API production builds exclude both `*.spec.ts` and `*.test.ts` sources.
-4. Node-targeted TypeScript projects use `NodeNext` module/resolution for TypeScript 7.
-5. API local runtime loads repo-root `.env` without adding dotenv and preserves process-env precedence.
-6. Self-hosted trusted-runner path is manual-only and exact-branch constrained.
-7. `pnpm run dev:api` performs ordered Config → Contracts → API initial compile before starting watchers/runtime.
-8. API dev supervisor treats unexpected child exit as failure and preserves non-zero shutdown state.
-9. API top-level bootstrap rejection is handled explicitly with a generic safe message and `process.exitCode = 1`; bare `void bootstrap()` is regression-blocked.
-10. Web foundation shell static review found no confirmed M01 blocker; it remains intentionally a boundary shell, not production product UI.
+The API development loop uses bounded polling instead of native filesystem watching and keeps the last-good runtime alive across compile failures.
 
-## Verification evidence
+### ABD-260 — PostgreSQL migration/data layer
 
-### Hosted GitHub Actions — infrastructure blocked
+State: **VERIFIED / DONE**.
 
-Latest current-head hosted run:
+Final GitHub Actions run `33333195961`:
 
-- head `401c7936381f02ddf84b09a47a16a411f574b7b7`
-- run `33309506532`
-- first job `99251880954`
-- diagnostic rerun job `99251942947`
-- both concluded `failure`
-- both returned no executable steps / no runner allocation evidence
+- quality/dev-loop job `99315413253`: PASS
+- PostgreSQL 18 migration integration job `99315636396`: PASS
 
-The diagnostic rerun was performed once solely to verify runner-allocation state. It produced the same signature, so redundant hosted reruns are now stopped.
+Verified behavior:
 
-Classification remains:
+- PostgreSQL `18.6` immutable service image
+- `@brovexa/db` Drizzle/node-postgres foundation
+- canonical `workspaces` tenant root
+- workspace-scoped FK child contract
+- reviewed SQL up/down migrations
+- migration checksum journal
+- advisory-lock serialization
+- transaction-wrapped migration apply/rollback
+- caller-visible migration result state only after successful COMMIT
+- exact unique constraint rejection by SQLSTATE `23505`
+- exact FK rejection by SQLSTATE `23503`
+- cascade delete behavior
+- transaction rollback behavior
+- explicit down migration
+- successful re-apply
+- DB readiness/schema probe
+- destructive integration-test safety guard (`BROVEXA_DB_TEST_ALLOW_RESET=true` + `*_test` DB name)
 
-`CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`
+No production database/provider/secret was activated.
 
-This is neither an application failure nor a PASS.
+## Current active lane — ABD-261 durable worker/queue foundation
 
-### Manual self-hosted dispatch
+State: **IN PROGRESS**.
 
-Default-branch workflow is ready, but GitHub reports **0 `workflow_dispatch` runs** on `main` during the latest check. No approved Windows self-hosted quality execution has occurred yet.
+Goal: introduce queue/worker execution transport without allowing queue state to become canonical workflow truth.
 
-### Runner-independent structural evidence
+Locked principles:
 
-Previous structural verifier/regression checks and `node --check` checks passed within their declared scope. They validate repository invariants only. The available tool runtime is Node 22.x, so they do **not** prove:
+- PostgreSQL remains canonical job/work-unit/checkpoint truth.
+- Queue state is transport/execution state only.
+- Restart recovery must derive runnable work from PostgreSQL.
+- Idempotency/effect guards live in PostgreSQL.
+- Queue delivery cannot mark business completion without a canonical DB state transition.
+- Retryable/permanent/cancelled/DLQ/review states are explicit.
+- Worker readiness and correlation/metrics contracts are required.
+- No hosted Redis/Valkey provider or production credentials are activated in M01.
 
-- approved Node 24 dependency resolution
-- TypeScript 7 compiler execution
-- Nest/Next build
-- Vitest tests
-- actual API hot-reload behavior with installed dependencies
+Current ecosystem preflight:
 
-## Technology pins
+- BullMQ `6.3.2` is current but is a recently released v6 major with pluggable Redis/PostgreSQL backends.
+- BullMQ `5.81.4` remains an actively published v5 line.
+- Valkey `9.1.1` is current stable.
+- Final queue-runtime pin must be chosen from executable compatibility/stability/supply-chain evidence, not latest-version bias.
+- Do not assume every Redis-compatible implementation is BullMQ-compatible.
+
+## Technology pins currently verified
 
 - Node.js `24.20.0`
 - pnpm `11.23.0`
@@ -130,26 +128,40 @@ Previous structural verifier/regression checks and `node --check` checks passed 
 - NestJS `12.0.1`
 - Vitest `4.1.11`
 - Zod `4.5.4`
+- PostgreSQL `18.6`
+- Drizzle ORM `0.45.2`
+- Drizzle Kit `0.31.10`
+- `pg` `8.23.0`
+- `@types/pg` `8.23.1`
 
-`pnpm-lock.yaml` remains absent because no approved dependency installation has completed.
+## Supply-chain posture
+
+- exact direct dependency pins
+- committed lockfile
+- CI frozen-lockfile only
+- pnpm 11 supply-chain policy checks enabled
+- no broad lifecycle-script bypass
+- only exact currently locked esbuild versions are allowed to execute lifecycle scripts
+- immutable GitHub Action SHAs
+- steady-state hosted CI `contents: read`
 
 ## M01 gates
 
-- `ABD-266` — default-branch protection/compensating controls — IN PROGRESS
-- `ABD-259` — executable monorepo/CI verification — IN PROGRESS / SERIALIZE
-- `ABD-260` — PostgreSQL harness — BLOCKED BY ABD-259
-- `ABD-261` — durable worker/queue — BLOCKED BY ABD-259/260
-- `ABD-262` — identity/RBAC/tenant — BLOCKED BY ABD-259/260
-- `ABD-263` — API/observability/health — waits for executable CI
-- `ABD-264` — M01 FULL GATE — final integration gate
+- `ABD-259` — executable monorepo/CI verification — **DONE**
+- `ABD-260` — PostgreSQL harness/data layer — **DONE**
+- `ABD-261` — durable worker/queue foundation — **IN PROGRESS**
+- `ABD-262` — identity/RBAC/tenant enforcement — dependency-gated by stable DB contract; not started
+- `ABD-263` — API/observability/health — later coordinated M01 lane
+- `ABD-266` — default-branch protection/compensating controls — remains open through FULL GATE
+- `ABD-264` — M01 FULL GATE — final integration/readiness handoff
 
 ## Next safe action
 
-1. Bring an approved `[self-hosted, Windows, X64]` runner online and manually execute `M01 Self-hosted Verification Dispatch`, or use hosted CI only if runner allocation demonstrably recovers.
-2. Execute Node `24.20.0` + pnpm `11.23.0` dependency installation.
-3. Commit generated `pnpm-lock.yaml` and switch all CI installs to `pnpm install --frozen-lockfile`.
-4. Run `pnpm run quality` and classify any actual failures from logs.
-5. Exercise `pnpm run dev:api` source-to-runtime restart behavior.
-6. Only after all `ABD-259` exit criteria pass, begin `ABD-260` PostgreSQL/Drizzle implementation.
+1. Finalize the smallest stable queue transport/runtime selection for ABD-261.
+2. Extend canonical PostgreSQL schema with job/work-unit/effect/idempotency records through reviewed migrations.
+3. Add worker boundary, queue naming/version conventions, retry/backoff/error classification and cancellation model.
+4. Add Redis/Valkey-compatible local/CI transport only after executable compatibility is proven.
+5. Prove idempotent retry, restart recovery from PostgreSQL, cancellation, failed-retry/DLQ behavior and worker readiness in CI.
+6. Close ABD-261 only from executable evidence, then advance the next dependency-unblocked M01 lane.
 
-Until executable runner evidence exists, avoid further significant foundation feature growth: static foundation is verification-ready and additional code would increase unverified surface area.
+PR #2 remains draft/unmerged; no auto-merge or production activation is authorized by this checkpoint.
