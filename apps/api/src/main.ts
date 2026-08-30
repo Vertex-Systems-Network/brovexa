@@ -12,4 +12,7 @@ async function bootstrap(): Promise<void> {
   await app.listen(runtime.PORT, runtime.HOST);
 }
 
-void bootstrap();
+bootstrap().catch(() => {
+  console.error('Brovexa API failed to start.');
+  process.exitCode = 1;
+});
