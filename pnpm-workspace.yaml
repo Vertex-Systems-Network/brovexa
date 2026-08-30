@@ -1,3 +1,9 @@
 packages:
   - apps/*
   - packages/*
+
+# pnpm 11 defaults minimumReleaseAge to 1440 minutes. zod@4.5.4 is an
+# explicitly reviewed, exact-version bootstrap exception; do not broaden this
+# to the whole package or a wildcard without a separate dependency review.
+minimumReleaseAgeExclude:
+  - zod@4.5.4
