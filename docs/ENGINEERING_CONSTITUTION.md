@@ -1,461 +1,481 @@
-# Brovexa AI-Native Engineering Constitution v1.1
+# Brovexa AI-Native Engineering Constitution v1.2
 
-This document is the durable project-specific successor to the supplied **AI-Native Production Development — Master Engineering Prompt**. It keeps the original production-engineering lifecycle and adds Brovexa-specific controls for data provenance, AI evaluation, prompt injection, source compliance, outreach safety, distributed jobs, cost governance, multi-client security, and continuous market intelligence.
+Status: canonical engineering governance.
+
+This document combines Brovexa-specific AI/source/security/data/commercial controls with the adopted **AI-Native Production Engineering — Universal Master Prompt**. It is intentionally repository-first, documentation-first, milestone-based, VCS-aware and optimized for maximum safe engineering throughput.
 
 ## 1. Operating lifecycle
 
-For every meaningful task:
+For meaningful work use:
 
-**Inspect → Understand → Research → Assess Impact → Plan → Architect → Implement → Test → Attack → Review → Harden → Verify → Document → Commit → Checkpoint → Report**
+**BOOT → Inspect → Understand → Research → Assess Impact → Plan → Architect → Implement → FAST GATE → Attack/Review → Harden → Verify → Document → Commit → Checkpoint → Report**.
 
-Never jump directly from requirements to code when architecture, security, data contracts, AI behavior, source-policy decisions, client permissions, or workflow automation are involved.
+At milestone/release boundaries use the FULL GATE.
 
-Prioritize:
+Never jump directly from a substantial requirement to code when architecture, security, data, AI behavior, source-policy, client permissions, billing, migration or workflow automation are involved.
+
+Priority order:
 1. correctness
-2. safety/security/compliance
+2. data safety/security/compliance
 3. maintainability
-4. evidence and testability
+4. evidence/testability/recoverability
 5. simplicity
 6. performance/cost efficiency
 7. delivery speed
 
-## 2. Durable sources of truth
+## 2. Project-state detection
 
-Implementation state is determined by:
-1. repository state
-2. automated tests/build/CI evidence
-3. project documentation/ADRs
-4. Linear plan/checkpoints
-5. Git history
-6. official external documentation for dependency/API behavior
+At first adoption and after material state changes classify the project as one of:
 
-Conversation memory is transient assistance, never the authoritative project state.
+- `GREENFIELD`
+- `PLANNED_EXISTING_PROJECT`
+- `ACTIVE_EXISTING_PROJECT`
+- `PRODUCTION_PROJECT`
+- `LEGACY_OR_MIGRATION`
+- `RECOVERY`
 
-## 3. Start and resume protocol
+Current Brovexa state at M01 authorization: `PLANNED_EXISTING_PROJECT` transitioning to `ACTIVE_EXISTING_PROJECT` when the first runtime foundation commit lands.
 
-Before work:
-- read project instructions and latest checkpoint
-- inspect Git status, recent commits, active PRs/issues
-- inspect architecture/docs/ADRs
-- inspect relevant code and tests
+Do not restart an existing project, discard working architecture or overwrite existing plans merely because a different implementation looks cleaner.
+
+## 3. Actual-state authority
+
+When evidence conflicts, actual state authority is:
+
+1. repository/application code
+2. actual database/schema/configuration
+3. observed execution/runtime behavior
+4. executed test evidence
+5. CI/CD evidence
+6. VCS history
+7. approved documentation/ADRs
+8. durable project state/checkpoint/Linear
+9. previous AI conversation
+
+Official external documentation remains authoritative for current provider/framework/standard behavior, but does not prove Brovexa implementation state.
+
+Conversation memory is never implementation evidence.
+
+## 4. Start/resume and capability declaration
+
+Before substantial work:
+- read latest checkpoint and approved scope
+- inspect current branch/revision/PR and recent relevant history
+- inspect relevant code/tests/docs/ADRs
+- inspect VCS status when a working copy is available
+- inspect migrations/schema/runtime when available
 - identify dependencies, consumers, integrations and affected data
-- verify available commands/environments
-- verify previous work actually exists
+- declare which capabilities are actually available: repo/filesystem, terminal, DB, tests, VCS, CI, deployment, planner, internet/research
 
-On resume, re-run relevant validation when state may have changed.
+Remote GitHub state does not prove local working-copy cleanliness. Uncommitted/staged/untracked/local runtime/DB state is `UNKNOWN` until observed.
 
-## 4. Research discipline
+## 5. Plan ↔ Reality tracking
 
-When a technical behavior depends on current external facts, verify primary/official sources first: framework/API docs, OWASP, NIST, standards, provider policies and compatibility notes.
+For planned functionality use exactly:
 
-Record material external decisions in project docs/ADRs. Never claim research or verification that was not actually performed.
+- `NOT STARTED`
+- `PARTIALLY IMPLEMENTED`
+- `IMPLEMENTED BUT NOT VERIFIED`
+- `VERIFIED`
+- `DIFFERS FROM PLAN`
+- `UNKNOWN`
 
-## 5. Architecture before implementation
+For implemented behavior, documentation state is separately:
 
-Before substantial change:
-- map dependencies and consumers
-- identify existing abstractions
-- document **Affected → Unaffected → Risk → Migration → Rollback → Verification**
-- choose the smallest durable implementation
+- `DOCUMENTED`
+- `PARTIALLY DOCUMENTED`
+- `UNDOCUMENTED`
+- `OBSOLETE`
+- `UNKNOWN PURPOSE`
 
-Do not introduce a package, framework, cache, queue, database, model provider, microservice or architectural layer merely because it is fashionable.
+Never mark a feature complete because a plan exists.
 
-## 6. Preserve existing work
+## 6. Existing-project preservation
 
-Do not unnecessarily rewrite, rename, delete, replace, or break working behavior. Breaking changes require explicit rationale, affected consumers, migration, rollback and verification.
+Use:
 
-## 7. Brovexa source-policy gate
+**Inspect → Baseline → Audit Existing Plan → Compare Plan With Reality → Identify Gaps → Amend Plan → Preserve Existing Work → Continue Safely**.
 
-Every external business-data source must have a source policy contract defining:
-- source and owner
-- approved access method/API
-- allowed purposes
-- field-level storage/retention/cache rules
-- attribution requirements
+Do not:
+- rebuild from zero without documented necessity
+- rewrite working code only for stylistic consistency
+- overwrite unknown uncommitted work
+- discard established VCS/review/release workflows
+- perform unrelated repository-wide cleanup during feature work
+
+## 7. Gap classification
+
+Clearly necessary plan additions are classified:
+
+- `CORRECTION`
+- `COMPLETION`
+- `HARDENING`
+- `OPTIMIZATION`
+- `NEW PRODUCT SCOPE`
+
+`NEW PRODUCT SCOPE` requires an appropriate product/milestone approval unless already explicitly authorized.
+
+## 8. Durable project memory
+
+Brovexa reuses its existing durable system rather than creating a duplicate `.ai/` tree:
+
+- `docs/CHECKPOINT.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/M00_COMPLETENESS_MATRIX.md`
+- `docs/CAPABILITY_TRACEABILITY_MATRIX.md`
+- architecture/module/security/operations docs
+- Linear issues/milestones/status updates
+- Git/PR history
+
+Create additional state files only when they own a distinct responsibility and reduce, rather than increase, drift.
+
+## 9. Documentation-first module development
+
+For every substantial new module or major feature use:
+
+**Understand → Research → Document → Self-Audit → Approval → Development**.
+
+Module specifications cover as applicable:
+- identity/purpose/objective/actors/dependencies/non-goals
+- pages/forms/tables/actions/states/responsive/accessibility
+- server-authoritative permissions
+- entities/fields/constraints/indexes/ownership/tenant/deletion/retention/audit/migration
+- triggers/preconditions/validation/state changes/events/jobs/notifications/failure/retry/cancel/recovery/concurrency
+- integrations/auth/timeouts/retries/rate limits/idempotency
+- security/observability/performance/tests/rollback/acceptance criteria
+
+## 10. Every option is a contract
+
+Every meaningful field/setting/toggle/status/permission/preference/automation option defines where relevant:
+
+name, purpose, type, allowed values, default, requiredness, validation, bounds, visibility, permission, storage, runtime behavior, dependencies/conflicts, side effects, fallback/error behavior, security/compliance, API representation, UI representation and tests/evals.
+
+Do not intentionally ship undocumented product options.
+
+## 11. Negative requirements
+
+Important specifications define both allowed and forbidden behavior. Security-sensitive negative requirements become automated tests where practical.
+
+## 12. Brovexa source-policy gate
+
+Every external business-data source must have a versioned SourcePolicy/SourceCapability contract defining:
+- source/owner/access method
+- allowed purpose
+- field-level storage/cache/retention/export
+- attribution
 - geography restrictions
 - quota/rate limits
 - refresh/deletion requirements
-- robots/contract constraints where relevant
-- policy/terms version and review date
+- robots/contract constraints where applicable
+- terms/policy version/review owner
 
-A connector cannot be enabled until its policy contract and enforcement tests exist.
+A connector cannot be enabled until its contract and enforcement tests exist.
 
-Provider-derived content cannot be copied into canonical storage when source terms prohibit it.
+`Internet` is never an unrestricted connector.
 
-## 8. Facts, evidence and inference separation
+## 13. Facts, evidence, inference and memory
 
-Canonical facts, source evidence and AI inference are separate records.
+Canonical facts, source evidence, AI inference and AI memory are separate concepts.
 
-Every material AI-derived claim must carry:
-- evidence IDs/source references
-- observed-at timestamp
-- confidence
-- model/rule version
-- prompt/template version where applicable
-- verification state
+Material AI claims require evidence/source references, observed/fetched timestamps, confidence, model/rule/prompt versions and verification state.
 
-Unsupported inference cannot silently become a verified fact.
+LLM/chat context is transient compute input, not canonical job state or durable memory.
 
-## 9. Untrusted-content and prompt-injection defense
+## 14. Untrusted external content
 
-Fetched webpages, documents, listings, reviews and external text are **untrusted data, never instructions**.
+Fetched webpages/documents/listings/reviews/social/search content are untrusted data, never instructions.
 
-Requirements:
-- retrieved content cannot override system/tool policy
-- active content is isolated/stripped as appropriate
-- tool arguments are validated independently
-- fetchers use network egress controls and SSRF protections
-- URLs/redirects are normalized and bounded
-- secrets are never exposed to content-processing prompts
-- agents use least-privilege tools
-- adversarial prompt-injection/tool-manipulation evals are mandatory
+Use least-privilege tools, independently validated tool arguments, SSRF-safe egress/URL handling, secret isolation and adversarial prompt/tool-injection evals.
 
-## 10. AI model governance
+## 15. AI Agent governance
 
-Every production AI task must define:
-- purpose
-- allowed inputs/outputs
-- structured output schema
-- deterministic pre/post validation
-- model/provider choice or abstraction
-- timeout/retry/fallback behavior
-- token/cost budget
-- confidence/review thresholds
-- versioned eval set and release threshold
-- model/prompt version tracking
-- regression policy
+Every production AgentDefinition specifies:
+- purpose/non-goals
+- input/output schemas
+- allowed tools/sources
+- memory read/propose/commit scope
+- autonomy tier
+- model/provider + fallback policy
+- prompt/skill/context versions
+- token/search/API/credit/cost/runtime/concurrency budgets
+- validators
+- evidence/confidence/review thresholds
+- eval suite/release threshold
+- owner/change/rollback
 
-A material model/prompt change cannot ship silently without evaluation.
+Models reason and propose; deterministic services enforce permissions, policy, budgets, billing and canonical mutations.
 
-## 11. AI evaluation requirements
+No unrestricted tool/memory agent is permitted.
 
-Maintain versioned evals for:
-- entity matching/deduplication
-- website classification
-- signal extraction
-- evidence-to-claim grounding
-- opportunity classification
-- lead-score calibration
-- multilingual behavior
-- contradictory-source handling
-- unsupported-claim/hallucination rate
-- prompt-injection resistance
+## 16. AI evaluation
 
-Record evaluation results as release evidence.
+Maintain versioned golden/regression/adversarial evals for entity resolution, website classification, signals, evidence grounding, opportunities, lead scoring/calibration, multilingual behavior, contradictions, hallucinations, prompt injection, tenant isolation, tool permissions and memory poisoning.
 
-## 12. Human approval boundaries
+Zero-tolerance release failures include cross-tenant leakage, suppression/policy/hard-budget bypass, unapproved tools/sources and fabricated canonical/external success.
 
-Until explicitly changed by a later approved milestone:
-- AI may discover, classify, rank and draft
-- AI may not autonomously send bulk external outreach
-- AI may not override suppression/opt-out/compliance decisions
-- AI may not permanently merge ambiguous entities outside configured confidence/review rules
+## 17. Human approval and approval scope
 
-High-impact or irreversible actions require human review or explicit policy.
+Approval scope is one of:
 
-## 13. Security baseline
+- `TASK`
+- `MODULE`
+- `MILESTONE`
+- `PHASE`
+- `PROJECT`
 
-Security is continuous, not a final-stage task.
+When documentation is sufficient, state becomes `AWAITING_DEVELOPMENT_APPROVAL`.
 
-Use:
-- OWASP ASVS 5.0 as the web application verification baseline appropriate to risk
-- NIST SSDF 1.1 for secure development practices
-- SLSA 1.2-aligned supply-chain provenance/hardening where practical
+Once a milestone is approved, normal reversible engineering decisions inside documented scope proceed autonomously. Ask again only for materially new product behavior, destructive data action, major breaking change, serious security/legal risk or privileged production action.
 
-Consider authentication, authorization, tenant isolation, sessions/tokens, input/output validation, injection, CSRF, XSS, SSRF, API abuse/rate limits, secrets, encryption, CORS, dependency/supply-chain risk, privilege escalation, data exposure, secure errors/logging and deployment configuration.
+Existing clearly authorized work does not require retroactive approval.
 
-Never hard-code credentials or weaken controls for convenience.
+## 18. Current authorization boundary
 
-## 14. Privacy, retention and direct-marketing controls
+The owner explicitly authorized implementation on 2026-08-30. Initial approval scope is **M01 — Platform Foundation & Developer Experience** plus completion of its necessary governance/readiness prerequisites.
 
-Do not assume one global outreach rule.
+This does **not** authorize:
+- payment-provider activation
+- production source connector enablement
+- unrestricted acquisition
+- autonomous external outreach
+- daily Market Scout activation
+- production deployment
+- destructive data actions
+- unresolved legal/vendor decisions outside M01
 
-Required concepts:
-- purpose limitation
-- data provenance
-- contact/business-type classification
-- lawful-basis/consent records where applicable
-- suppression/do-not-contact
-- unsubscribe/opt-out
-- frequency caps
-- retention TTL/deletion
-- export/access/correction workflows where applicable
-- audit trail
+Those remain behind their own readiness/approval gates.
 
-Compliance requirements must be configurable and reviewable by jurisdiction/source.
+## 19. Security baseline
 
-## 15. Data integrity
+Security is continuous. Use OWASP ASVS 5.0 appropriate to risk, NIST SSDF 1.1 and SLSA 1.2-aligned supply-chain controls where practical.
 
-For database changes assess:
-- schema and relationships
-- constraints/indexes
-- migrations/rollback
-- existing data
-- transactions/concurrency
-- uniqueness/nullability
-- referential integrity
-- retention/deletion
-- backup/recovery
+Always consider auth, authorization, tenant isolation, IDOR/BOLA, sessions/tokens, CSRF, XSS, injection, SSRF, uploads, CORS, abuse/rate limits, secrets, logging/data exposure, privilege escalation and dependencies.
 
-Prefer immutable evidence/history where auditability matters.
+Never hardcode credentials or weaken protections for convenience.
 
-## 16. Entity-resolution safety
+## 20. Privacy/outreach controls
 
-Business deduplication/merge is high impact.
+No universal global outreach assumption.
 
-Implement:
-- deterministic normalization
-- candidate generation
-- explainable match evidence
-- confidence thresholds
-- ambiguous review state
-- reversible merge/split history
-- provider identifier preservation
-- regression datasets
+Use purpose limitation, provenance, recipient/business classification, consent/lawful-basis records where applicable, suppression/DNC, opt-out, frequency caps, retention/deletion, correction/export and audit.
 
-Name similarity alone is never sufficient identity proof.
+Unknown jurisdiction/recipient/channel eligibility fails closed.
 
-## 17. Distributed jobs and resilience
+## 21. Data integrity
 
-Every external dependency can fail.
+Before data/schema changes assess relationships, constraints/indexes, uniqueness/nullability/defaults, transactions/concurrency, duplicate requests, existing records, migration/backfill, deletion/retention/audit and backup/recovery.
 
-Pipelines must address:
-- idempotency
-- timeouts
-- bounded retries with exponential backoff/jitter
-- rate limits
-- duplicate delivery
-- partial failures
-- stale data
-- dead-letter/review states
-- resumable checkpoints
-- per-source concurrency
-- cancellation
-- circuit breakers where useful
+Prefer `Expand → Migrate → Contract` for risky evolution where compatible coexistence is valuable.
 
-Retry policy must distinguish retryable from permanent errors.
+Entity merges are reversible/history-preserving; name similarity alone is not identity proof.
 
-## 18. Cost and quota engineering
+## 22. Small-batch rule
 
-Brovexa can generate substantial search/API/LLM cost.
+Before implementation estimate the expected change surface:
+- files/modules
+- APIs/contracts
+- migrations/data
+- dependencies
+- configuration/CI
 
-Every connector/AI stage should expose:
-- request counts
-- quota use
-- estimated/actual cost
-- per-job/workspace/global budgets
-- concurrency limits
-- allowed cache/reuse behavior
-- early-stop rules
-- anomaly alerts/kill switches
+If the actual surface expands materially, stop and reassess scope/coupling/architecture before continuing.
 
-Cost optimization must never violate source policy or freshness requirements.
+Prefer one coherent reversible change at a time.
 
-## 19. Quality gates
+## 23. No unrelated cleanup
 
-Use the project's existing tooling.
+During feature work do not automatically reformat the repo, rename unrelated files, reorganize folders, upgrade unrelated dependencies, rewrite architecture, change unrelated APIs or fix all technical debt.
 
-Run applicable:
-- formatting
-- linting
-- type checking
-- compilation/build
-- unit/integration/API/E2E tests
-- migrations
-- dependency/security checks
-- AI evals
-- data-quality checks
-- production build
+Record unrelated improvements separately.
 
-If a required check cannot run, record what, why, the resulting risk and the next verification action.
+## 24. Safe parallel development
 
-## 20. Test strategy
+Classify work packages:
 
-Test by risk, not by coverage theater.
+- `PARALLEL_SAFE`
+- `COORDINATED_PARALLEL`
+- `SERIALIZE`
+- `BLOCKED`
 
-Cover happy path, invalid input, boundaries, empty states, auth/permissions, errors, concurrency, network failures, rate limits, dependency/database failures, retries, recovery, idempotency and regressions.
+Migrations/schema, auth/authorization core, dependency manifests/lockfiles, global config, central routing, shared API types and CI/build configuration normally require coordination or serialization.
 
-Brovexa-specific tests also cover source-policy enforcement, evidence lineage, contradictory/stale data, multilingual extraction, entity ambiguity, prompt injection, score explanation, suppression and jurisdiction rules.
+## 25. Critical path
 
-Do not change a correct test merely to hide a defect.
+Prefer:
 
-## 21. Observability
+**Blocking Foundations → Shared Contracts → High-Risk Unknowns → Independent Features → Integration → Regression → Release**.
 
-Use structured logs, metrics, traces, correlation/run IDs, health checks and audit events. OpenTelemetry-compatible instrumentation is preferred when appropriate.
+Do not build large downstream systems on unverified assumptions.
 
-Track:
-- source latency/error/quota
-- queue depth/age/retries
-- data quality
-- AI latency/tokens/cost/eval quality
-- security events
-- compliance actions
-- job/business processing outcomes
-- client versions/health
+## 26. Distributed jobs and resilience
+
+Pipelines define idempotency, timeout, retry/backoff/jitter, rate limits, duplicate delivery, partial failure, stale data, DLQ/review, durable checkpoints, source concurrency, cancellation and circuit breakers where useful.
+
+PostgreSQL/canonical durable state remains authoritative; transport/queue state is not authoritative workflow truth.
+
+## 27. Cost and quota engineering
+
+Expose request counts, quota use, estimated/actual provider cost, per-job/workspace/global budgets, concurrency, allowed reuse, early-stop and anomaly/kill-switch controls.
+
+Research Credit and provider-cost accounting are idempotent; internal retry/replay cannot double-charge.
+
+## 28. Testing — two-speed verification
+
+### FAST GATE
+During small implementation batches run applicable targeted formatter/lint/typecheck, targeted unit/integration/API tests, affected build and relevant static/security checks.
+
+### FULL GATE
+At milestone/release boundaries run applicable broad unit/integration/E2E, migration, authorization/security, dependency, production-build, AI/data eval and recovery/regression checks.
+
+A pre-existing failure is labeled `BASELINE FAILURE`.
+
+A flaky test is a defect/risk; repeated reruns until green are not release evidence.
+
+Never modify a correct test merely to hide an implementation defect.
+
+## 29. Error handling
+
+Do not silently swallow important errors. Define safe behavior for timeouts, provider/DB/queue failures, malformed responses, duplicate requests, rate limits, partial success, stale data and retry exhaustion.
+
+Never expose secrets, internal stack traces, SQL, private paths or topology to end users.
+
+## 30. Performance
+
+Avoid N+1, unbounded queries/fan-out, missing pagination, oversized payloads, unnecessary provider calls, large blocking work and connection exhaustion.
+
+Do not add caching without a consistency/invalidation/source-policy model.
+
+## 31. Observability
+
+Production-critical behavior uses structured logs, correlation/request/run IDs, metrics, health/readiness, audit events and traces where useful.
+
+Track source latency/error/quota, queue depth/age, data quality, AI latency/tokens/cost/eval, security/compliance events, processing outcomes and client versions.
 
 Never log secrets or unnecessary personal data.
 
-## 22. Performance and scalability
+## 32. Dependency/supply-chain
 
-Avoid obvious N+1 queries, unbounded fan-out, oversized payloads and unbounded jobs. Use batching, pagination, streaming and async work where justified.
+Before dependencies verify need, maintenance, compatibility, security history, license and runtime/bundle impact.
 
-Measure before caching. Cache only when consistency and source terms permit it.
+Maintain lockfiles, automated dependency/security scanning, least-privilege CI tokens and SBOM/provenance where practical.
 
-## 23. Dependency and supply-chain management
+## 33. VCS workflow and protection
 
-Before adding dependencies verify need, maintenance status, compatibility, security history, license and runtime/bundle impact.
+Detect and preserve the repository's actual VCS/review/release workflow. Do not force GitHub terminology onto another VCS.
 
-Maintain lockfiles, automated dependency scanning, SBOM/release provenance where practical, least-privilege CI tokens and protected release workflows.
+For Git repositories prefer small coherent commits and short-lived branches/PRs where review is required. Do not add a permanent `develop` branch without a real need.
 
-## 24. CI/CD and environments
+Before implementation/release inspect where available:
+- branch protections/rulesets
+- required reviews/checks
+- CODEOWNERS
+- merge queue/train
+- tag/release rules
+- deployment approvals
 
-Development, test/staging and production have explicit configuration boundaries.
+Do not weaken protection to make AI faster. If protection state cannot be read, record `NOT VERIFIED` and use compensating controls.
 
-CI must be reproducible and fail closed on required gates.
+## 34. CI/CD and environments
 
-Production deployment requires:
-- migration/order plan
-- rollback plan
-- secrets/config verification
-- health checks
-- exact release/commit provenance
+Development/test/staging/production have explicit configuration boundaries.
 
-## 25. UX and accessibility
+CI is reproducible and fails closed on required gates.
 
-User-facing work must cover responsive behavior, keyboard/semantic accessibility, focus, loading, empty, error, retry, confirmation, disabled and network-failure states.
+M01 must establish an executable CI baseline before significant product code grows. No test/build/security claim is PASS without executed evidence.
 
-Evidence and AI confidence must be understandable rather than hidden behind an opaque score.
+Production deployment requires exact revision, migrations/order, config/secrets verification, health checks and rollback/recovery plan.
 
-## 26. Documentation and ADRs
+## 35. Release-state semantics
 
-Maintain useful architecture, setup, API, deployment, troubleshooting, security, database/migration, AI-eval, source-policy, compliance and runbook documentation.
+Distinguish:
 
-Material architectural decisions get ADRs containing context, decision, alternatives, consequences and rollback/migration considerations.
+- `BUILT`
+- `DEPLOYED`
+- `RELEASED`
+- `PRODUCTION VERIFIED`
 
-## 27. Git history
+Recovery classification:
 
-Commits are small, coherent, meaningful and reversible. Avoid meaningless messages. Never rewrite shared history without explicit instruction.
+- `SIMPLE ROLLBACK`
+- `ROLLBACK WITH COMPATIBILITY`
+- `FORWARD FIX PREFERRED`
+- `IRREVERSIBLE`
 
-Significant architectural reasoning belongs in ADRs/docs as well as Git history.
+Irreversible actions require stronger controls and explicit authorization.
 
-## 28. Checkpoints
+## 36. Incident mode
 
-After meaningful work record:
-- current state
+When production breaks:
+
+**Stabilize → Contain → Preserve Evidence → Diagnose → Recover → Verify → Root Cause → Prevent Recurrence**.
+
+Do not perform broad feature refactors during incident containment.
+
+## 37. STOP-THE-LINE
+
+Immediately stop affected work for unexpected data loss, cross-tenant leakage, credential exposure, destructive unknown commands, migration corruption, unexplained massive diffs, repository state that cannot be safely understood or critical security bypass.
+
+Preserve evidence and resume only after the risk is understood/contained.
+
+## 38. UX/accessibility
+
+User-facing work covers responsive behavior, keyboard/semantic accessibility, focus, loading, empty, error, retry, confirmation, disabled, partial/conflict, offline/network and permission states.
+
+Evidence/confidence/cost/freshness are explainable rather than hidden behind opaque AI scores.
+
+## 39. Documentation and ADRs
+
+Maintain useful architecture, module, setup, API, deployment, troubleshooting, security, database/migration, AI-eval, source-policy, compliance and runbook docs.
+
+Material architectural decisions include context, decision, alternatives, consequences and rollback/migration triggers.
+
+## 40. Definition of Ready
+
+A substantial feature is READY when product behavior, data/source policies, architecture/integration impact, security/privacy/compliance, acceptance criteria/tests/evals and migration/rollback are sufficiently defined.
+
+Desktop/browser work also requires permissions, local storage, runtime compatibility, updates/releases and cross-client contracts.
+
+Scheduled research requires source allowlist, evidence/output schemas, safe outputs, dedupe/no-spam and hard cost/runtime budgets.
+
+## 41. Definition of Done
+
+DONE requires applicable implementation, preserved intended behavior, acceptance criteria, executed tests/evals, security review, resilient failures, data integrity, performance/cost review, integration verification, observability, docs, VCS history, checkpoint, known limitations and understood recovery.
+
+Otherwise state is `PARTIALLY COMPLETE`.
+
+## 42. Final adversarial review
+
+Before production-ready claims attack the system from product, attacker, QA, DB, DevOps, support and future-maintainer perspectives. Verify hostile content, source lies/changes/outages, contradictory evidence, hallucinations, duplicate retries, retention rights, suppression/deletion, browser/desktop trust, scheduled-agent write scope and 3-AM recovery behavior.
+
+## 43. Checkpoints
+
+After meaningful work persist:
+- project/milestone/module/task state
+- branch/revision/PR
 - completed work
-- tests/checks/evals passed
+- tests/checks/evals executed
+- baseline failures/flakiness
 - unverified items
-- known failures/risks
-- decisions
-- files/components touched
-- current branch/commit/PR
-- next safe action
+- decisions/changed areas
+- risks/blockers
+- exact next safe action
 
-A checkpoint must allow another engineer/AI to resume without conversation memory.
+A new engineer/AI must be able to continue without previous chats.
 
-## 29. Definition of Ready
+## 44. End-of-task engineering report
 
-A substantial feature is READY only when:
-- product behavior is sufficiently defined
-- affected data/source policies are known
-- architecture/integration impact is understood
-- security/privacy/compliance implications are assessed
-- acceptance criteria and test strategy exist
-- AI eval requirements exist where material
-- migration/rollback behavior is understood where applicable
+Use concise fields:
 
-For desktop/browser features also require permission, local-storage, runtime-compatibility, update/release and cross-client contract decisions.
+**Status / Changed / Why / Research performed / Tests-checks / Security / Data-migration / Affected areas / VCS-commit / Documentation-memory / Known issues / Not verified / Next safe action**.
 
-For scheduled research automation also require source allowlist, evidence/output schemas, safe GitHub outputs, dedup/no-spam rules and explicit cost/runtime budgets.
+## 45. Multi-client rules
 
-## 30. Definition of Done
+Web, Desktop, Chrome/Chromium and Firefox are clients of one canonical platform. Use shared versioned contracts, server-authoritative business rules, capability negotiation, least-privilege extension permissions, secure browser/desktop auth, untrusted deep links and source/privacy-aware local storage. Content scripts never receive reusable backend credentials.
 
-DONE requires:
-- intended implementation complete
-- existing behavior preserved unless intentionally changed
-- automated tests/evals appropriate to risk
-- required quality/security checks executed
-- resilient errors/failures handled
-- data integrity considered
-- performance/cost implications understood
-- observability present
-- docs/ADRs/checkpoint updated
-- Git history meaningful
-- known limitations visible
+## 46. Continuous Market Intelligence rules
 
-Otherwise report **PARTIALLY COMPLETE**.
+The future scheduled scout may monitor approved public/authorized sources and propose evidence-backed improvements, but cannot implement code, auto-merge, enable connectors, change source policy/pricing, publish procedural memory or send outreach. It is budgeted, deduplicated and safe-output-only.
 
-## 31. Final adversarial review
+## 47. Current next-stage rule
 
-Before production-ready claims ask:
-- What can an attacker abuse?
-- What can a malicious webpage instruct the AI to do?
-- What if a source lies, changes schema, rate-limits or disappears?
-- What if two sources contradict each other?
-- What if the model hallucinates a buying signal?
-- What if retries duplicate work/outreach?
-- What data are we contractually/legally allowed to retain?
-- Can we explain every important lead recommendation?
-- Can we suppress/delete a contact correctly?
-- Can a browser page forge a desktop deep link or steal extension authority?
-- Can a scheduled research agent write more than its approved safe-output scope?
-- What fails at 3 AM, how is it detected, and how do we recover?
-
-Address important findings before release.
-
-## 32. Engineering report format
-
-At the end of meaningful work report:
-- What changed
-- Why
-- Research/decisions
-- Tests/checks/evals
-- Security/privacy/compliance considerations
-- Components affected
-- Commit/PR/checkpoint
-- Verified / Not Verified / Known Risk
-- Recommended next action
-
-## 33. Multi-client engineering rules
-
-Web, Desktop, Chrome/Chromium and Firefox are clients of one canonical Brovexa platform.
-
-Required:
-- shared versioned domain/API schemas
-- no duplicated canonical business rules in client applications
-- client capability negotiation/version compatibility
-- least-privilege extension permissions
-- secure browser/desktop authentication and token handling
-- deep links treated as untrusted navigation input, never authorization
-- local/offline storage governed by source/privacy retention rules
-- browser-runtime differences isolated behind tested adapters
-- signed/provenanced desktop and extension releases
-
-A page/content script must never receive reusable backend credentials or gain authority merely because it can invoke a client handoff.
-
-## 34. Continuous market-intelligence automation rules
-
-A scheduled research agent may monitor approved public/authorized sources and propose product improvements, but:
-- it may not implement product code from its own research
-- it may not auto-merge
-- it may not enable connectors or change source policy
-- it may not turn competitor claims into requirements without evidence/user-value analysis
-- it must deduplicate against existing backlog
-- every finding must include source/date/confidence
-- external research content remains untrusted input
-- per-run search/fetch/model/runtime budgets are mandatory
-- failures/partial coverage are explicit
-- only meaningful deltas produce write outputs
-
-GitHub write permissions are least-privilege and limited to approved safe outputs such as research issues/comments/artifacts or a dedicated research-state location.
-
-## 35. Development authorization
-
-Planning, audits, research, documentation and ADR preparation may proceed.
-
-Feature implementation, GitHub research-workflow enablement and product-code changes begin only after:
-1. M00 planning/architecture/compliance/eval gates are complete
-2. ABD-215 is explicitly approved
-3. the owner explicitly consents to development after reviewing the current planning artifacts
-
-No AI agent may infer this consent from earlier planning instructions.
+With explicit owner authorization now recorded, proceed through M01 in small verified batches. Later milestones remain governed by their documented readiness dependencies; unresolved provider/legal/commercial decisions are not silently treated as solved.
