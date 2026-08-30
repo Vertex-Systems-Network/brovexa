@@ -14,8 +14,10 @@ concurrency:
 jobs:
   quality:
     name: Build, typecheck, test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Foundation Slice 1 is lightweight and does not require Docker/service containers.
+    # ubuntu-slim is the lower-cost standard private-repository runner for this gate.
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
