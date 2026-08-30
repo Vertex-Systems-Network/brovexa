@@ -9,8 +9,10 @@ minimumReleaseAgeExclude:
   - zod@4.5.4
 
 # pnpm 11 blocks unreviewed dependency lifecycle scripts by default. The
-# Drizzle tooling graph requires esbuild's install script. Keep this matcher
-# exact to the versions currently locked; future esbuild versions require
+# Drizzle tooling graph requires esbuild's install script and the reviewed
+# BullMQ v5 graph requires msgpackr-extract's native-helper install script.
+# Keep matchers exact to currently locked versions so future releases require
 # another dependency review rather than inheriting trust automatically.
 allowBuilds:
   'esbuild@0.18.20 || 0.25.12 || 0.28.2': true
+  'msgpackr-extract@3.0.4': true
