@@ -11,6 +11,7 @@ const requiredPaths = [
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
+  '.gitignore',
   '.env.example',
   'docs/DEVELOPMENT.md',
   'apps/api/package.json',
@@ -19,6 +20,7 @@ const requiredPaths = [
   'packages/contracts/package.json',
   '.github/workflows/ci.yml',
   '.github/workflows/ci-self-hosted.yml',
+  'scripts/verify-foundation.test.mjs',
 ];
 
 for (const path of requiredPaths) {
@@ -79,7 +81,13 @@ if (failures.length === 0) {
   );
   check(typeof root.scripts?.quality === 'string', 'Root `quality` script is required.');
 
-  for (const command of ['verify:foundation', 'build', 'typecheck', 'test']) {
+  for (const command of [
+    'verify:foundation',
+    'verify:foundation:test',
+    'build',
+    'typecheck',
+    'test',
+  ]) {
     check(root.scripts?.quality?.includes(command), `Root quality script must include ${command}.`);
   }
 
