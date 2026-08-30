@@ -23,12 +23,17 @@ Approved scope: **M01 milestone**. Later production connectors, payments, unrest
 - shared-package production-build hardening: `43f8deccd50d74c0591586926d6047144fdc2580`
 - no-rewrite sibling reconciliation: `56c8844e1e891c29977ba74026103b7159746ee6`
 - TypeScript 7 NodeNext compatibility hardening: `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`
+- API local `.env` loading fix: `8c939b90f874dfc5f68afba1c64faae450ffd584`
+- self-hosted dispatcher hardening branch: `m01/self-hosted-dispatch-hardening`
+- self-hosted dispatcher hardening PR: #5, draft/unmerged, head `d409c19d56e9da502d25d9846f405b6ec44bfc35`
 
 Local developer working-copy/runtime/DB state remains `UNKNOWN` because repository work is being performed through remote GitHub tooling.
 
 ## Default-branch protection
 
 `main` is verified unprotected with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control and Linear `ABD-266` stays open through M01 FULL GATE.
+
+PR #5 is an additional least-privilege correction to the default-branch self-hosted dispatcher. It changes exactly one workflow file, is SELF REVIEWED and currently mergeable, but remains draft/unmerged/no-auto-merge until an explicit default-branch integration decision.
 
 ## M01 Foundation Slice 1
 
@@ -39,40 +44,38 @@ Implemented foundation includes monorepo metadata, exact runtime/dependency pins
 ### Static hardening findings resolved
 
 1. **Shared test emission** — config/contracts production builds use dedicated build tsconfigs excluding `*.spec.ts`/`*.test.ts`, while full tsconfigs retain test typechecking.
-2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used `moduleResolution: "Node"` (legacy node10). TypeScript 7 removes that mode. Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`.
-3. **Guardrail drift prevention** — the zero-dependency verifier enforces both corrections and contains negative regression coverage for legacy module resolution and test-inclusive production builds.
+2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used legacy `moduleResolution: "Node"`; Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`.
+3. **Guardrail drift prevention** — the zero-dependency verifier enforces production-build separation and modern NodeNext resolution with negative regression coverage.
+4. **Local environment mismatch** — the runbook instructed developers to copy `.env.example` to repo-root `.env`, while API scripts did not load that file. API `dev`/`start` now use Node 24 native `--env-file-if-exists=../../.env`. Real process environment variables continue to take precedence over file values.
+5. **Self-hosted ref overbreadth** — the merged default-branch dispatcher accepts arbitrary caller-supplied `m01/*` refs. Draft PR #5 removes that input and fixes checkout to `m01/platform-foundation`; integration remains pending explicit approval.
 
-No package `type: module` was introduced, so current application files remain CommonJS under NodeNext while modern Node/package-export resolution is modeled. NestJS 12 supports CommonJS applications on modern Node even though framework packages are ESM; migrating Brovexa application code to ESM is not required for this M01 correction.
+No package `type: module` was introduced, so current application files remain CommonJS under NodeNext while modern Node/package-export resolution is modeled.
 
 ## Verification evidence
 
 ### Hosted GitHub Actions — infrastructure blocked
 
-Latest hosted run on NodeNext hardening head `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`:
-- run `33307667165`
-- job `99246970413`
+Latest hosted run on current API-env head `8c939b90f874dfc5f68afba1c64faae450ffd584`:
+- run `33308458435`
+- job `99249082465`
 - conclusion `failure`
 - no executable steps returned
-- decoded log artifact unavailable (`BlobNotFound`)
 
 Classification remains `CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`.
 
-### Runner-independent NodeNext guardrail verification — PASS
+### Runner-independent structural verification — PASS within scope
 
-The exact `verify-foundation.mjs` logic from head `5e7318a...` was executed against an isolated invariant fixture using the available tool-container Node `22.16.0`.
+The zero-dependency foundation verifier/regression suite has been independently exercised against retrieved repository invariants. Positive foundation cases PASS and negative cases fail as expected for dependency-version drift, mutable Action tags, unsafe self-hosted auto-triggering, test-inclusive production builds and legacy TypeScript Node resolution.
 
-Executed:
-- `node --check scripts/verify-foundation.mjs` — PASS
-- positive NodeNext foundation fixture — PASS (`Brovexa foundation preflight passed.`)
-- negative mutation setting API `moduleResolution` back to `Node` — expected FAIL with `API TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`
-
-This verifies the zero-dependency structural guardrail behavior only. It is **not** TypeScript 7 compiler, dependency-install, Next/Nest build or Vitest evidence.
+Available tool-container Node is 22.x, so this is structural evidence only. It is **not** approved Node 24 dependency-install, TypeScript 7 compiler, Next/Nest build or Vitest execution evidence.
 
 ### Default-branch manual dispatcher
 
-`.github/workflows/m01-self-hosted-dispatch.yml` is present on `main` and ready for manual use on an approved `[self-hosted, Windows, X64]` runner. No approved runner execution has yet been verified.
+`.github/workflows/m01-self-hosted-dispatch.yml` is present on `main`. The currently merged form is manual-only, `contents: read`, targets `[self-hosted, Windows, X64]`, uses immutable Action pins and disables persisted checkout credentials.
 
-The current dispatcher accepts any `m01/*` target ref. Static security review identified this as broader than necessary for a self-hosted code-execution surface. A follow-up least-privilege CI-only PR should restrict the dispatcher to the exact authorized `m01/platform-foundation` ref before relying on it as the preferred verification route.
+Before relying on it as the preferred trusted-runner path, PR #5 should be explicitly integrated so the dispatcher can execute only `m01/platform-foundation` rather than arbitrary `m01/*` refs.
+
+No approved Windows self-hosted quality execution has been verified yet.
 
 ## Technology pins
 
@@ -110,8 +113,12 @@ The current dispatcher accepts any `m01/*` target ref. Static security review id
 
 ## Next safe action
 
-1. Create/review a CI-only default-branch hardening change that restricts self-hosted dispatch to `m01/platform-foundation`; do not merge it without the explicit integration decision required by the default-branch policy.
-2. Continue static foundation review while runner execution remains unavailable.
-3. If hosted allocation recovers or approved Windows runner is online, execute the real Node 24/pnpm quality path.
-4. Generate/commit `pnpm-lock.yaml`, switch installs to frozen mode, then obtain actual build/typecheck/Vitest evidence.
-5. Only after `ABD-259` passes may `ABD-260` PostgreSQL implementation begin.
+1. Obtain explicit default-branch integration approval for reviewed/mergeable draft PR #5; merge only against expected head `d409c19d56e9da502d25d9846f405b6ec44bfc35`.
+2. Bring an approved `[self-hosted, Windows, X64]` runner online and manually execute the default-branch dispatcher against the fixed `m01/platform-foundation` branch, or use GitHub-hosted CI if allocation recovers.
+3. Execute Node `24.20.0` + pnpm `11.23.0` dependency installation.
+4. Commit generated `pnpm-lock.yaml` and switch all CI installs to `pnpm install --frozen-lockfile`.
+5. Run build/typecheck/Vitest and fix only failures proven by logs.
+6. Then add lint/format/dependency/SBOM/security gates.
+7. Only after `ABD-259` passes may `ABD-260` PostgreSQL implementation begin.
+
+No later milestone capability should be pulled forward to bypass this verification gate.
