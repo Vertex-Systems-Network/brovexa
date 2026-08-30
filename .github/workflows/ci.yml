@@ -2,15 +2,13 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - 'm01/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,6 +30,7 @@ jobs:
         run: npm install --global pnpm@11.23.0
 
       - name: Install dependencies
+        # Temporary until the first verified install produces the committed pnpm-lock.yaml.
         run: pnpm install --no-frozen-lockfile
 
       - name: Run quality gate
