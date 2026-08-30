@@ -2,33 +2,26 @@ name: M01 Self-hosted Verification Dispatch
 
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: Trusted M01 branch/ref to verify
-        required: true
-        default: m01/platform-foundation
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: m01-self-hosted-${{ inputs.target_ref }}
+  group: m01-self-hosted-platform-foundation
   cancel-in-progress: false
 
 jobs:
   quality:
-    name: Verify trusted M01 ref on Windows x64
-    if: startsWith(inputs.target_ref, 'm01/')
+    name: Verify m01/platform-foundation on Windows x64
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 25
 
     steps:
-      - name: Checkout trusted target ref
+      - name: Checkout approved M01 foundation branch
         # actions/checkout v7.0.1 — immutable commit pin.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ inputs.target_ref }}
+          ref: m01/platform-foundation
           persist-credentials: false
           fetch-depth: 1
 
