@@ -22,7 +22,7 @@ Approved scope: **M01 milestone**. Later production connectors, payments, unrest
 - Foundation Slice 1 initial runtime: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
 - shared-package production-build hardening: `43f8deccd50d74c0591586926d6047144fdc2580`
 - no-rewrite sibling reconciliation: `56c8844e1e891c29977ba74026103b7159746ee6`
-- structural-verification checkpoint: `b2165889b63f8e07abcc6af8cbdcc53ec7796015`
+- TypeScript 7 NodeNext compatibility hardening: `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`
 
 Local developer working-copy/runtime/DB state remains `UNKNOWN` because repository work is being performed through remote GitHub tooling.
 
@@ -38,33 +38,41 @@ Implemented foundation includes monorepo metadata, exact runtime/dependency pins
 
 ### Static hardening findings resolved
 
-1. **Shared test emission** — config/contracts production builds now use dedicated build tsconfigs excluding `*.spec.ts`/`*.test.ts`, while full tsconfigs retain test typechecking.
-2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used `moduleResolution: "Node"` (legacy node10). TypeScript 7 removes that mode. Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`. No package `type: module` was introduced, so current CommonJS application semantics are preserved while modern Node/package-export resolution is modeled.
-3. Foundation guardrails now enforce both corrections and contain negative regression cases.
+1. **Shared test emission** — config/contracts production builds use dedicated build tsconfigs excluding `*.spec.ts`/`*.test.ts`, while full tsconfigs retain test typechecking.
+2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used `moduleResolution: "Node"` (legacy node10). TypeScript 7 removes that mode. Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`.
+3. **Guardrail drift prevention** — the zero-dependency verifier enforces both corrections and contains negative regression coverage for legacy module resolution and test-inclusive production builds.
 
-Official compatibility basis reviewed during this hardening:
-- TypeScript 7 removes legacy `node/node10` module resolution and recommends NodeNext/bundler as appropriate.
-- NestJS 12 core packages are ESM but explicitly support CommonJS applications on modern Node via `require(esm)`; migration of application code to ESM is optional.
+No package `type: module` was introduced, so current application files remain CommonJS under NodeNext while modern Node/package-export resolution is modeled. NestJS 12 supports CommonJS applications on modern Node even though framework packages are ESM; migrating Brovexa application code to ESM is not required for this M01 correction.
 
 ## Verification evidence
 
 ### Hosted GitHub Actions — infrastructure blocked
 
-Latest hosted run on prior checkpoint head `b2165889b63f8e07abcc6af8cbdcc53ec7796015`:
-- run `33307366554`
-- job `99246165648`
+Latest hosted run on NodeNext hardening head `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`:
+- run `33307667165`
+- job `99246970413`
 - conclusion `failure`
 - no executable steps returned
+- decoded log artifact unavailable (`BlobNotFound`)
 
 Classification remains `CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`.
 
-### Runner-independent structural verification
+### Runner-independent NodeNext guardrail verification — PASS
 
-Structural guardrails passed on the previous reconciled surface. The new NodeNext guardrail/fix is source-reviewed and must be re-executed against the new exact head after this commit. This is not a Node 24/package build PASS claim.
+The exact `verify-foundation.mjs` logic from head `5e7318a...` was executed against an isolated invariant fixture using the available tool-container Node `22.16.0`.
+
+Executed:
+- `node --check scripts/verify-foundation.mjs` — PASS
+- positive NodeNext foundation fixture — PASS (`Brovexa foundation preflight passed.`)
+- negative mutation setting API `moduleResolution` back to `Node` — expected FAIL with `API TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`
+
+This verifies the zero-dependency structural guardrail behavior only. It is **not** TypeScript 7 compiler, dependency-install, Next/Nest build or Vitest evidence.
 
 ### Default-branch manual dispatcher
 
 `.github/workflows/m01-self-hosted-dispatch.yml` is present on `main` and ready for manual use on an approved `[self-hosted, Windows, X64]` runner. No approved runner execution has yet been verified.
+
+The current dispatcher accepts any `m01/*` target ref. Static security review identified this as broader than necessary for a self-hosted code-execution surface. A follow-up least-privilege CI-only PR should restrict the dispatcher to the exact authorized `m01/platform-foundation` ref before relying on it as the preferred verification route.
 
 ## Technology pins
 
@@ -102,8 +110,8 @@ Structural guardrails passed on the previous reconciled surface. The new NodeNex
 
 ## Next safe action
 
-1. Advance branch to this NodeNext compatibility hardening commit.
-2. Re-run zero-dependency structural verifier/regression suite on the exact new head.
+1. Create/review a CI-only default-branch hardening change that restricts self-hosted dispatch to `m01/platform-foundation`; do not merge it without the explicit integration decision required by the default-branch policy.
+2. Continue static foundation review while runner execution remains unavailable.
 3. If hosted allocation recovers or approved Windows runner is online, execute the real Node 24/pnpm quality path.
 4. Generate/commit `pnpm-lock.yaml`, switch installs to frozen mode, then obtain actual build/typecheck/Vitest evidence.
 5. Only after `ABD-259` passes may `ABD-260` PostgreSQL implementation begin.
