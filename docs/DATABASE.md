@@ -1,6 +1,8 @@
 # Brovexa M01 Database Foundation
 
-Status: **ABD-260 in implementation**
+Status: **ABD-260 verified / Done**
+
+Final executable evidence: GitHub Actions run `33333195961`, PostgreSQL integration job `99315636396`.
 
 ## Technology baseline
 
@@ -54,6 +56,7 @@ The custom M01 migrator provides:
 - transaction-wrapped apply/rollback
 - PostgreSQL advisory lock during schema mutation
 - explicit reviewed down migration for rollback verification
+- caller-visible apply/rollback results only after successful transaction commit
 
 Drizzle Kit's `schema:generate` command writes generated review material to `packages/db/generated`. Generated SQL is not automatically production-approved; promote changes into the reviewed up/down migration contract after review.
 
@@ -66,13 +69,13 @@ Drizzle Kit's `schema:generate` command writes generated review material to `pac
 
 The GitHub integration job uses an ephemeral PostgreSQL 18.6 service database named `brovexa_m01_test`.
 
-The test proves:
+The verified test proves:
 
-- apply migration
+- migration apply
 - PostgreSQL major version 18
 - schema readiness probe
-- unique workspace slug constraint
-- workspace-preferences foreign key
+- unique workspace slug rejection using PostgreSQL SQLSTATE `23505` and exact constraint identity
+- workspace-preferences foreign-key rejection using SQLSTATE `23503` and exact constraint identity
 - cascade deletion
 - transaction rollback
 - explicit down migration
