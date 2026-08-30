@@ -32,7 +32,9 @@ Not authorized by this approval:
 - default-branch self-hosted dispatcher is merged on `main`
 - default-branch dispatcher merge commit: `eed4cbd16e987e254bd2b9758afb1817e3b60ceb`
 - Foundation Slice 1 initial runtime commit: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
-- latest foundation hardening commit pending branch ref update at this checkpoint: `43f8deccd50d74c0591586926d6047144fdc2580`
+- shared-package build hardening commit: `43f8deccd50d74c0591586926d6047144fdc2580`
+- checkpoint sibling commit: `e8d69d069af9831846d5e5371c1acfcf30c432f3`
+- explicit no-rewrite reconciliation merge: `8065cc05bf085d7966beeb8990c9eb19c5b18183`
 
 Local developer working-copy/uncommitted/runtime/DB state remains `UNKNOWN` because canonical repository writes are being performed through remote GitHub tooling.
 
@@ -69,11 +71,11 @@ Implemented:
 - default-branch integration policy
 
 Latest static review hardening:
-- shared package production builds now use separate `tsconfig.build.json`
+- shared package production builds use separate `tsconfig.build.json`
 - `*.spec.ts` and `*.test.ts` are excluded from emitted production `dist`
 - normal `tsconfig.json` remains the full source/test typecheck surface
-- foundation verifier enforces this build/test separation
-- regression suite contains a negative test that fails if a shared package build drifts back to the full test-inclusive tsconfig
+- foundation verifier enforces build/test separation
+- regression suite fails if a shared package build drifts back to the full test-inclusive tsconfig
 
 Explicitly not in Slice 1:
 - PostgreSQL/migrations
@@ -89,15 +91,15 @@ Explicitly not in Slice 1:
 
 ### Hosted GitHub Actions — infrastructure blocked
 
-The latest observed hosted run before this checkpoint remains pre-runner infrastructure failure: no runner allocation and no application steps. No build/typecheck/Vitest PASS exists.
+The latest observed hosted runs still fail before runner allocation with no application steps. No build/typecheck/Vitest PASS exists.
 
 ### Runner-independent structural verification
 
-Previous exact-head fixture execution proved the zero-dependency foundation verifier and regression suite PASS on the then-current foundation contract. The latest build/test-separation hardening has source-level guardrails and still requires re-execution evidence after branch ref advances.
+Previous exact-head fixture execution proved the zero-dependency foundation verifier and regression suite PASS on an earlier foundation contract. The latest build/test-separation hardening now includes source-level enforcement and must be re-executed on the reconciled head.
 
 ### Default-branch manual dispatcher
 
-`.github/workflows/m01-self-hosted-dispatch.yml` is now on `main`, manual-only, `contents: read`, targets `[self-hosted, Windows, X64]`, restricts target refs to `m01/*`, uses immutable Action pins, disables persisted checkout credentials, and runs the explicit `pnpm run quality` gate.
+`.github/workflows/m01-self-hosted-dispatch.yml` is on `main`, manual-only, `contents: read`, targets `[self-hosted, Windows, X64]`, restricts target refs to `m01/*`, uses immutable Action pins, disables persisted checkout credentials, and runs the explicit `pnpm run quality` gate.
 
 Workflow presence is not execution evidence. No matching approved runner execution has been verified yet.
 
@@ -133,11 +135,11 @@ Workflow presence is not execution evidence. No matching approved runner executi
 - local developer filesystem/runtime/database state remains UNKNOWN
 - exact hosted-runner allocation failure cause remains unverified
 - approved Windows x64 self-hosted quality run has not executed
-- latest shared-package build/test separation needs executable verification on the updated branch head
+- latest shared-package build/test separation needs executable verification on the reconciled branch head
 
 ## Next safe action
 
-1. Advance `m01/platform-foundation` to the latest reviewed hardening commit.
+1. Advance `m01/platform-foundation` to reconciliation commit `8065cc05bf085d7966beeb8990c9eb19c5b18183`.
 2. Re-run zero-dependency structural verification against that exact head.
 3. Use GitHub-hosted CI if runner allocation recovers, or manually dispatch the default-branch self-hosted verifier when an approved Windows x64 runner is online.
 4. Execute Node `24.20.0` + pnpm `11.23.0` dependency install.
