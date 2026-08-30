@@ -25,6 +25,9 @@ const fixtureFiles = [
   'apps/web/package.json',
   'packages/config/package.json',
   'packages/contracts/package.json',
+  'apps/api/src/health.controller.spec.ts',
+  'packages/config/src/index.spec.ts',
+  'packages/contracts/src/index.spec.ts',
   '.github/workflows/ci.yml',
   '.github/workflows/ci-self-hosted.yml',
   'scripts/verify-foundation.test.mjs',
@@ -84,6 +87,19 @@ try {
       'pnpm ci collision',
       runVerifier(root),
       'Do not define a root script named "ci"',
+    );
+  }
+
+  {
+    const root = makeFixture();
+    const packagePath = join(root, 'package.json');
+    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+    packageJson.devDependencies.turbo = '^2.10.3';
+    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    assertFailure(
+      'dependency range drift',
+      runVerifier(root),
+      'devDependencies.turbo must use an exact version or workspace: protocol',
     );
   }
 
