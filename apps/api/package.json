@@ -6,8 +6,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "dev": "node --watch dist/main.js",
-    "start": "node dist/main.js"
+    "dev": "node --env-file-if-exists=../../.env --watch dist/main.js",
+    "start": "node --env-file-if-exists=../../.env dist/main.js"
   },
   "dependencies": {
     "@brovexa/config": "workspace:*",
