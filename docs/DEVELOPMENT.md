@@ -1,6 +1,6 @@
 # Brovexa M01 Development & Verification Runbook
 
-Status: **M01 active / Foundation Slice 1 executable verification in progress**
+Status: **M01 active / Foundation Slice 1 final executable verification**
 
 Repository/runtime/test evidence outranks this document if they conflict.
 
@@ -9,7 +9,7 @@ Repository/runtime/test evidence outranks this document if they conflict.
 - Node.js `24.20.0`
 - pnpm `11.23.0`
 
-Use `.nvmrc` / `.node-version` and the root `packageManager`/`engines` metadata. Do not substitute another major runtime and report the result as equivalent verification.
+Use `.nvmrc` / `.node-version` and root `packageManager`/`engines` metadata. Do not substitute another major runtime and report it as equivalent verification.
 
 ## 2. Environment
 
@@ -20,7 +20,7 @@ Current non-secret variables:
 - `HOST` — default `0.0.0.0`
 - `PORT` — default `3001`, valid 1–65535
 
-The API loads repo-root `.env` through Node's native `--env-file-if-exists`. Already-set process environment variables remain authoritative. Never commit credentials/provider tokens/production secrets.
+The API loads repo-root `.env` through Node's native `--env-file-if-exists`. Existing process environment variables remain authoritative. Never commit credentials/provider tokens/production secrets.
 
 ## 3. Foundation preflight
 
@@ -35,17 +35,15 @@ These are zero-dependency structural/security guardrails. They do not replace bu
 
 ## 4. Dependency installation
 
-`pnpm-lock.yaml` is committed and is now mandatory.
-
-Canonical install:
+`pnpm-lock.yaml` is committed and mandatory.
 
 ```bash
 pnpm install --frozen-lockfile
 ```
 
-Non-frozen CI installation is a verification defect. The one-time bootstrap artifact/write path has been removed after the lockfile was persisted.
+Non-frozen CI installation is a verification defect. The one-time bootstrap artifact/write path was removed after lockfile persistence.
 
-`pnpm-workspace.yaml` keeps an explicit exact-version release-age exception for `zod@4.5.4`; do not broaden it to a package wildcard without dependency review.
+`pnpm-workspace.yaml` contains an explicit exact-version release-age exception for `zod@4.5.4`; do not broaden it to a package wildcard without dependency review.
 
 ## 5. FAST quality gate
 
@@ -59,7 +57,7 @@ Contract:
 Foundation preflight → Guardrail regression tests → Build → Typecheck → Tests
 ```
 
-The post-install portion is available separately as:
+Post-install checks only:
 
 ```bash
 pnpm run quality:runtime
@@ -69,31 +67,23 @@ Do not use bare `pnpm ci` as the Brovexa quality script; pnpm 11 owns that comma
 
 ## 6. Verified hosted baseline
 
-Hosted GitHub Actions has now executed successfully on Node `24.20.0` with pnpm `11.23.0`.
+Hosted GitHub Actions has executed successfully with Node `24.20.0` and pnpm `11.23.0`.
 
-Verified on run `33310396346` / job `99254280825`:
-- checkout and Node setup passed
-- foundation preflight passed
-- negative guardrail suite passed
-- dependency installation passed
-- Config/Contracts/API builds passed
-- Next.js 16.3.3 production build passed
-- TypeScript 7 typecheck passed across all workspace projects
-- Vitest passed: Contracts 4 tests, Config 6 tests, API health 1 test (11/11 total)
+Run `33310396346` / job `99254280825` proved:
+- foundation preflight and negative guardrails
+- dependency installation
+- Config/Contracts/API builds
+- Next.js 16.3.3 production build
+- TypeScript 7 typecheck across all workspace projects
+- Vitest: Contracts 4, Config 6, API health 1 — **11/11 tests passed**
 
-The bootstrap lockfile was then persisted by controlled run `33310860606`; current steady-state CI requires a clean frozen-lockfile run after bootstrap machinery removal.
+`pnpm-lock.yaml` was persisted through controlled run `33310860606` and steady-state bootstrap write permission was then removed.
 
-## 7. Development commands
+Run `33311396136` / job `99257019193` proved clean **frozen-lockfile reproducibility** plus build/typecheck/tests.
 
-Full primitives:
+## 7. API development loop
 
-```bash
-pnpm run build
-pnpm run typecheck
-pnpm run test
-```
-
-API source-to-runtime development loop:
+Canonical command:
 
 ```bash
 pnpm run dev:api
@@ -105,9 +95,30 @@ Equivalent package command:
 pnpm --filter @brovexa/api dev
 ```
 
-`scripts/dev-api.mjs` first compiles Config → Contracts → API. Only after all initial compiles pass does it start TypeScript watch compilers for all three projects plus Node runtime watch for `apps/api/dist/main.js`. Unexpected child exit is a failure; Ctrl+C shuts down supervised children.
+`scripts/dev-api.mjs` uses a deterministic dependency-free polling supervisor rather than platform-specific native filesystem watchers.
 
-The compile/build/test portion is verified on hosted CI. Source-to-runtime restart behavior still requires an explicit executable smoke check before `ABD-259` closes.
+Flow:
+
+```text
+Initial Config compile
+→ Initial Contracts compile
+→ Initial API compile
+→ Start last-good API runtime
+→ Poll Config/Contracts/API TypeScript sources + build tsconfigs every 500ms
+→ On change: rebuild Config → Contracts → API
+→ If rebuild succeeds: graceful runtime restart
+→ If rebuild fails: keep the last-good API runtime alive and retry on the next source change
+```
+
+This avoids known native watcher limitations in container/networked environments while preserving the same source-to-runtime development behavior on Linux and Windows.
+
+Live executable smoke command:
+
+```bash
+pnpm run verify:dev-api
+```
+
+The smoke starts the supervisor on an isolated test port, verifies `/health`, temporarily mutates the health version only in the CI working tree, verifies the rebuilt response, restores the source, verifies the restored response, and terminates the supervisor. The temporary mutation is never committed.
 
 Production-style API start after build:
 
@@ -125,8 +136,6 @@ pnpm --filter @brovexa/web dev
 
 `GET /health`
 
-Expected shape:
-
 ```json
 {
   "status": "ok",
@@ -142,17 +151,18 @@ The controller contract test is verified green on hosted CI.
 
 `.github/workflows/ci.yml` is the normal PR quality gate.
 
-Steady-state safety properties:
+Steady-state properties:
 - `contents: read`
-- checkout credentials are not persisted
+- checkout credentials not persisted
 - immutable Action commit pins
 - committed lockfile required
 - `pnpm install --frozen-lockfile`
-- runtime build/typecheck/test gate
+- build/typecheck/test gate
+- live API reload smoke gate
 - no bootstrap artifact upload
 - no CI write-back job
 
-Historical pre-runner failures are retained as baseline evidence, but hosted allocation recovered and real application verification has now executed.
+Historical pre-runner failures are baseline evidence only; hosted allocation recovered and executable application verification now runs normally.
 
 ## 10. Manual self-hosted fallback
 
@@ -175,9 +185,9 @@ Required contract:
 - immutable Action SHAs
 - `persist-credentials: false`
 - frozen-lockfile install
-- same preflight/runtime quality gates
+- same foundation/runtime quality contract
 
-A self-hosted PASS validates that runner path; it is not required to prove hosted runner health once hosted CI itself executes successfully, unless a Windows-specific behavior needs verification.
+A self-hosted PASS validates that runner path; it is not necessary to prove hosted runner health once hosted CI itself executes successfully unless a Windows-specific behavior is under investigation.
 
 ### Runner diagnostics / recovery
 
@@ -193,7 +203,7 @@ Read-only diagnostic command:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-runner.ps1
 ```
 
-The diagnostic script does not start/stop/install/remove/register/reconfigure the runner and does not print registration token material.
+The diagnostic script never starts/stops/installs/removes/registers/reconfigures the runner and never prints registration token material.
 
 ## 11. Failure classification
 
@@ -207,7 +217,7 @@ Use actual evidence:
 - `BASELINE FAILURE`
 - `FLAKY TEST DEFECT`
 
-Do not rerun until a failure happens to pass and hide the failing evidence.
+Do not rerun until a defect happens to pass and hide the failing evidence.
 
 ## 12. Foundation Slice 1 exit gate
 
@@ -220,10 +230,10 @@ Do not rerun until a failure happens to pass and hide the failing evidence.
 6. build passes;
 7. typecheck passes;
 8. tests pass;
-9. API development source-to-runtime restart smoke check passes;
+9. API development source-to-runtime reload smoke passes;
 10. checkpoint and Linear state are reconciled.
 
-After this gate, `ABD-260` PostgreSQL/migration implementation begins.
+After this gate, `ABD-260` PostgreSQL/migration implementation begins immediately.
 
 ## 13. Current non-scope
 
