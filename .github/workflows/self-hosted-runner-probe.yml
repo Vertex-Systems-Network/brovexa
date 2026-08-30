@@ -1,0 +1,26 @@
+name: Self-hosted Runner Probe
+
+on:
+  pull_request:
+    branches:
+      - planning/brovexa-baseline
+
+permissions: {}
+
+concurrency:
+  group: self-hosted-runner-probe-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Probe trusted Windows x64 runner
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'wpessential'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+
+    steps:
+      - name: Confirm runner allocation only
+        shell: pwsh
+        run: |
+          Write-Host "Brovexa self-hosted runner allocated."
+          Write-Host "No repository checkout or project code execution occurs in this probe."
