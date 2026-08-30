@@ -57,6 +57,9 @@ CREATE UNIQUE INDEX workspace_roles_single_owner_role_unique
   ON workspace_roles (workspace_id)
   WHERE kind = 'owner';
 --> statement-breakpoint
+CREATE INDEX workspace_roles_workspace_kind_idx
+  ON workspace_roles (workspace_id, kind);
+--> statement-breakpoint
 CREATE TABLE workspace_role_permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role_id uuid NOT NULL REFERENCES workspace_roles(id) ON DELETE CASCADE,
@@ -68,7 +71,7 @@ CREATE TABLE workspace_role_permissions (
 CREATE TABLE workspace_membership_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   membership_id uuid NOT NULL REFERENCES workspace_memberships(id) ON DELETE CASCADE,
-  role_id uuid NOT NULL REFERENCES workspace_roles(id) ON DELETE CASCADE,
+  role_id uuid NOT NULL REFERENCES workspace_roles(id) ON DELETE RESTRICT,
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT workspace_membership_roles_membership_role_unique UNIQUE (membership_id, role_id),
@@ -79,7 +82,7 @@ CREATE TABLE workspace_membership_roles (
   CONSTRAINT workspace_membership_roles_role_workspace_fk
     FOREIGN KEY (role_id, workspace_id)
     REFERENCES workspace_roles (id, workspace_id)
-    ON DELETE CASCADE
+    ON DELETE RESTRICT
 );
 --> statement-breakpoint
 CREATE INDEX workspace_membership_roles_workspace_idx
