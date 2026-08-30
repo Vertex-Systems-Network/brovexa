@@ -43,6 +43,13 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS authorization_audit_events CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_membership_roles CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_role_permissions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_roles CASCADE');
+  await pool.query('DROP TABLE IF EXISTS permissions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS workspace_memberships CASCADE');
+  await pool.query('DROP TABLE IF EXISTS users CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_effects CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_checkpoints CASCADE');
   await pool.query('DROP TABLE IF EXISTS job_work_units CASCADE');
@@ -60,7 +67,11 @@ try {
   await resetTestDatabase();
 
   const applied = await applyPendingMigrations(pool, migrationsDir);
-  assert.deepEqual(applied, ['0000_workspace_foundation', '0001_job_execution_foundation']);
+  assert.deepEqual(applied, [
+    '0000_workspace_foundation',
+    '0001_job_execution_foundation',
+    '0002_identity_authorization_foundation',
+  ]);
 
   const probe = await probeDatabase(pool);
   assert.equal(probe.serverMajor, 18, `Expected PostgreSQL 18.x, received ${probe.serverVersion}`);
@@ -114,26 +125,36 @@ try {
   );
   assert.equal(preferenceCount.rows[0]?.count, 0);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0001_job_execution_foundation');
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.equal((await applyPendingMigrations(pool, migrationsDir))[0], '0001_job_execution_foundation');
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
+    '0002_identity_authorization_foundation',
+  ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0001_job_execution_foundation');
+  assert.equal((await probeDatabase(pool)).schemaReady, false);
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0000_workspace_foundation');
 
   const afterRollback = await pool.query(`
     SELECT
       to_regclass('public.workspaces')::text AS workspaces,
+      to_regclass('public.users')::text AS users,
       to_regclass('public.job_runs')::text AS job_runs,
       to_regclass('public.job_work_units')::text AS job_work_units
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
+  assert.equal(afterRollback.rows[0]?.users, null);
   assert.equal(afterRollback.rows[0]?.job_runs, null);
   assert.equal(afterRollback.rows[0]?.job_work_units, null);
 
   const reapplied = await applyPendingMigrations(pool, migrationsDir);
-  assert.deepEqual(reapplied, ['0000_workspace_foundation', '0001_job_execution_foundation']);
+  assert.deepEqual(reapplied, [
+    '0000_workspace_foundation',
+    '0001_job_execution_foundation',
+    '0002_identity_authorization_foundation',
+  ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
   console.log('Brovexa PostgreSQL 18 migration/data-layer integration verification passed.');
