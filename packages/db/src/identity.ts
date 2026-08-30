@@ -70,7 +70,9 @@ const defaultRoles = [
   { key: 'member', displayName: 'Member', kind: 'custom' },
 ] as const;
 
-const roleCapabilities: Readonly<Record<(typeof defaultRoles)[number]['key'], readonly WorkspaceCapability[]>> = {
+type DefaultRoleKey = (typeof defaultRoles)[number]['key'];
+
+const roleCapabilities: Readonly<Record<DefaultRoleKey, readonly WorkspaceCapability[]>> = {
   owner: workspaceCapabilityValues,
   admin: [
     'workspace.read',
@@ -193,7 +195,6 @@ async function authorizeActor(
   if (!row?.has_capability) {
     throw new AuthorizationError('FORBIDDEN', `Missing required capability: ${capability}`);
   }
-
   return { isOwner: row.is_owner };
 }
 
@@ -265,7 +266,7 @@ export async function bootstrapWorkspaceOwner(
       );
     }
 
-    const roles = await client.query<{ id: string; key: 'owner' | 'admin' | 'member'; kind: string }>(
+    const roles = await client.query<{ id: string; key: DefaultRoleKey; kind: string }>(
       `SELECT id, key, kind
        FROM workspace_roles
        WHERE workspace_id = $1
@@ -389,9 +390,7 @@ export async function resolveWorkspaceAuthorization(
 
   const roleKeys = [...new Set(grants.rows.flatMap((grant) => (grant.role_key ? [grant.role_key] : [])))];
   const permissions = [
-    ...new Set(
-      grants.rows.flatMap((grant) => (grant.permission_key ? [grant.permission_key] : [])),
-    ),
+    ...new Set(grants.rows.flatMap((grant) => (grant.permission_key ? [grant.permission_key] : []))),
   ];
   const isOwner = grants.rows.some((grant) => grant.role_kind === 'owner');
 
@@ -537,7 +536,6 @@ export async function assignWorkspaceRole(
       resourceId: input.roleId,
       details: { membershipId: input.targetMembershipId, roleKey: roleRow.key },
     });
-
     return true;
   });
 }
@@ -550,7 +548,6 @@ export async function removeWorkspaceRoleAssignment(
   try {
     await withPgTransaction(pool, async (client) => {
       const actorState = await authorizeActor(client, actor, 'workspace.roles.manage');
-
       const assignment = await client.query<{
         assignment_id: string;
         target_user_id: string;
@@ -607,13 +604,28 @@ export async function setWorkspaceMembershipStatus(
 ): Promise<void> {
   try {
     await withPgTransaction(pool, async (client) => {
-      await authorizeActor(client, actor, 'workspace.members.manage');
-
-      const target = await client.query<{ user_id: string; status: WorkspaceMembershipStatus }>(
-        `SELECT user_id, status
-         FROM workspace_memberships
-         WHERE id = $1
-           AND workspace_id = $2
+      const actorState = await authorizeActor(client, actor, 'workspace.members.manage');
+      const target = await client.query<{
+        user_id: string;
+        status: WorkspaceMembershipStatus;
+        is_owner: boolean;
+      }>(
+        `SELECT
+           wm.user_id,
+           wm.status,
+           EXISTS (
+             SELECT 1
+             FROM workspace_membership_roles AS wmr
+             INNER JOIN workspace_roles AS wr
+               ON wr.id = wmr.role_id
+               AND wr.workspace_id = wmr.workspace_id
+             WHERE wmr.membership_id = wm.id
+               AND wmr.workspace_id = wm.workspace_id
+               AND wr.kind = 'owner'
+           ) AS is_owner
+         FROM workspace_memberships AS wm
+         WHERE wm.id = $1
+           AND wm.workspace_id = $2
          LIMIT 1
          FOR UPDATE`,
         [input.targetMembershipId, actor.workspaceId],
@@ -623,6 +635,12 @@ export async function setWorkspaceMembershipStatus(
         throw new AuthorizationError('RESOURCE_NOT_FOUND', 'Target membership was not found.');
       }
       if (row.status === input.status) return;
+      if (row.is_owner && !actorState.isOwner) {
+        throw new AuthorizationError(
+          'FORBIDDEN',
+          'Only an active owner may change an owner membership status.',
+        );
+      }
 
       await client.query(
         `UPDATE workspace_memberships
