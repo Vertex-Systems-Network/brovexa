@@ -29,7 +29,6 @@ function compileOnce(label, configPath) {
     console.error(`[dev:api] Failed to start ${label} compiler:`, result.error);
     process.exit(1);
   }
-
   if (result.status !== 0) {
     console.error(`[dev:api] Initial ${label} compile failed.`);
     process.exit(result.status ?? 1);
@@ -39,18 +38,42 @@ function compileOnce(label, configPath) {
 for (const [label, configPath] of projects) compileOnce(label, configPath);
 
 let shuttingDown = false;
+let shutdownPromise;
 const children = [];
 
+function waitForExit(child, graceMs = 2_000) {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+
+  return new Promise((resolveExit) => {
+    const onExit = () => {
+      clearTimeout(timer);
+      resolveExit();
+    };
+    child.once('exit', onExit);
+
+    const timer = setTimeout(() => {
+      child.removeListener('exit', onExit);
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      resolveExit();
+    }, graceMs);
+  });
+}
+
 function shutdown(code) {
-  if (shuttingDown) return;
+  if (shutdownPromise) return shutdownPromise;
+
   shuttingDown = true;
   process.exitCode = code;
 
   for (const child of children) {
-    if (!child.killed) child.kill();
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
   }
 
-  setTimeout(() => process.exit(code), 100);
+  shutdownPromise = Promise.allSettled(children.map((child) => waitForExit(child))).then(() => {
+    process.exit(code);
+  });
+
+  return shutdownPromise;
 }
 
 function startChild(label, args) {
@@ -59,19 +82,18 @@ function startChild(label, args) {
     env: process.env,
     stdio: 'inherit',
   });
-
   children.push(child);
 
   child.on('error', (error) => {
     if (shuttingDown) return;
     console.error(`[dev:api] ${label} failed to start:`, error);
-    shutdown(1);
+    void shutdown(1);
   });
 
   child.on('exit', (code, signal) => {
     if (shuttingDown) return;
     console.error(`[dev:api] ${label} exited unexpectedly (code=${String(code)}, signal=${String(signal)}).`);
-    shutdown(typeof code === 'number' && code !== 0 ? code : 1);
+    void shutdown(typeof code === 'number' && code !== 0 ? code : 1);
   });
 }
 
@@ -95,7 +117,7 @@ startChild('API runtime watcher', [
   'apps/api/dist/main.js',
 ]);
 
-process.on('SIGINT', () => shutdown(130));
-process.on('SIGTERM', () => shutdown(143));
+process.on('SIGINT', () => { void shutdown(130); });
+process.on('SIGTERM', () => { void shutdown(143); });
 
 console.log('[dev:api] Watching Config, Contracts, API and runtime. Press Ctrl+C to stop.');
