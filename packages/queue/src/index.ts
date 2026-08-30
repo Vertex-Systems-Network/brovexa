@@ -17,6 +17,7 @@ export interface WorkDeliveryEnvelope {
 }
 
 export type QueueConnectionOptions = ConnectionOptions;
+export type WorkQueue = Queue<WorkDeliveryEnvelope>;
 
 export interface TransportMetrics {
   waiting: number;
@@ -53,7 +54,7 @@ export function deliveryJobId(workUnitId: string, deliveryAttempt: number): stri
   return `wu-${workUnitId}-a${deliveryAttempt}`;
 }
 
-export function createWorkQueue(connection: ConnectionOptions): Queue<WorkDeliveryEnvelope> {
+export function createWorkQueue(connection: ConnectionOptions): WorkQueue {
   return new Queue<WorkDeliveryEnvelope>(BROVEXA_WORK_QUEUE, {
     prefix: BROVEXA_QUEUE_PREFIX,
     connection,
@@ -78,7 +79,7 @@ export function createWorkWorker(
 }
 
 export async function ensureWorkDelivery(
-  queue: Queue<WorkDeliveryEnvelope>,
+  queue: WorkQueue,
   envelope: WorkDeliveryEnvelope,
   delayMs = 0,
 ): Promise<boolean> {
@@ -106,7 +107,7 @@ export function isWorkDeliveryJob(job: Job<WorkDeliveryEnvelope>): boolean {
 }
 
 export async function getTransportMetrics(
-  queue: Queue<WorkDeliveryEnvelope>,
+  queue: WorkQueue,
 ): Promise<TransportMetrics> {
   const counts = await queue.getJobCounts('waiting', 'active', 'delayed', 'failed');
   return {
