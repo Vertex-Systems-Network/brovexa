@@ -16,15 +16,49 @@ const requiredPaths = [
   'packages/config/package.json',
   'packages/contracts/package.json',
   '.github/workflows/ci.yml',
+  '.github/workflows/ci-self-hosted.yml',
 ];
 
 for (const path of requiredPaths) {
   check(existsSync(path), `Missing required foundation path: ${path}`);
 }
 
+const verifyWorkflow = (workflow, label) => {
+  check(
+    /uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow),
+    `${label}: actions/checkout must be pinned to an immutable commit SHA.`,
+  );
+  check(
+    /uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow),
+    `${label}: actions/setup-node must be pinned to an immutable commit SHA.`,
+  );
+  check(
+    workflow.includes('permissions:\n  contents: read'),
+    `${label}: GitHub token permissions must remain contents: read.`,
+  );
+  check(
+    workflow.includes('pnpm run quality'),
+    `${label}: must execute the explicit root quality script.`,
+  );
+  check(
+    !workflow.includes('run: pnpm ci'),
+    `${label}: must not use bare \`pnpm ci\` as the quality gate.`,
+  );
+
+  const installCommand = existsSync('pnpm-lock.yaml')
+    ? 'pnpm install --frozen-lockfile'
+    : 'pnpm install --no-frozen-lockfile';
+
+  check(
+    workflow.includes(installCommand),
+    `${label}: install mode must match lockfile state: expected \`${installCommand}\`.`,
+  );
+};
+
 if (failures.length === 0) {
   const root = JSON.parse(read('package.json'));
-  const workflow = read('.github/workflows/ci.yml');
+  const hostedWorkflow = read('.github/workflows/ci.yml');
+  const selfHostedWorkflow = read('.github/workflows/ci-self-hosted.yml');
   const workspace = read('pnpm-workspace.yaml');
 
   check(root.private === true, 'Root package must remain private.');
@@ -46,28 +80,22 @@ if (failures.length === 0) {
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');
-  check(
-    /uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow),
-    'actions/checkout must be pinned to an immutable commit SHA.',
-  );
-  check(
-    /uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow),
-    'actions/setup-node must be pinned to an immutable commit SHA.',
-  );
-  check(
-    workflow.includes('permissions:\n  contents: read'),
-    'CI must keep default GitHub token permissions at contents: read.',
-  );
-  check(workflow.includes('pnpm run quality'), 'CI must execute the explicit root quality script.');
-  check(!workflow.includes('run: pnpm ci'), 'CI must not use bare `pnpm ci` as the quality gate.');
 
-  const installCommand = existsSync('pnpm-lock.yaml')
-    ? 'pnpm install --frozen-lockfile'
-    : 'pnpm install --no-frozen-lockfile';
+  verifyWorkflow(hostedWorkflow, 'Hosted CI');
+  verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI');
 
   check(
-    workflow.includes(installCommand),
-    `CI install mode must match lockfile state: expected \`${installCommand}\`.`,
+    selfHostedWorkflow.includes('workflow_dispatch:'),
+    'Self-hosted CI must remain manual-only.',
+  );
+  check(
+    !selfHostedWorkflow.includes('pull_request:'),
+    'Self-hosted CI must not auto-run on pull requests.',
+  );
+  check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI must not auto-run on push.');
+  check(
+    selfHostedWorkflow.includes('runs-on: [self-hosted, Windows, X64]'),
+    'Self-hosted CI must target the explicit Windows x64 self-hosted labels.',
   );
 }
 
