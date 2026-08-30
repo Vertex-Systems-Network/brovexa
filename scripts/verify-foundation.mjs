@@ -2,79 +2,38 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
 const read = (path) => readFileSync(path, 'utf8');
-const check = (condition, message) => {
-  if (!condition) failures.push(message);
-};
+const check = (condition, message) => { if (!condition) failures.push(message); };
 
-const packageManifests = [
-  'package.json',
-  'apps/api/package.json',
-  'apps/web/package.json',
-  'packages/config/package.json',
-  'packages/contracts/package.json',
-];
-
-const nodeTsconfigs = [
-  ['API', 'apps/api/tsconfig.json'],
-  ['Config', 'packages/config/tsconfig.json'],
-  ['Contracts', 'packages/contracts/tsconfig.json'],
-];
-
+const packageManifests = ['package.json','apps/api/package.json','apps/web/package.json','packages/config/package.json','packages/contracts/package.json'];
+const nodeTsconfigs = [['API','apps/api/tsconfig.json'],['Config','packages/config/tsconfig.json'],['Contracts','packages/contracts/tsconfig.json']];
 const requiredPaths = [
   ...packageManifests,
   ...nodeTsconfigs.map(([, path]) => path),
-  'apps/api/tsconfig.build.json',
-  'packages/config/tsconfig.build.json',
-  'packages/contracts/tsconfig.build.json',
-  'pnpm-lock.yaml',
-  'pnpm-workspace.yaml',
-  'turbo.json',
-  'tsconfig.base.json',
-  '.gitignore',
-  '.env.example',
-  'docs/DEVELOPMENT.md',
-  'apps/api/src/main.ts',
-  'apps/api/src/health.controller.spec.ts',
-  'packages/config/src/index.spec.ts',
-  'packages/contracts/src/index.spec.ts',
-  '.github/workflows/ci.yml',
-  '.github/workflows/ci-self-hosted.yml',
-  'scripts/dev-api.mjs',
-  'scripts/verify-foundation.test.mjs',
+  'apps/api/tsconfig.build.json','packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json',
+  'pnpm-lock.yaml','pnpm-workspace.yaml','turbo.json','tsconfig.base.json','.gitignore','.env.example','docs/DEVELOPMENT.md',
+  'apps/api/src/main.ts','apps/api/src/health.controller.spec.ts','packages/config/src/index.spec.ts','packages/contracts/src/index.spec.ts',
+  '.github/workflows/ci.yml','.github/workflows/ci-self-hosted.yml','scripts/dev-api.mjs','scripts/verify-foundation.test.mjs',
 ];
-
-for (const path of requiredPaths) {
-  check(existsSync(path), `Missing required foundation path: ${path}`);
-}
+for (const path of requiredPaths) check(existsSync(path), `Missing required foundation path: ${path}`);
 
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-
 function verifyDependencyPins(path, manifest) {
-  for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+  for (const section of ['dependencies','devDependencies','optionalDependencies']) {
     for (const [name, spec] of Object.entries(manifest[section] ?? {})) {
-      check(
-        spec.startsWith('workspace:') || exactVersion.test(spec),
-        `${path}: ${section}.${name} must use an exact version or workspace: protocol, found ${spec}.`,
-      );
+      check(spec.startsWith('workspace:') || exactVersion.test(spec), `${path}: ${section}.${name} must use an exact version or workspace: protocol, found ${spec}.`);
     }
   }
 }
-
 function verifyNodeTsconfig(name, path) {
   const config = JSON.parse(read(path));
-  const moduleKind = String(config.compilerOptions?.module ?? '').toLowerCase();
-  const resolution = String(config.compilerOptions?.moduleResolution ?? '').toLowerCase();
-  check(moduleKind === 'nodenext', `${name} TypeScript module must be NodeNext for the pinned TypeScript 7 / modern Node runtime.`);
-  check(resolution === 'nodenext', `${name} TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`);
+  check(String(config.compilerOptions?.module ?? '').toLowerCase() === 'nodenext', `${name} TypeScript module must be NodeNext for the pinned TypeScript 7 / modern Node runtime.`);
+  check(String(config.compilerOptions?.moduleResolution ?? '').toLowerCase() === 'nodenext', `${name} TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`);
 }
-
 function verifyBuildExcludes(name, manifest, path) {
   check(manifest.scripts?.build === 'tsc -p tsconfig.build.json', `${name} package production build must use tsconfig.build.json.`);
-  const config = JSON.parse(read(path));
-  const excludes = new Set(config.exclude ?? []);
+  const excludes = new Set(JSON.parse(read(path)).exclude ?? []);
   check(excludes.has('src/**/*.spec.ts') && excludes.has('src/**/*.test.ts'), `${name} production build must exclude spec/test source files.`);
 }
-
 function verifyWorkflow(workflow, label) {
   check(/uses:\s*actions\/checkout@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/checkout must be pinned to an immutable commit SHA.`);
   check(/uses:\s*actions\/setup-node@[0-9a-f]{40}\b/.test(workflow), `${label}: actions/setup-node must be pinned to an immutable commit SHA.`);
@@ -116,22 +75,19 @@ if (failures.length === 0) {
   check(root.scripts?.['dev:api'] === 'node scripts/dev-api.mjs', 'Root dev:api script must use the dependency-free API supervisor.');
   check(apiPackage.scripts?.dev === 'node ../../scripts/dev-api.mjs', 'API dev script must use the shared API supervisor.');
 
-  for (const [name, manifest] of [['API', apiPackage], ['Config', configPackage], ['Contracts', contractsPackage]]) {
-    check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
-  }
-
+  for (const [name, manifest] of [['API',apiPackage],['Config',configPackage],['Contracts',contractsPackage]]) check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
   verifyBuildExcludes('API', apiPackage, 'apps/api/tsconfig.build.json');
   verifyBuildExcludes('Config', configPackage, 'packages/config/tsconfig.build.json');
   verifyBuildExcludes('Contracts', contractsPackage, 'packages/contracts/tsconfig.build.json');
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');
-  check(workspace.includes("minimumReleaseAgeExclude:\n  - 'zod@4.5.4'"), 'pnpm workspace must explicitly document the exact zod@4.5.4 release-age exception used by the locked bootstrap.');
+  check(/minimumReleaseAgeExclude:\s*\n\s*-\s*zod@4\.5\.4\b/.test(workspace), 'pnpm workspace must explicitly document the exact zod@4.5.4 release-age exception used by the locked bootstrap.');
   check(gitignore.includes('.env'), '.gitignore must exclude local .env files.');
   check(gitignore.includes('!.env.example'), '.gitignore must explicitly allow the secrets-free .env.example template.');
 
-  const exampleKeys = envExample.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#')).map((line) => line.split('=', 1)[0]);
-  const allowedFoundationKeys = new Set(['NODE_ENV', 'HOST', 'PORT']);
+  const exampleKeys = envExample.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#')).map((line) => line.split('=',1)[0]);
+  const allowedFoundationKeys = new Set(['NODE_ENV','HOST','PORT']);
   for (const key of exampleKeys) check(allowedFoundationKeys.has(key), `.env.example contains an unapproved Foundation Slice 1 key: ${key}`);
   for (const key of allowedFoundationKeys) check(exampleKeys.includes(key), `.env.example is missing ${key}.`);
   check(!/(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|ACCESS_KEY)\s*=\s*\S+/i.test(envExample), '.env.example must not contain credential-like values.');
@@ -141,9 +97,7 @@ if (failures.length === 0) {
   check(developmentRunbook.includes('reference mirror'), 'Development runbook must distinguish the branch-local self-hosted workflow as a reference mirror.');
   check(developmentRunbook.includes('pnpm run dev:api'), 'Development runbook must document the canonical API development loop.');
 
-  for (const configPath of ['packages/config/tsconfig.build.json', 'packages/contracts/tsconfig.build.json', 'apps/api/tsconfig.build.json']) {
-    check(apiDevSupervisor.includes(configPath), `API dev supervisor must compile/watch ${configPath}.`);
-  }
+  for (const path of ['packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json','apps/api/tsconfig.build.json']) check(apiDevSupervisor.includes(path), `API dev supervisor must compile/watch ${path}.`);
   check(apiDevSupervisor.includes("'--watch'"), 'API dev supervisor must use Node/TypeScript watch mode.');
   check(apiDevSupervisor.includes("'--env-file-if-exists=.env'"), 'API dev supervisor runtime must load repo-root .env safely.');
 
@@ -170,5 +124,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-
 console.log('Brovexa foundation preflight passed.');
