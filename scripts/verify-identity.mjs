@@ -39,6 +39,15 @@ function findPostgresError(error) {
   return null;
 }
 
+function expectPostgresCode(expectedCode) {
+  return (error) => {
+    const postgresError = findPostgresError(error);
+    assert.ok(postgresError, `Expected nested PostgreSQL error ${expectedCode}.`);
+    assert.equal(postgresError.code, expectedCode);
+    return true;
+  };
+}
+
 function expectPostgresConstraint(expectedCode, expectedConstraint) {
   return (error) => {
     const postgresError = findPostgresError(error);
@@ -118,6 +127,18 @@ try {
     userId: ownerB.id,
   });
 
+  await assert.rejects(
+    () => pool.query('DELETE FROM workspace_roles WHERE id = $1', [bootstrapA.ownerRoleId]),
+    expectPostgresCode('23503'),
+  );
+  await assert.rejects(
+    () =>
+      pool.query(`UPDATE workspace_roles SET kind = 'custom' WHERE id = $1`, [
+        bootstrapA.ownerRoleId,
+      ]),
+    expectPostgresConstraint('23514', 'workspace_owner_role_identity_immutable'),
+  );
+
   const ownerAContext = await resolveWorkspaceAuthorization(pool, {
     workspaceId: workspaceA,
     userId: ownerA.id,
@@ -184,6 +205,7 @@ try {
   });
   assert.equal(elevatedNonOwnerContext.isOwner, false);
   assert.ok(elevatedNonOwnerContext.permissions.includes('workspace.roles.manage'));
+  assert.ok(elevatedNonOwnerContext.permissions.includes('workspace.members.manage'));
 
   await assert.rejects(
     () =>
@@ -210,6 +232,15 @@ try {
       roleId: bootstrapA.ownerRoleId,
     }),
     true,
+  );
+
+  await assert.rejects(
+    () =>
+      setWorkspaceMembershipStatus(pool, elevatedNonOwnerContext, {
+        targetMembershipId: secondOwnerMembership.membershipId,
+        status: 'suspended',
+      }),
+    expectAuthorizationCode('FORBIDDEN'),
   );
 
   await removeWorkspaceRoleAssignment(pool, ownerAContext, {
