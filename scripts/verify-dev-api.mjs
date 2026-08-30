@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourcePath = resolve(repoRoot, 'apps/api/src/health.controller.ts');
-const packageManager = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const supervisorPath = resolve(repoRoot, 'scripts/dev-api.mjs');
 const port = 31337;
 const healthUrl = `http://127.0.0.1:${port}/health`;
 const initialVersion = '0.1.0';
@@ -44,7 +44,7 @@ async function waitForVersion(expectedVersion, label) {
     }
 
     if (child?.exitCode !== null && child?.exitCode !== undefined) {
-      throw new Error(`dev:api exited before ${label} (code=${child.exitCode}).\n${output}`);
+      throw new Error(`dev:api supervisor exited before ${label} (code=${child.exitCode}).\n${output}`);
     }
 
     await delay(pollMs);
@@ -64,7 +64,7 @@ async function stopChild() {
 }
 
 try {
-  child = spawn(packageManager, ['run', 'dev:api'], {
+  child = spawn(process.execPath, [supervisorPath], {
     cwd: repoRoot,
     env: {
       ...process.env,
@@ -77,17 +77,11 @@ try {
 
   child.stdout.on('data', (chunk) => { output += chunk.toString(); });
   child.stderr.on('data', (chunk) => { output += chunk.toString(); });
-
-  child.on('error', (error) => {
-    output += `\nspawn error: ${error instanceof Error ? error.message : String(error)}\n`;
-  });
+  child.on('error', (error) => { output += `\nspawn error: ${error instanceof Error ? error.message : String(error)}\n`; });
 
   await waitForVersion(initialVersion, 'initial API health response');
 
-  const mutatedSource = originalSource.replace(
-    `version: '${initialVersion}'`,
-    `version: '${reloadVersion}'`,
-  );
+  const mutatedSource = originalSource.replace(`version: '${initialVersion}'`, `version: '${reloadVersion}'`);
   await writeFile(sourcePath, mutatedSource);
   await waitForVersion(reloadVersion, 'source-to-runtime reload response');
 
