@@ -187,7 +187,7 @@ export const workspaceMembershipRoles = pgTable(
       .references(() => workspaceMemberships.id, { onDelete: 'cascade' }),
     roleId: uuid('role_id')
       .notNull()
-      .references(() => workspaceRoles.id, { onDelete: 'cascade' }),
+      .references(() => workspaceRoles.id, { onDelete: 'restrict' }),
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
