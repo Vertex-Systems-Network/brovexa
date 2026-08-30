@@ -152,7 +152,7 @@ try {
   {
     const root = makeFixture();
     const workflowPath = join(root, '.github/workflows/ci.yml');
-    const workflow = readFileSync(workflowPath, 'utf8').replace(/actions\/checkout@[0-9a-f]{40}/, 'actions/checkout@v7');
+    const workflow = readFileSync(workflowPath, 'utf8').replace(/actions\/checkout@[0-9a-f]{40}/g, 'actions/checkout@v7');
     writeFileSync(workflowPath, workflow);
     assertFailure('mutable GitHub Action tag', runVerifier(root), 'actions/checkout must be pinned to an immutable commit SHA.');
   }
