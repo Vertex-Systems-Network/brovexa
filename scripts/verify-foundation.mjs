@@ -14,8 +14,14 @@ const packageManifests = [
   'packages/contracts/package.json',
 ];
 
+const sharedBuildConfigs = [
+  ['Config', 'packages/config/tsconfig.build.json'],
+  ['Contracts', 'packages/contracts/tsconfig.build.json'],
+];
+
 const requiredPaths = [
   ...packageManifests,
+  ...sharedBuildConfigs.map(([, path]) => path),
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
@@ -78,6 +84,20 @@ const verifyDependencyPins = (path, manifest) => {
   }
 };
 
+const verifySharedBuild = (name, manifest, buildConfigPath) => {
+  check(
+    manifest.scripts?.build === 'tsc -p tsconfig.build.json',
+    `${name} package production build must use tsconfig.build.json.`,
+  );
+
+  const buildConfig = JSON.parse(read(buildConfigPath));
+  const excludes = new Set(buildConfig.exclude ?? []);
+  check(
+    excludes.has('src/**/*.spec.ts') && excludes.has('src/**/*.test.ts'),
+    `${name} production build must exclude spec/test source files.`,
+  );
+};
+
 if (failures.length === 0) {
   const manifests = Object.fromEntries(
     packageManifests.map((path) => [path, JSON.parse(read(path))]),
@@ -127,6 +147,9 @@ if (failures.length === 0) {
   ]) {
     check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
   }
+
+  verifySharedBuild('Config', configPackage, 'packages/config/tsconfig.build.json');
+  verifySharedBuild('Contracts', contractsPackage, 'packages/contracts/tsconfig.build.json');
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');

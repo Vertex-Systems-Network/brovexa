@@ -24,7 +24,9 @@ const fixtureFiles = [
   'apps/api/package.json',
   'apps/web/package.json',
   'packages/config/package.json',
+  'packages/config/tsconfig.build.json',
   'packages/contracts/package.json',
+  'packages/contracts/tsconfig.build.json',
   'apps/api/src/health.controller.spec.ts',
   'packages/config/src/index.spec.ts',
   'packages/contracts/src/index.spec.ts',
@@ -151,6 +153,19 @@ try {
       'mutable GitHub Action tag',
       runVerifier(root),
       'actions/checkout must be pinned to an immutable commit SHA.',
+    );
+  }
+
+  {
+    const root = makeFixture();
+    const packagePath = join(root, 'packages/contracts/package.json');
+    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+    packageJson.scripts.build = 'tsc -p tsconfig.json';
+    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    assertFailure(
+      'production build includes test sources',
+      runVerifier(root),
+      'Contracts package production build must use tsconfig.build.json.',
     );
   }
 

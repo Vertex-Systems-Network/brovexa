@@ -33,8 +33,7 @@ Not authorized by this approval:
 - default-branch dispatcher merge commit: `eed4cbd16e987e254bd2b9758afb1817e3b60ceb`
 - Foundation Slice 1 initial runtime commit: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
 - shared-package build hardening commit: `43f8deccd50d74c0591586926d6047144fdc2580`
-- checkpoint sibling commit: `e8d69d069af9831846d5e5371c1acfcf30c432f3`
-- explicit no-rewrite reconciliation merge: `8065cc05bf085d7966beeb8990c9eb19c5b18183`
+- checkpoint sibling commit: `347eedffa1fbaccadc2c3d3d4f314d9ac88f9ebf`
 
 Local developer working-copy/uncommitted/runtime/DB state remains `UNKNOWN` because canonical repository writes are being performed through remote GitHub tooling.
 
@@ -139,8 +138,8 @@ Workflow presence is not execution evidence. No matching approved runner executi
 
 ## Next safe action
 
-1. Advance `m01/platform-foundation` to reconciliation commit `8065cc05bf085d7966beeb8990c9eb19c5b18183`.
-2. Re-run zero-dependency structural verification against that exact head.
+1. Reconcile the current checkpoint branch head with shared-package build hardening without rewriting history.
+2. Re-run zero-dependency structural verification against that exact combined head.
 3. Use GitHub-hosted CI if runner allocation recovers, or manually dispatch the default-branch self-hosted verifier when an approved Windows x64 runner is online.
 4. Execute Node `24.20.0` + pnpm `11.23.0` dependency install.
 5. Commit generated `pnpm-lock.yaml` and switch CI to `pnpm install --frozen-lockfile`.
