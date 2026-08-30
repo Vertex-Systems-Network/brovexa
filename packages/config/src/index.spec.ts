@@ -21,4 +21,16 @@ describe('parseRuntimeEnvironment', () => {
   it('rejects an unsupported environment name', () => {
     expect(() => parseRuntimeEnvironment({ NODE_ENV: 'preview' })).toThrow();
   });
+
+  it('accepts an optional PostgreSQL URL and treats an empty value as unconfigured', () => {
+    expect(
+      parseRuntimeEnvironment({ DATABASE_URL: 'postgresql://brovexa:local@localhost:5432/brovexa' })
+        .DATABASE_URL,
+    ).toBe('postgresql://brovexa:local@localhost:5432/brovexa');
+    expect(parseRuntimeEnvironment({ DATABASE_URL: '' }).DATABASE_URL).toBeUndefined();
+  });
+
+  it('rejects a non-PostgreSQL DATABASE_URL', () => {
+    expect(() => parseRuntimeEnvironment({ DATABASE_URL: 'mysql://localhost/example' })).toThrow();
+  });
 });

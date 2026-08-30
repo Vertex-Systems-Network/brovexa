@@ -9,6 +9,17 @@ export const HealthResponseSchema = z.object({
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
+export const ReadinessResponseSchema = z.object({
+  status: z.literal('ready'),
+  database: z.object({
+    serverVersion: z.string().min(1),
+    serverMajor: z.literal(18),
+    schemaReady: z.literal(true),
+  }),
+});
+
+export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>;
+
 export const ApiErrorSchema = z.object({
   code: z.string().min(1),
   message: z.string().min(1),
