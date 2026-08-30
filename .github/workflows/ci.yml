@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: 24.20.0
 
+      - name: Verify foundation contract
+        run: node scripts/verify-foundation.mjs
+
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.23.0
 
