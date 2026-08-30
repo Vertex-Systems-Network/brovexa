@@ -29,6 +29,7 @@ const requiredPaths = [
   ...packageManifests,
   ...nodeTsconfigs.map(([, path]) => path),
   ...sharedBuildConfigs.map(([, path]) => path),
+  'apps/api/tsconfig.build.json',
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
@@ -98,6 +99,7 @@ if (failures.length === 0) {
   const developmentRunbook = read('docs/DEVELOPMENT.md');
   const apiDevSupervisor = read('scripts/dev-api.mjs');
   const apiEntrypoint = read('apps/api/src/main.ts');
+  const apiBuildConfig = JSON.parse(read('apps/api/tsconfig.build.json'));
 
   for (const [path, manifest] of Object.entries(manifests)) verifyDependencyPins(path, manifest);
   for (const [name, path] of nodeTsconfigs) verifyNodeTsconfig(name, path);
@@ -121,6 +123,9 @@ if (failures.length === 0) {
 
   verifySharedBuild('Config', configPackage, 'packages/config/tsconfig.build.json');
   verifySharedBuild('Contracts', contractsPackage, 'packages/contracts/tsconfig.build.json');
+  const apiBuildExcludes = new Set(apiBuildConfig.exclude ?? []);
+  check(apiPackage.scripts?.build === 'tsc -p tsconfig.build.json', 'API production build must use tsconfig.build.json.');
+  check(apiBuildExcludes.has('src/**/*.spec.ts') && apiBuildExcludes.has('src/**/*.test.ts'), 'API production build must exclude spec/test source files.');
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
   check(workspace.includes('packages/*'), 'pnpm workspace must include packages/*.');
