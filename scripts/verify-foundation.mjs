@@ -98,10 +98,17 @@ if (failures.length === 0) {
   check(developmentRunbook.includes('.github/workflows/m01-self-hosted-dispatch.yml'), 'Development runbook must identify the default-branch self-hosted dispatcher.');
   check(developmentRunbook.includes('reference mirror'), 'Development runbook must distinguish the branch-local self-hosted workflow as a reference mirror.');
   check(developmentRunbook.includes('pnpm run dev:api'), 'Development runbook must document the canonical API development loop.');
+  check(developmentRunbook.includes('poll'), 'Development runbook must document deterministic source polling for the API dev loop.');
 
-  for (const path of ['packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json','apps/api/tsconfig.build.json']) check(apiDevSupervisor.includes(path), `API dev supervisor must compile/watch ${path}.`);
-  check(apiDevSupervisor.includes("'--watch'"), 'API dev supervisor must use Node/TypeScript watch mode.');
+  for (const path of ['packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json','apps/api/tsconfig.build.json']) check(apiDevSupervisor.includes(path), `API dev supervisor must compile ${path}.`);
+  check(apiDevSupervisor.includes('const pollIntervalMs = 500;'), 'API dev supervisor must use the bounded 500ms source polling interval.');
+  check(apiDevSupervisor.includes("'packages/config/src'"), 'API dev supervisor must poll Config source changes.');
+  check(apiDevSupervisor.includes("'packages/contracts/src'"), 'API dev supervisor must poll Contracts source changes.');
+  check(apiDevSupervisor.includes("'apps/api/src'"), 'API dev supervisor must poll API source changes.');
+  check(apiDevSupervisor.includes('setInterval(() => { void pollForChanges(); }, pollIntervalMs)'), 'API dev supervisor must continuously poll source snapshots.');
+  check(apiDevSupervisor.includes('keeping the last-good API runtime alive'), 'API dev supervisor must preserve the last-good runtime when reload compilation fails.');
   check(apiDevSupervisor.includes("'--env-file-if-exists=.env'"), 'API dev supervisor runtime must load repo-root .env safely.');
+  check(!apiDevSupervisor.includes("'--watch'"), 'API dev supervisor must not depend on platform-specific native watch mode.');
   check(apiDevSmoke.includes("'0.1.0-dev-reload'"), 'API reload smoke must verify a temporary source-to-runtime version mutation.');
   check(apiDevSmoke.includes('await writeFile(sourcePath, originalSource);'), 'API reload smoke must restore the original source in its cleanup path.');
 
