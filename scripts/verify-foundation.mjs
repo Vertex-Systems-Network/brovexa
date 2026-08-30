@@ -6,18 +6,25 @@ const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
-const requiredPaths = [
+const packageManifests = [
   'package.json',
+  'apps/api/package.json',
+  'apps/web/package.json',
+  'packages/config/package.json',
+  'packages/contracts/package.json',
+];
+
+const requiredPaths = [
+  ...packageManifests,
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
   '.gitignore',
   '.env.example',
   'docs/DEVELOPMENT.md',
-  'apps/api/package.json',
-  'apps/web/package.json',
-  'packages/config/package.json',
-  'packages/contracts/package.json',
+  'apps/api/src/health.controller.spec.ts',
+  'packages/config/src/index.spec.ts',
+  'packages/contracts/src/index.spec.ts',
   '.github/workflows/ci.yml',
   '.github/workflows/ci-self-hosted.yml',
   'scripts/verify-foundation.test.mjs',
@@ -59,14 +66,36 @@ const verifyWorkflow = (workflow, label) => {
   );
 };
 
+const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const verifyDependencyPins = (path, manifest) => {
+  for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+    for (const [name, spec] of Object.entries(manifest[section] ?? {})) {
+      check(
+        spec.startsWith('workspace:') || exactVersion.test(spec),
+        `${path}: ${section}.${name} must use an exact version or workspace: protocol, found ${spec}.`,
+      );
+    }
+  }
+};
+
 if (failures.length === 0) {
-  const root = JSON.parse(read('package.json'));
+  const manifests = Object.fromEntries(
+    packageManifests.map((path) => [path, JSON.parse(read(path))]),
+  );
+  const root = manifests['package.json'];
+  const apiPackage = manifests['apps/api/package.json'];
+  const configPackage = manifests['packages/config/package.json'];
+  const contractsPackage = manifests['packages/contracts/package.json'];
   const hostedWorkflow = read('.github/workflows/ci.yml');
   const selfHostedWorkflow = read('.github/workflows/ci-self-hosted.yml');
   const workspace = read('pnpm-workspace.yaml');
   const gitignore = read('.gitignore');
   const envExample = read('.env.example');
   const developmentRunbook = read('docs/DEVELOPMENT.md');
+
+  for (const [path, manifest] of Object.entries(manifests)) {
+    verifyDependencyPins(path, manifest);
+  }
 
   check(root.private === true, 'Root package must remain private.');
   check(root.packageManager === 'pnpm@11.23.0', 'Root packageManager must pin pnpm@11.23.0.');
@@ -89,6 +118,14 @@ if (failures.length === 0) {
     'test',
   ]) {
     check(root.scripts?.quality?.includes(command), `Root quality script must include ${command}.`);
+  }
+
+  for (const [name, manifest] of [
+    ['API', apiPackage],
+    ['Config', configPackage],
+    ['Contracts', contractsPackage],
+  ]) {
+    check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
   }
 
   check(workspace.includes('apps/*'), 'pnpm workspace must include apps/*.');
