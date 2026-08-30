@@ -36,15 +36,13 @@ $runnerServices = @(
 )
 
 if ($runnerServices.Count -eq 0) {
-    Write-Check 'Runner service registration' $false 'No Windows service matching actions.runner.* was found.'
+    Write-Check -Name 'Runner service registration' -Passed $false -Detail 'No Windows service matching actions.runner.* was found.'
     Set-DiagnosticFailure 2
 } else {
     foreach ($service in $runnerServices) {
         $running = $service.State -eq 'Running'
-        Write-Check \
-            "Runner service $($service.Name)" \
-            $running \
-            "State=$($service.State); StartMode=$($service.StartMode)"
+        $detail = "State=$($service.State); StartMode=$($service.StartMode)"
+        Write-Check -Name "Runner service $($service.Name)" -Passed $running -Detail $detail
 
         if (-not $running) {
             Set-DiagnosticFailure 3
@@ -54,10 +52,12 @@ if ($runnerServices.Count -eq 0) {
 
 $listenerProcesses = @(Get-Process -Name 'Runner.Listener' -ErrorAction SilentlyContinue)
 $listenerRunning = $listenerProcesses.Count -gt 0
-Write-Check \
-    'Runner.Listener process' \
-    $listenerRunning \
-    $(if ($listenerRunning) { "Found $($listenerProcesses.Count) listener process(es)." } else { 'No Runner.Listener process is currently visible.' })
+$listenerDetail = if ($listenerRunning) {
+    "Found $($listenerProcesses.Count) listener process(es)."
+} else {
+    'No Runner.Listener process is currently visible.'
+}
+Write-Check -Name 'Runner.Listener process' -Passed $listenerRunning -Detail $listenerDetail
 
 if (-not $listenerRunning) {
     Set-DiagnosticFailure 4
@@ -70,7 +70,7 @@ if ($RunnerRoot) {
         $resolved = (Resolve-Path -LiteralPath $RunnerRoot).Path
         $detectedRoots.Add($resolved)
     } catch {
-        Write-Check 'Explicit runner root' $false "Path does not exist: $RunnerRoot"
+        Write-Check -Name 'Explicit runner root' -Passed $false -Detail "Path does not exist: $RunnerRoot"
         Set-DiagnosticFailure 5
     }
 }
@@ -98,7 +98,7 @@ foreach ($service in $runnerServices) {
 }
 
 if ($detectedRoots.Count -eq 0) {
-    Write-Check 'Runner installation root' $false 'Could not infer a runner root from the Windows service. Pass -RunnerRoot if the runner is installed elsewhere.'
+    Write-Check -Name 'Runner installation root' -Passed $false -Detail 'Could not infer a runner root from the Windows service. Pass -RunnerRoot if the runner is installed elsewhere.'
     Set-DiagnosticFailure 5
 } else {
     foreach ($root in $detectedRoots) {
@@ -106,21 +106,24 @@ if ($detectedRoots.Count -eq 0) {
         Write-Host "Runner root: $root"
 
         $runnerMetadata = Join-Path $root '.runner'
-        Write-Check \
-            'Runner registration metadata' \
-            (Test-Path -LiteralPath $runnerMetadata) \
-            $(if (Test-Path -LiteralPath $runnerMetadata) { '.runner exists (contents intentionally not printed).' } else { '.runner is missing.' })
+        $metadataExists = Test-Path -LiteralPath $runnerMetadata
+        $metadataDetail = if ($metadataExists) {
+            '.runner exists (contents intentionally not printed).'
+        } else {
+            '.runner is missing.'
+        }
+        Write-Check -Name 'Runner registration metadata' -Passed $metadataExists -Detail $metadataDetail
 
-        if (-not (Test-Path -LiteralPath $runnerMetadata)) {
+        if (-not $metadataExists) {
             Set-DiagnosticFailure 6
         }
 
         $listenerBinary = Join-Path $root 'bin\Runner.Listener.exe'
         if (Test-Path -LiteralPath $listenerBinary) {
             $version = (Get-Item -LiteralPath $listenerBinary).VersionInfo.FileVersion
-            Write-Check 'Runner.Listener binary' $true "Present; file version=$version"
+            Write-Check -Name 'Runner.Listener binary' -Passed $true -Detail "Present; file version=$version"
         } else {
-            Write-Check 'Runner.Listener binary' $false "Missing: $listenerBinary"
+            Write-Check -Name 'Runner.Listener binary' -Passed $false -Detail "Missing: $listenerBinary"
             Set-DiagnosticFailure 6
         }
 
@@ -131,12 +134,12 @@ if ($detectedRoots.Count -eq 0) {
                 Select-Object -First 1
 
             if ($latestDiag) {
-                Write-Check 'Runner diagnostic logs' $true "Latest file=$($latestDiag.FullName); LastWriteTime=$($latestDiag.LastWriteTime)"
+                Write-Check -Name 'Runner diagnostic logs' -Passed $true -Detail "Latest file=$($latestDiag.FullName); LastWriteTime=$($latestDiag.LastWriteTime)"
             } else {
-                Write-Check 'Runner diagnostic logs' $false '_diag exists but contains no files.'
+                Write-Check -Name 'Runner diagnostic logs' -Passed $false -Detail '_diag exists but contains no files.'
             }
         } else {
-            Write-Check 'Runner diagnostic logs' $false "Directory not found: $diagDirectory"
+            Write-Check -Name 'Runner diagnostic logs' -Passed $false -Detail "Directory not found: $diagDirectory"
         }
     }
 }
@@ -153,7 +156,8 @@ $networkTargets = @(
 
 foreach ($target in $networkTargets) {
     $reachable = Test-NetConnection -ComputerName $target -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue
-    Write-Check "TCP 443 $target" $reachable $(if ($reachable) { 'Reachable.' } else { 'Not reachable from this machine.' })
+    $networkDetail = if ($reachable) { 'Reachable.' } else { 'Not reachable from this machine.' }
+    Write-Check -Name "TCP 443 $target" -Passed $reachable -Detail $networkDetail
     if (-not $reachable) {
         Set-DiagnosticFailure 7
     }
