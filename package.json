@@ -1,0 +1,22 @@
+{
+  "name": "brovexa",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=24.20.0 <25",
+    "pnpm": "11.23.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "ci": "pnpm build && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.0",
+    "turbo": "2.10.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}
