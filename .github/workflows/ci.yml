@@ -44,3 +44,6 @@ jobs:
 
       - name: Run runtime quality gate
         run: pnpm run quality:runtime
+
+      - name: Verify API source-to-runtime reload loop
+        run: pnpm run verify:dev-api
