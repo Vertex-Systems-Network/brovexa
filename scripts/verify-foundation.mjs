@@ -11,8 +11,8 @@ const requiredPaths = [
   ...nodeTsconfigs.map(([, path]) => path),
   'apps/api/tsconfig.build.json','packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json',
   'pnpm-lock.yaml','pnpm-workspace.yaml','turbo.json','tsconfig.base.json','.gitignore','.env.example','docs/DEVELOPMENT.md',
-  'apps/api/src/main.ts','apps/api/src/health.controller.spec.ts','packages/config/src/index.spec.ts','packages/contracts/src/index.spec.ts',
-  '.github/workflows/ci.yml','.github/workflows/ci-self-hosted.yml','scripts/dev-api.mjs','scripts/verify-foundation.test.mjs',
+  'apps/api/src/main.ts','apps/api/src/health.controller.ts','apps/api/src/health.controller.spec.ts','packages/config/src/index.spec.ts','packages/contracts/src/index.spec.ts',
+  '.github/workflows/ci.yml','.github/workflows/ci-self-hosted.yml','scripts/dev-api.mjs','scripts/verify-dev-api.mjs','scripts/verify-foundation.test.mjs',
 ];
 for (const path of requiredPaths) check(existsSync(path), `Missing required foundation path: ${path}`);
 
@@ -58,6 +58,7 @@ if (failures.length === 0) {
   const envExample = read('.env.example');
   const developmentRunbook = read('docs/DEVELOPMENT.md');
   const apiDevSupervisor = read('scripts/dev-api.mjs');
+  const apiDevSmoke = read('scripts/verify-dev-api.mjs');
   const apiEntrypoint = read('apps/api/src/main.ts');
 
   for (const [path, manifest] of Object.entries(manifests)) verifyDependencyPins(path, manifest);
@@ -73,6 +74,7 @@ if (failures.length === 0) {
   check(root.scripts?.quality?.includes('verify:foundation:test'), 'Root quality script must include verify:foundation:test.');
   check(root.scripts?.quality?.includes('quality:runtime'), 'Root quality script must delegate post-install checks to quality:runtime.');
   check(root.scripts?.['dev:api'] === 'node scripts/dev-api.mjs', 'Root dev:api script must use the dependency-free API supervisor.');
+  check(root.scripts?.['verify:dev-api'] === 'node scripts/verify-dev-api.mjs', 'Root verify:dev-api script must expose the live API reload smoke gate.');
   check(apiPackage.scripts?.dev === 'node ../../scripts/dev-api.mjs', 'API dev script must use the shared API supervisor.');
 
   for (const [name, manifest] of [['API',apiPackage],['Config',configPackage],['Contracts',contractsPackage]]) check(manifest.scripts?.test === 'vitest run', `${name} package must expose the Vitest test gate.`);
@@ -100,6 +102,8 @@ if (failures.length === 0) {
   for (const path of ['packages/config/tsconfig.build.json','packages/contracts/tsconfig.build.json','apps/api/tsconfig.build.json']) check(apiDevSupervisor.includes(path), `API dev supervisor must compile/watch ${path}.`);
   check(apiDevSupervisor.includes("'--watch'"), 'API dev supervisor must use Node/TypeScript watch mode.');
   check(apiDevSupervisor.includes("'--env-file-if-exists=.env'"), 'API dev supervisor runtime must load repo-root .env safely.');
+  check(apiDevSmoke.includes("'0.1.0-dev-reload'"), 'API reload smoke must verify a temporary source-to-runtime version mutation.');
+  check(apiDevSmoke.includes('await writeFile(sourcePath, originalSource);'), 'API reload smoke must restore the original source in its cleanup path.');
 
   check(!apiEntrypoint.includes('void bootstrap();'), 'API entrypoint must not discard the bootstrap promise.');
   check(apiEntrypoint.includes('bootstrap().catch('), 'API entrypoint must handle startup rejection explicitly.');
@@ -111,6 +115,7 @@ if (failures.length === 0) {
   check(hostedWorkflow.includes('persist-credentials: false'), 'Hosted CI checkout must not persist GitHub credentials.');
   check(!hostedWorkflow.includes('contents: write'), 'Hosted CI must not retain bootstrap write permission after lockfile adoption.');
   check(!hostedWorkflow.includes('upload-artifact'), 'Hosted CI must not retain bootstrap lockfile artifact machinery after lockfile adoption.');
+  check(hostedWorkflow.includes('pnpm run verify:dev-api'), 'Hosted CI must execute the API source-to-runtime reload smoke gate.');
   check(selfHostedWorkflow.includes('workflow_dispatch:'), 'Self-hosted CI reference must remain manual-only.');
   check(!selfHostedWorkflow.includes('pull_request:'), 'Self-hosted CI reference must not auto-run on pull requests.');
   check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI reference must not auto-run on push.');
