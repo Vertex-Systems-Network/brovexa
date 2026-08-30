@@ -6,76 +6,120 @@ Updated: 2026-08-30
 
 `ACTIVE_EXISTING_PROJECT`
 
-Brovexa moved from planning-only to active implementation after explicit owner approval for **M01 — Platform Foundation & Developer Experience**.
+M01 — Platform Foundation & Developer Experience is explicitly approved and active.
 
 ## Authorization
 
-Approved scope: **M01 milestone**. Later production connectors, payments, unrestricted acquisition, autonomous outreach, Market Scout activation, production deployment and destructive actions remain separately gated.
+Approved scope: **M01 milestone**.
+
+Still separately gated: production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive data actions, and later legal/provider/commercial decisions.
 
 ## VCS state
 
 - default branch: `main`
-- planning PR: #1, draft/unmerged
-- implementation branch: `m01/platform-foundation`
-- implementation PR: #2, draft/unmerged
-- default-branch self-hosted dispatcher merge: `eed4cbd16e987e254bd2b9758afb1817e3b60ceb`
-- Foundation Slice 1 initial runtime: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
+- current `main`: `198eec6ddc582e07a78c72d3bd8c88b05a0a5b75`
+- planning PR #1: draft/unmerged
+- M01 implementation branch: `m01/platform-foundation`
+- M01 implementation PR #2: draft/unmerged
+- current implementation head: `a67daca7fa7825b07864af8ad2931551184b6e34`
+- initial runtime foundation: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
 - shared-package production-build hardening: `43f8deccd50d74c0591586926d6047144fdc2580`
-- no-rewrite sibling reconciliation: `56c8844e1e891c29977ba74026103b7159746ee6`
-- TypeScript 7 NodeNext compatibility hardening: `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`
-- API local `.env` loading fix: `8c939b90f874dfc5f68afba1c64faae450ffd584`
-- self-hosted dispatcher hardening branch: `m01/self-hosted-dispatch-hardening`
-- self-hosted dispatcher hardening PR: #5, draft/unmerged, head `d409c19d56e9da502d25d9846f405b6ec44bfc35`
+- TypeScript 7 NodeNext compatibility: `5e7318a87db2ddd57928dd0ddf364dfb8ecdc016`
+- API `.env` loading: `8c939b90f874dfc5f68afba1c64faae450ffd584`
+- self-hosted contract/reference alignment: `23c7803c8081ba9732dc098d66491387df1a674c`
+- API dev supervisor: `3eb242b33ade7602d4585bd6852a3986c5b201a5`
+- API dev supervisor failure-state correction: `a67daca7fa7825b07864af8ad2931551184b6e34`
 
-Local developer working-copy/runtime/DB state remains `UNKNOWN` because repository work is being performed through remote GitHub tooling.
+Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes are being made through remote GitHub tooling.
 
-## Default-branch protection
+## Default-branch security
 
-`main` is verified unprotected with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control and Linear `ABD-266` stays open through M01 FULL GATE.
+`main` remains verified `protected:false` with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` is the compensating control and Linear `ABD-266` remains open through the M01 FULL GATE.
 
-PR #5 is an additional least-privilege correction to the default-branch self-hosted dispatcher. It changes exactly one workflow file, is SELF REVIEWED and currently mergeable, but remains draft/unmerged/no-auto-merge until an explicit default-branch integration decision.
+Owner-approved dispatcher hardening was integrated through exact-head replacement PR #6 after the connector could not transition draft PR #5 to ready-for-review. The signed `main` commit `198eec6d...` now makes `.github/workflows/m01-self-hosted-dispatch.yml`:
+
+- manual-only
+- `contents: read`
+- `[self-hosted, Windows, X64]`
+- immutable Action pins
+- `persist-credentials: false`
+- fixed checkout to exactly `m01/platform-foundation`
+- no caller-controlled target ref
 
 ## M01 Foundation Slice 1
 
 State: `IMPLEMENTED BUT NOT VERIFIED`.
 
-Implemented foundation includes monorepo metadata, exact runtime/dependency pins, contracts/config packages, Nest `/health`, Next Web shell, hosted CI, manual self-hosted verification path, immutable Action pins, structural verifier/regression suite, runbook and default-branch integration policy.
+Implemented foundation now includes:
 
-### Static hardening findings resolved
+- pnpm/Turborepo/TypeScript monorepo metadata
+- exact runtime/dependency pins
+- shared contracts/config packages
+- NestJS API with `/health`
+- minimal Next.js Web shell
+- hosted CI and controlled self-hosted verification path
+- zero-dependency foundation verifier + negative regression suite
+- development/verification runbook
+- default-branch integration policy
+- NodeNext compatibility for TypeScript 7
+- production build/test-source separation for shared packages
+- repo-root `.env` loading for API runtime
+- cross-platform dependency-free API development supervisor
 
-1. **Shared test emission** — config/contracts production builds use dedicated build tsconfigs excluding `*.spec.ts`/`*.test.ts`, while full tsconfigs retain test typechecking.
-2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used legacy `moduleResolution: "Node"`; Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`.
-3. **Guardrail drift prevention** — the zero-dependency verifier enforces production-build separation and modern NodeNext resolution with negative regression coverage.
-4. **Local environment mismatch** — the runbook instructed developers to copy `.env.example` to repo-root `.env`, while API scripts did not load that file. API `dev`/`start` now use Node 24 native `--env-file-if-exists=../../.env`. Real process environment variables continue to take precedence over file values.
-5. **Self-hosted ref overbreadth** — the merged default-branch dispatcher accepts arbitrary caller-supplied `m01/*` refs. Draft PR #5 removes that input and fixes checkout to `m01/platform-foundation`; integration remains pending explicit approval.
+## API development loop
 
-No package `type: module` was introduced, so current application files remain CommonJS under NodeNext while modern Node/package-export resolution is modeled.
+Canonical command:
+
+```bash
+pnpm run dev:api
+```
+
+`node scripts/dev-api.mjs` performs an initial ordered compile:
+
+`Config → Contracts → API`
+
+Only after all initial compiles succeed does it start:
+
+- Config TypeScript watcher
+- Contracts TypeScript watcher
+- API TypeScript watcher
+- Node `--watch` runtime on `apps/api/dist/main.js`
+
+Node runtime uses `--env-file-if-exists=.env`. Unexpected watcher/runtime exit is treated as failure, not success; shutdown preserves the intended non-zero exit state.
+
+Independent tool-container checks performed on the supervisor source:
+
+- `node --check scripts/dev-api.mjs` — PASS
+- execution without installed TypeScript/workspace dependencies — expected fail-safe exit `1` with instruction to run `pnpm install`
+
+This is supervisor structural behavior evidence only; the full loop remains unverified until approved Node 24 dependencies exist.
+
+## Self-hosted reference alignment
+
+The implementation branch `.github/workflows/ci-self-hosted.yml` is now explicitly a structural **reference mirror**, not the operational dispatch entry point. It mirrors the default-branch safety contract: exact `m01/platform-foundation` checkout, no persisted credentials, immutable actions, Windows x64 labels, manual-only trigger, and lockfile-aware install mode.
+
+The development runbook and foundation verifier/regression tests enforce this distinction and include negative cases for arbitrary-ref drift and persisted checkout credentials.
 
 ## Verification evidence
 
-### Hosted GitHub Actions — infrastructure blocked
+### Hosted GitHub Actions — still infrastructure blocked
 
-Latest hosted run on current API-env head `8c939b90f874dfc5f68afba1c64faae450ffd584`:
-- run `33308458435`
-- job `99249082465`
+Latest observed hosted run for head `a67daca7fa7825b07864af8ad2931551184b6e34`:
+
+- run `33309018041`
+- job `99250580416`
 - conclusion `failure`
-- no executable steps returned
+- executable steps: none (`steps=null`)
 
-Classification remains `CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`.
+Classification remains:
 
-### Runner-independent structural verification — PASS within scope
+`CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`
 
-The zero-dependency foundation verifier/regression suite has been independently exercised against retrieved repository invariants. Positive foundation cases PASS and negative cases fail as expected for dependency-version drift, mutable Action tags, unsafe self-hosted auto-triggering, test-inclusive production builds and legacy TypeScript Node resolution.
+This is neither an application failure nor a PASS.
 
-Available tool-container Node is 22.x, so this is structural evidence only. It is **not** approved Node 24 dependency-install, TypeScript 7 compiler, Next/Nest build or Vitest execution evidence.
+### Runner-independent evidence
 
-### Default-branch manual dispatcher
-
-`.github/workflows/m01-self-hosted-dispatch.yml` is present on `main`. The currently merged form is manual-only, `contents: read`, targets `[self-hosted, Windows, X64]`, uses immutable Action pins and disables persisted checkout credentials.
-
-Before relying on it as the preferred trusted-runner path, PR #5 should be explicitly integrated so the dispatcher can execute only `m01/platform-foundation` rather than arbitrary `m01/*` refs.
-
-No approved Windows self-hosted quality execution has been verified yet.
+Zero-dependency foundation guardrails have previous PASS evidence on reconstructed repository fixtures, including negative regression behavior for unsafe workflow/dependency/TypeScript/build drift. The available tool runtime is Node 22.x, so this cannot substitute for the approved Node 24/pnpm build/type/test gate.
 
 ## Technology pins
 
@@ -88,7 +132,7 @@ No approved Windows self-hosted quality execution has been verified yet.
 - Vitest `4.1.11`
 - Zod `4.5.4`
 
-`pnpm-lock.yaml` remains absent because no approved dependency install has completed.
+`pnpm-lock.yaml` remains absent because no approved dependency installation has completed.
 
 ## M01 gates
 
@@ -103,22 +147,23 @@ No approved Windows self-hosted quality execution has been verified yet.
 ## Still not verified
 
 - approved Node 24 dependency install
-- lockfile generation/frozen-lockfile mode
-- Next/Nest build
-- TypeScript 7 actual compiler execution
+- lockfile generation/frozen-lockfile enforcement
+- actual TypeScript 7 compile/typecheck
+- Nest/Next build
 - Vitest application tests
-- native main protection
-- local developer runtime/database state
+- API hot-reload loop with installed workspace dependencies
 - approved Windows self-hosted quality run
+- native `main` protection
+- local developer database/runtime state
 
 ## Next safe action
 
-1. Obtain explicit default-branch integration approval for reviewed/mergeable draft PR #5; merge only against expected head `d409c19d56e9da502d25d9846f405b6ec44bfc35`.
-2. Bring an approved `[self-hosted, Windows, X64]` runner online and manually execute the default-branch dispatcher against the fixed `m01/platform-foundation` branch, or use GitHub-hosted CI if allocation recovers.
-3. Execute Node `24.20.0` + pnpm `11.23.0` dependency installation.
-4. Commit generated `pnpm-lock.yaml` and switch all CI installs to `pnpm install --frozen-lockfile`.
+1. Bring an approved `[self-hosted, Windows, X64]` runner online and manually run the default-branch `M01 Self-hosted Verification Dispatch`, or use hosted CI if allocation recovers.
+2. Execute Node `24.20.0` + pnpm `11.23.0` dependency installation.
+3. Commit the generated `pnpm-lock.yaml`.
+4. Switch all CI installs to frozen-lockfile-only mode.
 5. Run build/typecheck/Vitest and fix only failures proven by logs.
-6. Then add lint/format/dependency/SBOM/security gates.
-7. Only after `ABD-259` passes may `ABD-260` PostgreSQL implementation begin.
+6. Verify `pnpm run dev:api` source-to-runtime restart behavior.
+7. Then add the remaining M01 quality/security gates and proceed to `ABD-260` only after `ABD-259` passes.
 
-No later milestone capability should be pulled forward to bypass this verification gate.
+Do not pull later milestone implementation forward merely to bypass this verification gate.
