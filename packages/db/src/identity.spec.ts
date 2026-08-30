@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AuthorizationError,
   assertWorkspaceCapability,
+  type AuthorizationErrorCode,
   type WorkspaceAuthorizationContext,
 } from './identity';
 
@@ -14,26 +15,38 @@ const context: WorkspaceAuthorizationContext = {
   isOwner: false,
 };
 
+function expectAuthorizationCode(work: () => void, expectedCode: AuthorizationErrorCode): void {
+  try {
+    work();
+  } catch (error) {
+    expect(error).toBeInstanceOf(AuthorizationError);
+    expect((error as AuthorizationError).code).toBe(expectedCode);
+    return;
+  }
+  throw new Error(`Expected AuthorizationError(${expectedCode}).`);
+}
+
 describe('workspace authorization guard', () => {
   it('allows a capability in the same workspace', () => {
     expect(() => assertWorkspaceCapability(context, 'workspace.read')).not.toThrow();
   });
 
   it('denies a missing capability', () => {
-    expect(() => assertWorkspaceCapability(context, 'workspace.members.manage')).toThrowError(
-      expect.objectContaining<Partial<AuthorizationError>>({ code: 'FORBIDDEN' }),
+    expectAuthorizationCode(
+      () => assertWorkspaceCapability(context, 'workspace.members.manage'),
+      'FORBIDDEN',
     );
   });
 
   it('rejects a resource from another workspace before capability evaluation', () => {
-    expect(() =>
-      assertWorkspaceCapability(
-        context,
-        'workspace.read',
-        '44444444-4444-4444-8444-444444444444',
-      ),
-    ).toThrowError(
-      expect.objectContaining<Partial<AuthorizationError>>({ code: 'TENANT_SCOPE_MISMATCH' }),
+    expectAuthorizationCode(
+      () =>
+        assertWorkspaceCapability(
+          context,
+          'workspace.read',
+          '44444444-4444-4444-8444-444444444444',
+        ),
+      'TENANT_SCOPE_MISMATCH',
     );
   });
 });
