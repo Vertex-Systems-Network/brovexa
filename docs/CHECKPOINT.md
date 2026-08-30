@@ -30,7 +30,7 @@ Not authorized by this approval:
 - implementation branch: `m01/platform-foundation`
 - implementation PR: #2, draft/unmerged
 - Foundation Slice 1 initial runtime commit: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
-- current implementation head before this checkpoint update: `f07a4e6f89664a639cc25cf87117ea30b8fdb5fb`
+- current implementation head before this checkpoint update: `0b10f74f3f70a6ecab5d12a227adc2dc915ebd32`
 
 Local developer working-copy/uncommitted/runtime/DB state remains `UNKNOWN` because canonical repository writes are being performed through remote GitHub tooling.
 
@@ -65,7 +65,8 @@ Implemented:
 - `packages/config` with validated runtime environment parsing
 - `apps/api` NestJS shell, `/health` endpoint and contract unit test
 - `apps/web` Next.js shell
-- `.github/workflows/ci.yml` executable build/typecheck/test design
+- `.github/workflows/ci.yml` hosted build/typecheck/test design
+- `.github/workflows/ci-self-hosted.yml` manual-only Windows x64 fallback
 - immutable commit pins for `actions/checkout` and `actions/setup-node`
 - `scripts/verify-foundation.mjs` zero-dependency repository-contract preflight
 
@@ -83,17 +84,36 @@ Explicitly not in Slice 1:
 
 ### Hosted CI — infrastructure blocked
 
-All observed GitHub-hosted CI attempts through head `f07a4e6f89664a639cc25cf87117ea30b8fdb5fb` failed **before any workflow step executed**:
+GitHub-hosted CI was tested with both `ubuntu-latest` and `ubuntu-slim`. Every observed attempt failed **before any workflow step executed**:
 - runner not allocated (`runner_id=0`)
 - runner name empty
 - job step list empty
 - job completed in seconds
 
-Latest observed run: `33304327421`, job `99238050827`.
+Latest `ubuntu-slim` evidence:
+- run `33304410544`
+- job `99238270558`
+- requested label `ubuntu-slim`
+- runner `0` / empty name
+- steps `[]`
 
-Classification: `CI INFRASTRUCTURE FAILURE / APPLICATION TESTS NOT EXECUTED`.
+Classification: `CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`.
 
-This is not an application-code failure and not a PASS. Exact GitHub account/org/billing/runner-policy/platform cause is not observable through the current repository connector.
+Using a second hosted runner image with the same pre-step failure makes an image-specific workflow problem less likely, but the exact account/org usage-budget/payment/policy/platform cause is still **UNVERIFIED** through available repository tooling.
+
+This is not an application-code failure and not a PASS.
+
+### Manual self-hosted fallback
+
+`.github/workflows/ci-self-hosted.yml` provides a controlled fallback:
+- trigger: `workflow_dispatch` only
+- runner labels: `[self-hosted, Windows, X64]`
+- no automatic `pull_request` or `push` execution on the self-hosted machine
+- `permissions: contents: read`
+- immutable Action commit pins
+- same foundation preflight/install/quality contract as hosted CI
+
+The workflow has not been dispatched/executed from this environment because the connected GitHub toolset does not expose workflow-dispatch mutation. Therefore self-hosted build/test evidence is still **NOT EXECUTED**.
 
 ### Static CI defect found and corrected
 
@@ -117,8 +137,10 @@ Corrective change:
 - least-privilege `contents: read`
 - explicit `pnpm run quality`
 - lockfile-aware CI install mode
+- hosted and self-hosted workflow invariants
+- self-hosted workflow remains manual-only and explicitly Windows x64
 
-The script received **local fixture PASS** using available Node execution:
+The preflight received **local fixture PASS** using available Node execution:
 - `node --check scripts/verify-foundation.mjs` — PASS
 - `node scripts/verify-foundation.mjs` against a fixture representing the current foundation contract — PASS
 
@@ -153,14 +175,15 @@ Direct dependency pins are exact. A `pnpm-lock.yaml` is not yet committed becaus
 - GitHub branch/ruleset/required-check state remains NOT VERIFIED through available API
 - local developer filesystem/runtime/database state remains UNKNOWN
 - no database/queue/auth primitives exist yet
-- remote GitHub tooling does not expose the exact reason GitHub-hosted runners are not allocated
+- exact hosted-runner allocation failure cause remains unverified
+- self-hosted fallback has not been dispatched/executed
 
 ## Next safe action
 
-1. Restore/obtain an executable CI runner path for PR #2.
-2. Run zero-dependency foundation preflight on the actual checked-out repository.
+1. Restore hosted-runner allocation **or** manually dispatch the controlled Windows x64 self-hosted fallback when an approved runner is online.
+2. Run the zero-dependency foundation preflight on the actual checked-out repository.
 3. Run dependency install and generate `pnpm-lock.yaml`.
-4. Commit the lockfile and switch CI to `pnpm install --frozen-lockfile`.
+4. Commit the lockfile and switch both CI workflows to `pnpm install --frozen-lockfile`.
 5. Execute actual build/typecheck/test and fix failures from real logs.
 6. Add lint/format/dependency/SBOM/security gates as the next small quality slice.
 7. Only after executable foundation evidence, proceed to `ABD-260` PostgreSQL migration/data-layer harness, then coordinated queue/auth work.
