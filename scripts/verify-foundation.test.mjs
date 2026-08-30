@@ -50,8 +50,8 @@ try {
   }
   { const root = makeFixture(); rmSync(join(root, 'pnpm-lock.yaml')); assertFailure('missing lockfile', runVerifier(root), 'Missing required foundation path: pnpm-lock.yaml'); }
   {
-    const root = makeFixture(); mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace('pnpm install --frozen-lockfile', 'pnpm install --no-frozen-lockfile'));
-    assertFailure('hosted non-frozen install', runVerifier(root), 'must install from the committed lockfile');
+    const root = makeFixture(); mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replaceAll('pnpm install --frozen-lockfile', 'pnpm install --no-frozen-lockfile'));
+    assertFailure('hosted non-frozen install', runVerifier(root), 'non-frozen dependency installation is forbidden');
   }
   {
     const root = makeFixture(); mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace(/actions\/checkout@[0-9a-f]{40}/g, 'actions/checkout@v7'));
