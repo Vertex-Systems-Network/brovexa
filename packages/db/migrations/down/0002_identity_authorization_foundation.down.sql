@@ -2,11 +2,15 @@ DROP TRIGGER IF EXISTS workspace_membership_roles_require_active_owner ON worksp
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS workspace_memberships_require_active_owner ON workspace_memberships;
 --> statement-breakpoint
+DROP TRIGGER IF EXISTS workspace_roles_owner_identity_immutable ON workspace_roles;
+--> statement-breakpoint
 DROP FUNCTION IF EXISTS brovexa_internal.enforce_owner_from_membership_role();
 --> statement-breakpoint
 DROP FUNCTION IF EXISTS brovexa_internal.enforce_owner_from_membership();
 --> statement-breakpoint
 DROP FUNCTION IF EXISTS brovexa_internal.assert_workspace_has_active_owner(uuid);
+--> statement-breakpoint
+DROP FUNCTION IF EXISTS brovexa_internal.enforce_owner_role_identity();
 --> statement-breakpoint
 DROP TABLE IF EXISTS authorization_audit_events;
 --> statement-breakpoint
