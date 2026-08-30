@@ -46,15 +46,9 @@ jobs:
         shell: pwsh
         run: npm install --global pnpm@11.23.0
 
-      - name: Install dependencies using lockfile-aware mode
+      - name: Install dependencies from committed lockfile
         shell: pwsh
-        run: |
-          if (Test-Path pnpm-lock.yaml) {
-            pnpm install --frozen-lockfile
-          } else {
-            pnpm install --no-frozen-lockfile
-          }
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: pnpm install --frozen-lockfile
 
       - name: Run runtime quality gate
         shell: pwsh
