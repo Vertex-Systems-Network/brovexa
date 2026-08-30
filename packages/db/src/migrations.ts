@@ -61,7 +61,7 @@ export async function applyPendingMigrations(
   const applied: string[] = [];
 
   for (const migration of migrations) {
-    await withPgTransaction(pool, async (client) => {
+    const didApply = await withPgTransaction(pool, async (client) => {
       await client.query(advisoryLockSql);
       const existing = await client.query<{ checksum: string }>(
         'SELECT checksum FROM brovexa_internal.schema_migrations WHERE id = $1',
@@ -73,7 +73,7 @@ export async function applyPendingMigrations(
         if (row.checksum !== migration.checksum) {
           throw new Error(`Applied migration checksum mismatch: ${migration.id}`);
         }
-        return;
+        return false;
       }
 
       await executeStatements(client, migration.upSql);
@@ -81,8 +81,10 @@ export async function applyPendingMigrations(
         'INSERT INTO brovexa_internal.schema_migrations (id, checksum) VALUES ($1, $2)',
         [migration.id, migration.checksum],
       );
-      applied.push(migration.id);
+      return true;
     });
+
+    if (didApply) applied.push(migration.id);
   }
 
   return applied;
@@ -95,9 +97,8 @@ export async function rollbackLatestMigration(
   await ensureMigrationJournal(pool);
   const migrations = await discoverMigrations(migrationsDir);
   const byId = new Map(migrations.map((migration) => [migration.id, migration]));
-  let rolledBack: string | null = null;
 
-  await withPgTransaction(pool, async (client) => {
+  return withPgTransaction(pool, async (client) => {
     await client.query(advisoryLockSql);
     const latest = await client.query<{ id: string; checksum: string }>(
       `SELECT id, checksum
@@ -107,7 +108,7 @@ export async function rollbackLatestMigration(
     );
 
     const row = latest.rows[0];
-    if (!row) return;
+    if (!row) return null;
 
     const migration = byId.get(row.id);
     if (!migration) throw new Error(`Rollback SQL missing for applied migration: ${row.id}`);
@@ -117,8 +118,6 @@ export async function rollbackLatestMigration(
 
     await executeStatements(client, migration.downSql);
     await client.query('DELETE FROM brovexa_internal.schema_migrations WHERE id = $1', [row.id]);
-    rolledBack = row.id;
+    return row.id;
   });
-
-  return rolledBack;
 }
