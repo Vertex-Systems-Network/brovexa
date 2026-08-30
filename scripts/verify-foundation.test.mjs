@@ -1,11 +1,4 @@
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +8,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const verifier = join(repoRoot, 'scripts', 'verify-foundation.mjs');
 const fixtureFiles = [
   'package.json',
+  'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
   'turbo.json',
   'tsconfig.base.json',
@@ -70,6 +64,11 @@ function assertFailure(name, result, expectedText) {
   }
 }
 
+function mutate(path, transform) {
+  const current = readFileSync(path, 'utf8');
+  writeFileSync(path, transform(current));
+}
+
 try {
   {
     const root = makeFixture();
@@ -77,99 +76,95 @@ try {
   }
   {
     const root = makeFixture();
-    const packagePath = join(root, 'package.json');
-    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-    packageJson.scripts.ci = 'echo unsafe-collision';
-    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    const path = join(root, 'package.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.scripts.ci = 'echo unsafe-collision';
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('pnpm ci collision', runVerifier(root), 'Do not define a root script named "ci"');
   }
   {
     const root = makeFixture();
-    const packagePath = join(root, 'package.json');
-    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-    packageJson.devDependencies.turbo = '^2.10.3';
-    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    const path = join(root, 'package.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.devDependencies.turbo = '^2.10.3';
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('dependency range drift', runVerifier(root), 'devDependencies.turbo must use an exact version or workspace: protocol');
   }
   {
     const root = makeFixture();
-    const apiPath = join(root, 'apps/api/package.json');
-    const apiPackage = JSON.parse(readFileSync(apiPath, 'utf8'));
-    apiPackage.scripts.dev = 'node --watch dist/main.js';
-    writeFileSync(apiPath, `${JSON.stringify(apiPackage, null, 2)}\n`);
+    const path = join(root, 'apps/api/package.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.scripts.dev = 'node --watch dist/main.js';
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('stale API dev loop', runVerifier(root), 'API dev script must use the shared API supervisor.');
   }
   {
     const root = makeFixture();
-    const entrypointPath = join(root, 'apps/api/src/main.ts');
-    const entrypoint = readFileSync(entrypointPath, 'utf8').replace(
-      /bootstrap\(\)\.catch\([\s\S]*?\n\}\);\n?$/,
-      'void bootstrap();\n',
-    );
-    writeFileSync(entrypointPath, entrypoint);
+    mutate(join(root, 'apps/api/src/main.ts'), (source) => source.replace(/bootstrap\(\)\.catch\([\s\S]*?\n\}\);\n?$/, 'void bootstrap();\n'));
     assertFailure('discarded API bootstrap promise', runVerifier(root), 'API entrypoint must not discard the bootstrap promise.');
   }
   {
     const root = makeFixture();
-    const apiBuildPath = join(root, 'apps/api/tsconfig.build.json');
-    const apiBuildConfig = JSON.parse(readFileSync(apiBuildPath, 'utf8'));
-    apiBuildConfig.exclude = ['src/**/*.spec.ts'];
-    writeFileSync(apiBuildPath, `${JSON.stringify(apiBuildConfig, null, 2)}\n`);
+    const path = join(root, 'apps/api/tsconfig.build.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.exclude = ['src/**/*.spec.ts'];
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('API production build includes test sources', runVerifier(root), 'API production build must exclude spec/test source files.');
   }
   {
     const root = makeFixture();
-    const envPath = join(root, '.env.example');
-    writeFileSync(envPath, `${readFileSync(envPath, 'utf8')}\nAPI_TOKEN=not-allowed\n`);
+    mutate(join(root, '.env.example'), (source) => `${source}\nAPI_TOKEN=not-allowed\n`);
     assertFailure('credential-like env example', runVerifier(root), 'unapproved Foundation Slice 1 key: API_TOKEN');
   }
   {
     const root = makeFixture();
-    const workflowPath = join(root, '.github/workflows/ci-self-hosted.yml');
-    const workflow = readFileSync(workflowPath, 'utf8').replace('  workflow_dispatch:', '  workflow_dispatch:\n  pull_request:');
-    writeFileSync(workflowPath, workflow);
-    assertFailure('self-hosted pull-request auto-trigger', runVerifier(root), 'Self-hosted CI reference must not auto-run on pull requests.');
+    rmSync(join(root, 'pnpm-lock.yaml'));
+    assertFailure('missing lockfile', runVerifier(root), 'Missing required foundation path: pnpm-lock.yaml');
   }
   {
     const root = makeFixture();
-    const workflowPath = join(root, '.github/workflows/ci-self-hosted.yml');
-    const workflow = readFileSync(workflowPath, 'utf8').replace('ref: m01/platform-foundation', 'ref: m01/unapproved-branch');
-    writeFileSync(workflowPath, workflow);
-    assertFailure('self-hosted arbitrary ref drift', runVerifier(root), 'Self-hosted CI reference must checkout exactly m01/platform-foundation.');
+    mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace('pnpm install --frozen-lockfile', 'pnpm install --no-frozen-lockfile'));
+    assertFailure('hosted non-frozen install', runVerifier(root), 'must install from the committed lockfile');
   }
   {
     const root = makeFixture();
-    const workflowPath = join(root, '.github/workflows/ci-self-hosted.yml');
-    const workflow = readFileSync(workflowPath, 'utf8').replace('persist-credentials: false', 'persist-credentials: true');
-    writeFileSync(workflowPath, workflow);
-    assertFailure('self-hosted persisted checkout credentials', runVerifier(root), 'Self-hosted CI reference must not persist checkout credentials.');
-  }
-  {
-    const root = makeFixture();
-    writeFileSync(join(root, 'pnpm-lock.yaml'), 'lockfileVersion: placeholder\n');
-    assertFailure('lockfile requires frozen CI install', runVerifier(root), 'pnpm install --frozen-lockfile');
-  }
-  {
-    const root = makeFixture();
-    const workflowPath = join(root, '.github/workflows/ci.yml');
-    const workflow = readFileSync(workflowPath, 'utf8').replace(/actions\/checkout@[0-9a-f]{40}/g, 'actions/checkout@v7');
-    writeFileSync(workflowPath, workflow);
+    mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace(/actions\/checkout@[0-9a-f]{40}/g, 'actions/checkout@v7'));
     assertFailure('mutable GitHub Action tag', runVerifier(root), 'actions/checkout must be pinned to an immutable commit SHA.');
   }
   {
     const root = makeFixture();
-    const tsconfigPath = join(root, 'apps/api/tsconfig.json');
-    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
-    tsconfig.compilerOptions.moduleResolution = 'Node';
-    writeFileSync(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`);
+    mutate(join(root, '.github/workflows/ci.yml'), (source) => source.replace('permissions:\n  contents: read', 'permissions:\n  contents: write'));
+    assertFailure('hosted write permission', runVerifier(root), 'GitHub token permissions must remain contents: read.');
+  }
+  {
+    const root = makeFixture();
+    mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('  workflow_dispatch:', '  workflow_dispatch:\n  pull_request:'));
+    assertFailure('self-hosted pull-request auto-trigger', runVerifier(root), 'Self-hosted CI reference must not auto-run on pull requests.');
+  }
+  {
+    const root = makeFixture();
+    mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('ref: m01/platform-foundation', 'ref: m01/unapproved-branch'));
+    assertFailure('self-hosted arbitrary ref drift', runVerifier(root), 'Self-hosted CI reference must checkout exactly m01/platform-foundation.');
+  }
+  {
+    const root = makeFixture();
+    mutate(join(root, '.github/workflows/ci-self-hosted.yml'), (source) => source.replace('persist-credentials: false', 'persist-credentials: true'));
+    assertFailure('self-hosted persisted credentials', runVerifier(root), 'Self-hosted CI reference must not persist checkout credentials.');
+  }
+  {
+    const root = makeFixture();
+    const path = join(root, 'apps/api/tsconfig.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.compilerOptions.moduleResolution = 'Node';
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('legacy TypeScript module resolution', runVerifier(root), 'API TypeScript moduleResolution must be NodeNext');
   }
   {
     const root = makeFixture();
-    const packagePath = join(root, 'packages/contracts/package.json');
-    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-    packageJson.scripts.build = 'tsc -p tsconfig.json';
-    writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    const path = join(root, 'packages/contracts/package.json');
+    const json = JSON.parse(readFileSync(path, 'utf8'));
+    json.scripts.build = 'tsc -p tsconfig.json';
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     assertFailure('production build includes test sources', runVerifier(root), 'Contracts package production build must use tsconfig.build.json.');
   }
   {
