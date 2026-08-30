@@ -10,120 +10,63 @@ Brovexa moved from planning-only to active implementation after explicit owner a
 
 ## Authorization
 
-Approved scope: **M01 milestone**.
-
-Not authorized by this approval:
-- production payment-provider activation
-- production source connector enablement
-- unrestricted internet acquisition
-- autonomous/bulk external outreach
-- Daily Market Intelligence Scout activation
-- production deployment
-- destructive data actions
-- bypassing unresolved legal/provider/commercial gates
+Approved scope: **M01 milestone**. Later production connectors, payments, unrestricted acquisition, autonomous outreach, Market Scout activation, production deployment and destructive actions remain separately gated.
 
 ## VCS state
 
 - default branch: `main`
-- planning branch: `planning/brovexa-baseline`
 - planning PR: #1, draft/unmerged
 - implementation branch: `m01/platform-foundation`
 - implementation PR: #2, draft/unmerged
-- default-branch self-hosted dispatcher is merged on `main`
-- default-branch dispatcher merge commit: `eed4cbd16e987e254bd2b9758afb1817e3b60ceb`
-- Foundation Slice 1 initial runtime commit: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
-- shared-package build hardening: `43f8deccd50d74c0591586926d6047144fdc2580`
-- checkpoint sibling: `347eedffa1fbaccadc2c3d3d4f314d9ac88f9ebf`
-- no-rewrite reconciliation merge: `56c8844e1e891c29977ba74026103b7159746ee6`
+- default-branch self-hosted dispatcher merge: `eed4cbd16e987e254bd2b9758afb1817e3b60ceb`
+- Foundation Slice 1 initial runtime: `9cc48faed8531cbab1a72716e5f9b5c351f6902c`
+- shared-package production-build hardening: `43f8deccd50d74c0591586926d6047144fdc2580`
+- no-rewrite sibling reconciliation: `56c8844e1e891c29977ba74026103b7159746ee6`
+- structural-verification checkpoint: `b2165889b63f8e07abcc6af8cbdcc53ec7796015`
 
-The sibling commits were reconciled with a two-parent merge and branch fast-forward. No force push/history rewrite was used.
+Local developer working-copy/runtime/DB state remains `UNKNOWN` because repository work is being performed through remote GitHub tooling.
 
-Local developer working-copy/uncommitted/runtime/DB state remains `UNKNOWN` because canonical repository writes are being performed through remote GitHub tooling.
+## Default-branch protection
 
-## Default-branch protection state
-
-GitHub branch metadata verifies:
-- `main protected: false`
-- required status checks: off
-
-`docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` is the current compensating control. Linear `ABD-266` remains open through M01 FULL GATE.
-
-## M00 state
-
-M00 readiness/governance is complete for entering M01. Later vendor/legal/commercial decisions remain explicit gates for the capabilities that require them.
+`main` is verified unprotected with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control and Linear `ABD-266` stays open through M01 FULL GATE.
 
 ## M01 Foundation Slice 1
 
-State: `IMPLEMENTED BUT NOT VERIFIED`
-Parallel classification: `SERIALIZE` for shared repo/build/CI surfaces.
+State: `IMPLEMENTED BUT NOT VERIFIED`.
 
-Implemented:
-- Node/pnpm/Turborepo/TypeScript workspace metadata
-- exact direct dependency/runtime pins
-- `.editorconfig`, `.gitignore`, `.env.example`
-- `packages/contracts` typed/Zod API contracts + tests
-- `packages/config` validated runtime environment parsing + tests
-- `apps/api` NestJS shell, `/health` endpoint + contract test
-- `apps/web` Next.js shell
-- hosted CI workflow
-- manual Windows x64 self-hosted verification designs
-- immutable commit pins for GitHub Actions
-- zero-dependency foundation verifier + regression suite
-- developer verification runbook
-- default-branch integration policy
+Implemented foundation includes monorepo metadata, exact runtime/dependency pins, contracts/config packages, Nest `/health`, Next Web shell, hosted CI, manual self-hosted verification path, immutable Action pins, structural verifier/regression suite, runbook and default-branch integration policy.
 
-Latest static review hardening:
-- shared package production builds use separate `tsconfig.build.json`
-- `*.spec.ts` and `*.test.ts` are excluded from emitted production `dist`
-- normal `tsconfig.json` remains the full source/test typecheck surface
-- foundation verifier enforces build/test separation
-- regression suite fails if a shared package build drifts back to the full test-inclusive tsconfig
+### Static hardening findings resolved
 
-Explicitly not in Slice 1:
-- PostgreSQL/migrations
-- Redis/BullMQ
-- hosted identity provider/auth implementation
-- source connectors
-- AI Agent runtime/memory implementation
-- billing/payment
-- Desktop/extensions
-- deployment
+1. **Shared test emission** — config/contracts production builds now use dedicated build tsconfigs excluding `*.spec.ts`/`*.test.ts`, while full tsconfigs retain test typechecking.
+2. **TypeScript 7 module-resolution incompatibility** — API/config/contracts previously used `moduleResolution: "Node"` (legacy node10). TypeScript 7 removes that mode. Node-targeted projects now use `module: "NodeNext"` and `moduleResolution: "NodeNext"`. No package `type: module` was introduced, so current CommonJS application semantics are preserved while modern Node/package-export resolution is modeled.
+3. Foundation guardrails now enforce both corrections and contain negative regression cases.
+
+Official compatibility basis reviewed during this hardening:
+- TypeScript 7 removes legacy `node/node10` module resolution and recommends NodeNext/bundler as appropriate.
+- NestJS 12 core packages are ESM but explicitly support CommonJS applications on modern Node via `require(esm)`; migration of application code to ESM is optional.
 
 ## Verification evidence
 
 ### Hosted GitHub Actions — infrastructure blocked
 
-Latest run for reconciliation head `56c8844e1e891c29977ba74026103b7159746ee6`:
-- run `33307179139`
-- job `99245665723`
+Latest hosted run on prior checkpoint head `b2165889b63f8e07abcc6af8cbdcc53ec7796015`:
+- run `33307366554`
+- job `99246165648`
 - conclusion `failure`
 - no executable steps returned
 
-This matches the established pre-runner infrastructure-failure pattern. No application build/typecheck/Vitest PASS exists.
+Classification remains `CI INFRASTRUCTURE / HOSTED-RUNNER ALLOCATION FAILURE — APPLICATION TESTS NOT EXECUTED`.
 
-### Runner-independent structural verification — PASS
+### Runner-independent structural verification
 
-For head `56c8844e1e891c29977ba74026103b7159746ee6`, the exact structural manifests/configs/workflows/verifier scripts were retrieved from GitHub and reconstructed in an isolated tool fixture. Spec files were represented only for their existence checks; their executable tests are not claimed by this structural run.
-
-Executed with available tool-container Node `22.16.0`:
-- `node --check scripts/verify-foundation.mjs` — PASS
-- `node --check scripts/verify-foundation.test.mjs` — PASS
-- `node scripts/verify-foundation.mjs` — PASS
-- `node scripts/verify-foundation.test.mjs` — PASS
-
-Observed output:
-- `Brovexa foundation preflight passed.`
-- `Brovexa foundation preflight regression tests passed.`
-
-This validates repository/CI guardrails including the new shared-package build/test separation. It does **not** verify approved Node `24.20.0`, dependency resolution, Next/Nest compilation, TypeScript 7, or Vitest application tests.
+Structural guardrails passed on the previous reconciled surface. The new NodeNext guardrail/fix is source-reviewed and must be re-executed against the new exact head after this commit. This is not a Node 24/package build PASS claim.
 
 ### Default-branch manual dispatcher
 
-`.github/workflows/m01-self-hosted-dispatch.yml` is on `main`, manual-only, `contents: read`, targets `[self-hosted, Windows, X64]`, restricts target refs to `m01/*`, uses immutable Action pins, disables persisted checkout credentials, and runs the explicit `pnpm run quality` gate.
+`.github/workflows/m01-self-hosted-dispatch.yml` is present on `main` and ready for manual use on an approved `[self-hosted, Windows, X64]` runner. No approved runner execution has yet been verified.
 
-Workflow presence is not execution evidence. No matching approved runner execution has been verified yet.
-
-## Current technology pins
+## Technology pins
 
 - Node.js `24.20.0`
 - pnpm `11.23.0`
@@ -134,35 +77,33 @@ Workflow presence is not execution evidence. No matching approved runner executi
 - Vitest `4.1.11`
 - Zod `4.5.4`
 
-`pnpm-lock.yaml` is still absent because no approved dependency installation has completed.
+`pnpm-lock.yaml` remains absent because no approved dependency install has completed.
 
-## M01 work packages
+## M01 gates
 
 - `ABD-266` — default-branch protection/compensating controls — IN PROGRESS
 - `ABD-259` — executable monorepo/CI verification — IN PROGRESS / SERIALIZE
-- `ABD-260` — PostgreSQL migration/data-layer harness — BLOCKED BY ABD-259
-- `ABD-261` — durable worker/queue foundation — BLOCKED BY ABD-259/260
-- `ABD-262` — provider-neutral identity/RBAC/tenant primitives — BLOCKED BY ABD-259/260
-- `ABD-263` — API conventions/observability/health — waits for executable CI
-- `ABD-264` — M01 FULL GATE/readiness handoff — final integration gate
+- `ABD-260` — PostgreSQL harness — BLOCKED BY ABD-259
+- `ABD-261` — durable worker/queue — BLOCKED BY ABD-259/260
+- `ABD-262` — identity/RBAC/tenant — BLOCKED BY ABD-259/260
+- `ABD-263` — API/observability/health — waits for executable CI
+- `ABD-264` — M01 FULL GATE — final integration gate
 
-## Known risks / not verified
+## Still not verified
 
-- dependency install has not executed successfully
-- no lockfile yet
-- build/typecheck/Vitest application tests have not executed successfully
-- native `main` protection remains OFF
-- local developer filesystem/runtime/database state remains UNKNOWN
-- exact hosted-runner allocation failure cause remains unverified
-- approved Windows x64 self-hosted quality run has not executed
+- approved Node 24 dependency install
+- lockfile generation/frozen-lockfile mode
+- Next/Nest build
+- TypeScript 7 actual compiler execution
+- Vitest application tests
+- native main protection
+- local developer runtime/database state
+- approved Windows self-hosted quality run
 
 ## Next safe action
 
-1. Use GitHub-hosted CI if runner allocation recovers, or manually dispatch the default-branch self-hosted verifier when an approved Windows x64 runner is online.
-2. Execute Node `24.20.0` + pnpm `11.23.0` dependency install.
-3. Commit generated `pnpm-lock.yaml` and switch all CI installs to `pnpm install --frozen-lockfile`.
-4. Execute build/typecheck/Vitest and fix only log-proven failures.
-5. Then add lint/format/dependency/SBOM/security gates.
-6. Only after `ABD-259` has executable evidence, start `ABD-260` PostgreSQL migration/data-layer implementation.
-
-No later milestone capability should be pulled forward to bypass this verification gate.
+1. Advance branch to this NodeNext compatibility hardening commit.
+2. Re-run zero-dependency structural verifier/regression suite on the exact new head.
+3. If hosted allocation recovers or approved Windows runner is online, execute the real Node 24/pnpm quality path.
+4. Generate/commit `pnpm-lock.yaml`, switch installs to frozen mode, then obtain actual build/typecheck/Vitest evidence.
+5. Only after `ABD-259` passes may `ABD-260` PostgreSQL implementation begin.

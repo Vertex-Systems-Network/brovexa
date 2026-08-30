@@ -22,10 +22,13 @@ const fixtureFiles = [
   '.env.example',
   'docs/DEVELOPMENT.md',
   'apps/api/package.json',
+  'apps/api/tsconfig.json',
   'apps/web/package.json',
   'packages/config/package.json',
+  'packages/config/tsconfig.json',
   'packages/config/tsconfig.build.json',
   'packages/contracts/package.json',
+  'packages/contracts/tsconfig.json',
   'packages/contracts/tsconfig.build.json',
   'apps/api/src/health.controller.spec.ts',
   'packages/config/src/index.spec.ts',
@@ -153,6 +156,19 @@ try {
       'mutable GitHub Action tag',
       runVerifier(root),
       'actions/checkout must be pinned to an immutable commit SHA.',
+    );
+  }
+
+  {
+    const root = makeFixture();
+    const tsconfigPath = join(root, 'apps/api/tsconfig.json');
+    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
+    tsconfig.compilerOptions.moduleResolution = 'Node';
+    writeFileSync(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`);
+    assertFailure(
+      'legacy TypeScript module resolution',
+      runVerifier(root),
+      'API TypeScript moduleResolution must be NodeNext',
     );
   }
 

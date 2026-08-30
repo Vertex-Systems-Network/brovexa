@@ -14,6 +14,12 @@ const packageManifests = [
   'packages/contracts/package.json',
 ];
 
+const nodeTsconfigs = [
+  ['API', 'apps/api/tsconfig.json'],
+  ['Config', 'packages/config/tsconfig.json'],
+  ['Contracts', 'packages/contracts/tsconfig.json'],
+];
+
 const sharedBuildConfigs = [
   ['Config', 'packages/config/tsconfig.build.json'],
   ['Contracts', 'packages/contracts/tsconfig.build.json'],
@@ -21,6 +27,7 @@ const sharedBuildConfigs = [
 
 const requiredPaths = [
   ...packageManifests,
+  ...nodeTsconfigs.map(([, path]) => path),
   ...sharedBuildConfigs.map(([, path]) => path),
   'pnpm-workspace.yaml',
   'turbo.json',
@@ -84,6 +91,21 @@ const verifyDependencyPins = (path, manifest) => {
   }
 };
 
+const verifyNodeTsconfig = (name, path) => {
+  const config = JSON.parse(read(path));
+  const moduleKind = String(config.compilerOptions?.module ?? '').toLowerCase();
+  const resolution = String(config.compilerOptions?.moduleResolution ?? '').toLowerCase();
+
+  check(
+    moduleKind === 'nodenext',
+    `${name} TypeScript module must be NodeNext for the pinned TypeScript 7 / modern Node runtime.`,
+  );
+  check(
+    resolution === 'nodenext',
+    `${name} TypeScript moduleResolution must be NodeNext; legacy Node/node10 resolution is removed in TypeScript 7.`,
+  );
+};
+
 const verifySharedBuild = (name, manifest, buildConfigPath) => {
   check(
     manifest.scripts?.build === 'tsc -p tsconfig.build.json',
@@ -115,6 +137,10 @@ if (failures.length === 0) {
 
   for (const [path, manifest] of Object.entries(manifests)) {
     verifyDependencyPins(path, manifest);
+  }
+
+  for (const [name, path] of nodeTsconfigs) {
+    verifyNodeTsconfig(name, path);
   }
 
   check(root.private === true, 'Root package must remain private.');
