@@ -1,31 +1,26 @@
 # Brovexa M01 Development & Verification Runbook
 
-Status: **M01 active / Foundation Slice 1 not yet fully verified**
+Status: **M01 active / Foundation Slice 1 executable verification in progress**
 
-This runbook defines the safe developer path for the current platform foundation. Repository/runtime/test evidence outranks this document if they conflict.
+Repository/runtime/test evidence outranks this document if they conflict.
 
 ## 1. Prerequisites
-
-Foundation Slice 1 is pinned to:
 
 - Node.js `24.20.0`
 - pnpm `11.23.0`
 
-Use the repository `.nvmrc` / `.node-version` and `packageManager`/`engines` metadata. Do not silently substitute a different major runtime and call the result verified.
+Use `.nvmrc` / `.node-version` and the root `packageManager`/`engines` metadata. Do not substitute another major runtime and report the result as equivalent verification.
 
 ## 2. Environment
 
 Copy `.env.example` to `.env` for local development.
 
-Current non-secret foundation variables:
-
+Current non-secret variables:
 - `NODE_ENV=development|test|staging|production`
-- `HOST` — API listen address, default `0.0.0.0`
-- `PORT` — API port, default `3001`, valid 1–65535
+- `HOST` — default `0.0.0.0`
+- `PORT` — default `3001`, valid 1–65535
 
-The API runtime loads repo-root `.env` through Node's native `--env-file-if-exists` option. Already-set process environment variables remain authoritative over `.env` values.
-
-Real credentials, provider tokens and production secrets must never be committed. Foundation Slice 1 does not require any production secret.
+The API loads repo-root `.env` through Node's native `--env-file-if-exists`. Already-set process environment variables remain authoritative. Never commit credentials/provider tokens/production secrets.
 
 ## 3. Foundation preflight
 
@@ -33,45 +28,64 @@ Before dependency installation:
 
 ```bash
 node scripts/verify-foundation.mjs
+node scripts/verify-foundation.test.mjs
 ```
 
-This is a zero-dependency structural gate. It validates repository/CI invariants but is **not** a replacement for dependency install, build, typecheck or tests.
+These are zero-dependency structural/security guardrails. They do not replace build/typecheck/application tests.
 
 ## 4. Dependency installation
 
-Current temporary bootstrap state, while no lockfile exists:
+`pnpm-lock.yaml` is committed and is now mandatory.
 
-```bash
-pnpm install --no-frozen-lockfile
-```
-
-The **first verified successful install** must generate `pnpm-lock.yaml`. Commit that lockfile in the same M01 verification work package, then both hosted and self-hosted CI must change to:
+Canonical install:
 
 ```bash
 pnpm install --frozen-lockfile
 ```
 
-After the lockfile exists, a non-frozen CI install is a verification defect.
+Non-frozen CI installation is a verification defect. The one-time bootstrap artifact/write path has been removed after the lockfile was persisted.
+
+`pnpm-workspace.yaml` keeps an explicit exact-version release-age exception for `zod@4.5.4`; do not broaden it to a package wildcard without dependency review.
 
 ## 5. FAST quality gate
-
-Run:
 
 ```bash
 pnpm run quality
 ```
 
-The current quality contract is:
+Contract:
 
 ```text
-Foundation preflight → Build → Typecheck → Test
+Foundation preflight → Guardrail regression tests → Build → Typecheck → Tests
 ```
 
-Do not invoke bare `pnpm ci` as the Brovexa quality script. In pnpm 11, `pnpm ci` is a package-manager clean-install command.
+The post-install portion is available separately as:
 
-## 6. Development commands
+```bash
+pnpm run quality:runtime
+```
 
-Full quality primitives:
+Do not use bare `pnpm ci` as the Brovexa quality script; pnpm 11 owns that command as package-manager behavior.
+
+## 6. Verified hosted baseline
+
+Hosted GitHub Actions has now executed successfully on Node `24.20.0` with pnpm `11.23.0`.
+
+Verified on run `33310396346` / job `99254280825`:
+- checkout and Node setup passed
+- foundation preflight passed
+- negative guardrail suite passed
+- dependency installation passed
+- Config/Contracts/API builds passed
+- Next.js 16.3.3 production build passed
+- TypeScript 7 typecheck passed across all workspace projects
+- Vitest passed: Contracts 4 tests, Config 6 tests, API health 1 test (11/11 total)
+
+The bootstrap lockfile was then persisted by controlled run `33310860606`; current steady-state CI requires a clean frozen-lockfile run after bootstrap machinery removal.
+
+## 7. Development commands
+
+Full primitives:
 
 ```bash
 pnpm run build
@@ -91,11 +105,11 @@ Equivalent package command:
 pnpm --filter @brovexa/api dev
 ```
 
-The dependency-free `scripts/dev-api.mjs` supervisor performs an initial ordered compile of Config → Contracts → API. Only after those compiles pass does it start TypeScript watch compilers for all three projects plus Node's runtime watch for `apps/api/dist/main.js`. Node watch restarts when the entry point or imported built modules change. Ctrl+C terminates the supervised children.
+`scripts/dev-api.mjs` first compiles Config → Contracts → API. Only after all initial compiles pass does it start TypeScript watch compilers for all three projects plus Node runtime watch for `apps/api/dist/main.js`. Unexpected child exit is a failure; Ctrl+C shuts down supervised children.
 
-This development loop is **implemented but not yet runtime-verified** because the approved Node 24 dependency installation/build gate has not executed successfully yet.
+The compile/build/test portion is verified on hosted CI. Source-to-runtime restart behavior still requires an explicit executable smoke check before `ABD-259` closes.
 
-API production-style start after a successful build:
+Production-style API start after build:
 
 ```bash
 pnpm --filter @brovexa/api start
@@ -107,15 +121,11 @@ Web development server:
 pnpm --filter @brovexa/web dev
 ```
 
-## 7. Health contract
+## 8. Health contract
 
-Foundation API exposes:
+`GET /health`
 
-```text
-GET /health
-```
-
-Expected contract shape:
+Expected shape:
 
 ```json
 {
@@ -126,69 +136,68 @@ Expected contract shape:
 }
 ```
 
-The controller has a contract-level unit test, but it remains unverified until the actual test runner executes successfully.
+The controller contract test is verified green on hosted CI.
 
-## 8. GitHub-hosted CI
+## 9. GitHub-hosted CI
 
 `.github/workflows/ci.yml` is the normal PR quality gate.
 
-Current diagnostic state as of 2026-08-30:
+Steady-state safety properties:
+- `contents: read`
+- checkout credentials are not persisted
+- immutable Action commit pins
+- committed lockfile required
+- `pnpm install --frozen-lockfile`
+- runtime build/typecheck/test gate
+- no bootstrap artifact upload
+- no CI write-back job
 
-- both `ubuntu-latest` and `ubuntu-slim` attempts failed before runner allocation
-- observed jobs reported no executable steps
-- application dependency install/build/typecheck/tests did not execute
+Historical pre-runner failures are retained as baseline evidence, but hosted allocation recovered and real application verification has now executed.
 
-Classification: **CI infrastructure / hosted-runner allocation failure**, exact account/org/budget/payment/policy/platform cause unverified.
+## 10. Manual self-hosted fallback
 
-Do not modify application code merely to make a pre-runner infrastructure failure disappear.
-
-## 9. Manual self-hosted fallback
-
-The **dispatchable** M01 fallback is the default-branch workflow:
+Operational default-branch workflow:
 
 ```text
 .github/workflows/m01-self-hosted-dispatch.yml
 ```
 
-It checks out exactly `m01/platform-foundation` on an approved `[self-hosted, Windows, X64]` runner. It is manual-only and does not accept a caller-controlled target ref.
+It checks out exactly `m01/platform-foundation` on `[self-hosted, Windows, X64]`, is manual-only, and accepts no caller-controlled target ref.
 
-The implementation branch also carries `.github/workflows/ci-self-hosted.yml` as a **reference mirror** for structural regression checks. Because GitHub `workflow_dispatch` requires the workflow file on the default branch, do not treat the branch-local mirror as the operational dispatch entry point.
+The implementation branch `.github/workflows/ci-self-hosted.yml` is a **reference mirror**, not the operational dispatch entry point.
 
-Required safety properties for the operational dispatcher/reference contract:
-
+Required contract:
 - manual `workflow_dispatch` only
-- exact `m01/platform-foundation` checkout
+- exact `m01/platform-foundation`
 - no automatic PR/push execution on the local machine
-- explicit `[self-hosted, Windows, X64]` labels
-- `contents: read` GitHub token permissions
-- immutable Action commit pins
+- `[self-hosted, Windows, X64]`
+- `contents: read`
+- immutable Action SHAs
 - `persist-credentials: false`
-- same preflight/install/quality contract as hosted CI
+- frozen-lockfile install
+- same preflight/runtime quality gates
 
-If manually dispatched, preserve the exact workflow run/job evidence. A self-hosted PASS may provide M01 verification evidence, but it does not prove GitHub-hosted runner allocation is fixed.
+A self-hosted PASS validates that runner path; it is not required to prove hosted runner health once hosted CI itself executes successfully, unless a Windows-specific behavior needs verification.
 
 ### Runner diagnostics / recovery
 
-Current evidence shows the historical trusted Windows probe still queued, which is consistent with no online/idle runner matching all required labels.
-
-Use the dedicated recovery runbook:
+Recovery guide:
 
 ```text
 docs/SELF_HOSTED_RUNNER_RECOVERY.md
 ```
 
-Safe read-only Windows diagnostic command:
+Read-only diagnostic command:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-runner.ps1
 ```
 
-The script checks service/process/registration-file presence, runner binary metadata, diagnostic-log location, and representative outbound TCP/443 connectivity. It never starts, stops, installs, removes, registers, or reconfigures the runner and does not read/print runner token material.
+The diagnostic script does not start/stop/install/remove/register/reconfigure the runner and does not print registration token material.
 
-## 10. Failure classification
+## 11. Failure classification
 
-When a check fails, record the actual category:
-
+Use actual evidence:
 - `FOUNDATION CONTRACT FAILURE`
 - `DEPENDENCY INSTALL FAILURE`
 - `BUILD FAILURE`
@@ -198,33 +207,24 @@ When a check fails, record the actual category:
 - `BASELINE FAILURE`
 - `FLAKY TEST DEFECT`
 
-Never repeatedly rerun a failing test until it happens to pass and report only the successful attempt.
+Do not rerun until a failure happens to pass and hide the failing evidence.
 
-## 11. Foundation Slice 1 exit gate
+## 12. Foundation Slice 1 exit gate
 
-`ABD-259` cannot complete until all are evidenced:
-
-1. an approved runner actually executes;
+`ABD-259` completes only when all are evidenced:
+1. approved executable runner evidence exists;
 2. dependency installation succeeds;
 3. `pnpm-lock.yaml` is committed;
-4. CI uses frozen-lockfile mode;
-5. foundation preflight passes on the real checkout;
+4. steady-state CI is frozen-lockfile-only;
+5. preflight/regression guardrails pass;
 6. build passes;
 7. typecheck passes;
 8. tests pass;
-9. checkpoint and Linear evidence are reconciled.
+9. API development source-to-runtime restart smoke check passes;
+10. checkpoint and Linear state are reconciled.
 
-Only after this gate should `ABD-260` PostgreSQL/migration implementation begin.
+After this gate, `ABD-260` PostgreSQL/migration implementation begins.
 
-## 12. Current non-scope
+## 13. Current non-scope
 
-This runbook does not authorize:
-
-- production deployment
-- source connector activation
-- payment-provider activation
-- unrestricted internet acquisition
-- autonomous/bulk outreach
-- Daily Market Intelligence Scout activation
-- destructive data actions
-- bypass of later legal/provider/commercial gates
+This M01 work does not activate production deployment, source connectors, payment providers, unrestricted internet acquisition, autonomous/bulk outreach, the Daily Market Intelligence Scout, destructive data actions, or later legal/provider/commercial gates.
