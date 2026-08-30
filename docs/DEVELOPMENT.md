@@ -23,6 +23,8 @@ Current non-secret foundation variables:
 - `HOST` — API listen address, default `0.0.0.0`
 - `PORT` — API port, default `3001`, valid 1–65535
 
+The API `dev` and `start` scripts load repo-root `.env` through Node's native `--env-file-if-exists` option. Already-set process environment variables remain authoritative over `.env` values.
+
 Real credentials, provider tokens and production secrets must never be committed. Foundation Slice 1 does not require any production secret.
 
 ## 3. Foundation preflight
@@ -87,7 +89,7 @@ Web development server:
 pnpm --filter @brovexa/web dev
 ```
 
-The API's current `dev` script is intentionally not treated as a complete hot-reload developer workflow yet; that is a later M01 developer-experience hardening item. Do not claim it has been verified before execution evidence exists.
+The API's current `dev` script is not yet a complete source-to-runtime hot-reload workflow; it watches built output, while source compilation still requires an explicit build. This is tracked as M01 developer-experience hardening and must not be described as verified hot reload until executable evidence exists.
 
 ## 7. Health contract
 
@@ -117,7 +119,7 @@ The controller has a contract-level unit test, but it remains unverified until t
 Current diagnostic state as of 2026-08-30:
 
 - both `ubuntu-latest` and `ubuntu-slim` attempts failed before runner allocation
-- observed jobs reported `runner_id=0`, empty runner name and zero steps
+- observed jobs reported no executable steps
 - application dependency install/build/typecheck/tests did not execute
 
 Classification: **CI infrastructure / hosted-runner allocation failure**, exact account/org/budget/payment/policy/platform cause unverified.
@@ -126,15 +128,25 @@ Do not modify application code merely to make a pre-runner infrastructure failur
 
 ## 9. Manual self-hosted fallback
 
-`.github/workflows/ci-self-hosted.yml` is an approved diagnostic/verification fallback for a trusted Windows x64 self-hosted runner.
+The **dispatchable** M01 fallback is the default-branch workflow:
 
-Safety properties:
+```text
+.github/workflows/m01-self-hosted-dispatch.yml
+```
+
+It checks out exactly `m01/platform-foundation` on an approved `[self-hosted, Windows, X64]` runner. It is manual-only and does not accept a caller-controlled target ref.
+
+The implementation branch also carries `.github/workflows/ci-self-hosted.yml` as a **reference mirror** for structural regression checks. Because GitHub `workflow_dispatch` requires the workflow file on the default branch, do not treat the branch-local mirror as the operational dispatch entry point.
+
+Required safety properties for the operational dispatcher/reference contract:
 
 - manual `workflow_dispatch` only
+- exact `m01/platform-foundation` checkout
 - no automatic PR/push execution on the local machine
 - explicit `[self-hosted, Windows, X64]` labels
 - `contents: read` GitHub token permissions
 - immutable Action commit pins
+- `persist-credentials: false`
 - same preflight/install/quality contract as hosted CI
 
 If manually dispatched, preserve the exact workflow run/job evidence. A self-hosted PASS may provide M01 verification evidence, but it does not prove GitHub-hosted runner allocation is fixed.

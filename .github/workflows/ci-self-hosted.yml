@@ -1,4 +1,7 @@
-name: CI Self-hosted Fallback
+# Reference mirror for M01 self-hosted verification safety.
+# The dispatchable workflow lives on the default branch as
+# .github/workflows/m01-self-hosted-dispatch.yml.
+name: CI Self-hosted Reference
 
 on:
   workflow_dispatch:
@@ -7,38 +10,52 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-self-hosted-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-self-hosted-platform-foundation
+  cancel-in-progress: false
 
 jobs:
   quality:
-    name: Build, typecheck, test (self-hosted Windows)
+    name: Verify m01/platform-foundation (Windows x64 reference)
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
-      - name: Checkout
+      - name: Checkout approved M01 foundation branch
         # actions/checkout v7.0.1 — immutable commit pin.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: m01/platform-foundation
+          persist-credentials: false
+          fetch-depth: 1
 
-      - name: Set up Node.js
+      - name: Set up approved Node.js
         # actions/setup-node v7.0.0 — immutable commit pin.
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.20.0
 
-      - name: Verify foundation contract
+      - name: Verify foundation contract before dependency install
+        shell: pwsh
         run: node scripts/verify-foundation.mjs
 
-      - name: Test foundation guardrails
+      - name: Test foundation guardrails before dependency install
+        shell: pwsh
         run: node scripts/verify-foundation.test.mjs
 
       - name: Install pinned pnpm
+        shell: pwsh
         run: npm install --global pnpm@11.23.0
 
-      - name: Install dependencies
-        # Temporary until the first verified install produces the committed pnpm-lock.yaml.
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies using lockfile-aware mode
+        shell: pwsh
+        run: |
+          if (Test-Path pnpm-lock.yaml) {
+            pnpm install --frozen-lockfile
+          } else {
+            pnpm install --no-frozen-lockfile
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Run quality gate
+      - name: Run explicit Brovexa quality gate
+        shell: pwsh
         run: pnpm run quality

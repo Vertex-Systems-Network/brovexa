@@ -216,22 +216,38 @@ if (failures.length === 0) {
     developmentRunbook.includes('pnpm install --frozen-lockfile'),
     'Development runbook must document frozen-lockfile mode after bootstrap.',
   );
+  check(
+    developmentRunbook.includes('.github/workflows/m01-self-hosted-dispatch.yml'),
+    'Development runbook must identify the default-branch self-hosted dispatcher.',
+  );
+  check(
+    developmentRunbook.includes('reference mirror'),
+    'Development runbook must distinguish the branch-local self-hosted workflow as a reference mirror.',
+  );
 
   verifyWorkflow(hostedWorkflow, 'Hosted CI');
-  verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI');
+  verifyWorkflow(selfHostedWorkflow, 'Self-hosted CI reference');
 
   check(
     selfHostedWorkflow.includes('workflow_dispatch:'),
-    'Self-hosted CI must remain manual-only.',
+    'Self-hosted CI reference must remain manual-only.',
   );
   check(
     !selfHostedWorkflow.includes('pull_request:'),
-    'Self-hosted CI must not auto-run on pull requests.',
+    'Self-hosted CI reference must not auto-run on pull requests.',
   );
-  check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI must not auto-run on push.');
+  check(!selfHostedWorkflow.includes('\npush:'), 'Self-hosted CI reference must not auto-run on push.');
   check(
     selfHostedWorkflow.includes('runs-on: [self-hosted, Windows, X64]'),
-    'Self-hosted CI must target the explicit Windows x64 self-hosted labels.',
+    'Self-hosted CI reference must target the explicit Windows x64 self-hosted labels.',
+  );
+  check(
+    selfHostedWorkflow.includes('ref: m01/platform-foundation'),
+    'Self-hosted CI reference must checkout exactly m01/platform-foundation.',
+  );
+  check(
+    selfHostedWorkflow.includes('persist-credentials: false'),
+    'Self-hosted CI reference must not persist checkout credentials.',
   );
 }
 

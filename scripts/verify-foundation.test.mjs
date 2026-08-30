@@ -130,7 +130,37 @@ try {
     assertFailure(
       'self-hosted pull-request auto-trigger',
       runVerifier(root),
-      'Self-hosted CI must not auto-run on pull requests.',
+      'Self-hosted CI reference must not auto-run on pull requests.',
+    );
+  }
+
+  {
+    const root = makeFixture();
+    const workflowPath = join(root, '.github/workflows/ci-self-hosted.yml');
+    const workflow = readFileSync(workflowPath, 'utf8').replace(
+      'ref: m01/platform-foundation',
+      'ref: m01/unapproved-branch',
+    );
+    writeFileSync(workflowPath, workflow);
+    assertFailure(
+      'self-hosted arbitrary ref drift',
+      runVerifier(root),
+      'Self-hosted CI reference must checkout exactly m01/platform-foundation.',
+    );
+  }
+
+  {
+    const root = makeFixture();
+    const workflowPath = join(root, '.github/workflows/ci-self-hosted.yml');
+    const workflow = readFileSync(workflowPath, 'utf8').replace(
+      'persist-credentials: false',
+      'persist-credentials: true',
+    );
+    writeFileSync(workflowPath, workflow);
+    assertFailure(
+      'self-hosted persisted checkout credentials',
+      runVerifier(root),
+      'Self-hosted CI reference must not persist checkout credentials.',
     );
   }
 
