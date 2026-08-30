@@ -1,6 +1,6 @@
 # Brovexa M01 Development & Verification Runbook
 
-Status: **M01 active / Foundation Slice 1 final executable verification**
+Status: **M01 active / Foundation Slice 1 verified / PostgreSQL foundation in progress**
 
 Repository/runtime/test evidence outranks this document if they conflict.
 
@@ -19,6 +19,7 @@ Current non-secret variables:
 - `NODE_ENV=development|test|staging|production`
 - `HOST` — default `0.0.0.0`
 - `PORT` — default `3001`, valid 1–65535
+- `DATABASE_URL` — optional PostgreSQL connection URL; leave empty when DB readiness is not required
 
 The API loads repo-root `.env` through Node's native `--env-file-if-exists`. Existing process environment variables remain authoritative. Never commit credentials/provider tokens/production secrets.
 
@@ -41,9 +42,9 @@ These are zero-dependency structural/security guardrails. They do not replace bu
 pnpm install --frozen-lockfile
 ```
 
-Non-frozen CI installation is a verification defect. The one-time bootstrap artifact/write path was removed after lockfile persistence.
+Non-frozen CI installation is a verification defect. Temporary lockfile write workflows must be removed immediately after an approved dependency-lock reconciliation.
 
-`pnpm-workspace.yaml` contains an explicit exact-version release-age exception for `zod@4.5.4`; do not broaden it to a package wildcard without dependency review.
+`pnpm-workspace.yaml` contains an exact-version release-age exception for `zod@4.5.4`. It also explicitly permits dependency build scripts only for the exact currently locked esbuild versions required by the Drizzle tooling graph. Do not broaden either trust rule to a package wildcard or all future versions without dependency review.
 
 ## 5. FAST quality gate
 
@@ -65,21 +66,20 @@ pnpm run quality:runtime
 
 Do not use bare `pnpm ci` as the Brovexa quality script; pnpm 11 owns that command as package-manager behavior.
 
-## 6. Verified hosted baseline
+## 6. Verified Foundation Slice 1 baseline
 
 Hosted GitHub Actions has executed successfully with Node `24.20.0` and pnpm `11.23.0`.
 
-Run `33310396346` / job `99254280825` proved:
+Final Foundation Slice 1 run `33312134186` / job `99258997531` proved:
 - foundation preflight and negative guardrails
-- dependency installation
+- committed frozen-lockfile installation
 - Config/Contracts/API builds
 - Next.js 16.3.3 production build
-- TypeScript 7 typecheck across all workspace projects
+- TypeScript 7 typecheck across all foundation workspace projects
 - Vitest: Contracts 4, Config 6, API health 1 — **11/11 tests passed**
+- live API source-to-runtime reload smoke
 
-`pnpm-lock.yaml` was persisted through controlled run `33310860606` and steady-state bootstrap write permission was then removed.
-
-Run `33311396136` / job `99257019193` proved clean **frozen-lockfile reproducibility** plus build/typecheck/tests.
+`ABD-259` is therefore `VERIFIED/DONE`. PostgreSQL/data-layer work continues under `ABD-260`.
 
 ## 7. API development loop
 
@@ -97,20 +97,21 @@ pnpm --filter @brovexa/api dev
 
 `scripts/dev-api.mjs` uses a deterministic dependency-free polling supervisor rather than platform-specific native filesystem watchers.
 
-Flow:
+Current flow:
 
 ```text
 Initial Config compile
 → Initial Contracts compile
+→ Initial DB compile
 → Initial API compile
 → Start last-good API runtime
-→ Poll Config/Contracts/API TypeScript sources + build tsconfigs every 500ms
-→ On change: rebuild Config → Contracts → API
+→ Poll Config/Contracts/DB/API TypeScript sources, DB migration SQL, and build tsconfigs every 500ms
+→ On change: rebuild Config → Contracts → DB → API
 → If rebuild succeeds: graceful runtime restart
 → If rebuild fails: keep the last-good API runtime alive and retry on the next source change
 ```
 
-This avoids known native watcher limitations in container/networked environments while preserving the same source-to-runtime development behavior on Linux and Windows.
+This avoids native watcher limitations in container/networked environments while ensuring the API never consumes a stale `@brovexa/db` build during local development.
 
 Live executable smoke command:
 
@@ -132,9 +133,11 @@ Web development server:
 pnpm --filter @brovexa/web dev
 ```
 
-## 8. Health contract
+## 8. Health and readiness
 
-`GET /health`
+`GET /health` remains process health and is independent of PostgreSQL.
+
+Canonical health response:
 
 ```json
 {
@@ -145,7 +148,7 @@ pnpm --filter @brovexa/web dev
 }
 ```
 
-The controller contract test is verified green on hosted CI.
+`GET /ready` is database-aware during ABD-260 and fails closed when the database is not configured, unavailable, on the wrong PostgreSQL major, or missing the required schema. See `docs/DATABASE.md`.
 
 ## 9. GitHub-hosted CI
 
@@ -157,12 +160,13 @@ Steady-state properties:
 - immutable Action commit pins
 - committed lockfile required
 - `pnpm install --frozen-lockfile`
+- explicit pnpm dependency-build allowlist; broad allow-all is forbidden
 - build/typecheck/test gate
 - live API reload smoke gate
-- no bootstrap artifact upload
-- no CI write-back job
+- PostgreSQL 18 migration/data-layer integration gate during ABD-260
+- no standing CI write-back job
 
-Historical pre-runner failures are baseline evidence only; hosted allocation recovered and executable application verification now runs normally.
+Historical pre-runner failures are baseline evidence only; hosted allocation recovered and executable application verification runs normally.
 
 ## 10. Manual self-hosted fallback
 
@@ -213,28 +217,29 @@ Use actual evidence:
 - `BUILD FAILURE`
 - `TYPECHECK FAILURE`
 - `TEST FAILURE`
+- `DATABASE INTEGRATION FAILURE`
 - `CI INFRASTRUCTURE FAILURE`
 - `BASELINE FAILURE`
 - `FLAKY TEST DEFECT`
 
 Do not rerun until a defect happens to pass and hide the failing evidence.
 
-## 12. Foundation Slice 1 exit gate
+## 12. M01 progression
 
-`ABD-259` completes only when all are evidenced:
-1. approved executable runner evidence exists;
-2. dependency installation succeeds;
-3. `pnpm-lock.yaml` is committed;
-4. steady-state CI is frozen-lockfile-only;
-5. preflight/regression guardrails pass;
-6. build passes;
-7. typecheck passes;
-8. tests pass;
-9. API development source-to-runtime reload smoke passes;
-10. checkpoint and Linear state are reconciled.
+Completed:
+- `ABD-259` monorepo/foundation executable baseline
 
-After this gate, `ABD-260` PostgreSQL/migration implementation begins immediately.
+Current:
+- `ABD-260` PostgreSQL migration/data-layer harness
+
+`ABD-260` must not be called Done until actual PostgreSQL 18 evidence proves migration apply, constraints, transaction rollback, explicit down migration, re-apply, and API readiness behavior.
+
+Next dependency-gated work:
+- `ABD-261` durable worker/queue foundation
+- `ABD-262` provider-neutral identity/RBAC/tenant primitives
+- `ABD-263` API conventions/observability
+- `ABD-264` M01 FULL GATE
 
 ## 13. Current non-scope
 
-This M01 work does not activate production deployment, source connectors, payment providers, unrestricted internet acquisition, autonomous/bulk outreach, the Daily Market Intelligence Scout, destructive data actions, or later legal/provider/commercial gates.
+This M01 work does not activate production deployment, source connectors, payment providers, unrestricted internet acquisition, autonomous/bulk outreach, the Daily Market Intelligence Scout, destructive production data actions, or later legal/provider/commercial gates.
