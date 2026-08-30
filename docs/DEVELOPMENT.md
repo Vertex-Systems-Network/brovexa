@@ -23,7 +23,7 @@ Current non-secret foundation variables:
 - `HOST` — API listen address, default `0.0.0.0`
 - `PORT` — API port, default `3001`, valid 1–65535
 
-The API `dev` and `start` scripts load repo-root `.env` through Node's native `--env-file-if-exists` option. Already-set process environment variables remain authoritative over `.env` values.
+The API runtime loads repo-root `.env` through Node's native `--env-file-if-exists` option. Already-set process environment variables remain authoritative over `.env` values.
 
 Real credentials, provider tokens and production secrets must never be committed. Foundation Slice 1 does not require any production secret.
 
@@ -69,7 +69,9 @@ Foundation preflight → Build → Typecheck → Test
 
 Do not invoke bare `pnpm ci` as the Brovexa quality script. In pnpm 11, `pnpm ci` is a package-manager clean-install command.
 
-## 6. Individual commands
+## 6. Development commands
+
+Full quality primitives:
 
 ```bash
 pnpm run build
@@ -77,7 +79,23 @@ pnpm run typecheck
 pnpm run test
 ```
 
-API after a successful build:
+API source-to-runtime development loop:
+
+```bash
+pnpm run dev:api
+```
+
+Equivalent package command:
+
+```bash
+pnpm --filter @brovexa/api dev
+```
+
+The dependency-free `scripts/dev-api.mjs` supervisor performs an initial ordered compile of Config → Contracts → API. Only after those compiles pass does it start TypeScript watch compilers for all three projects plus Node's runtime watch for `apps/api/dist/main.js`. Node watch restarts when the entry point or imported built modules change. Ctrl+C terminates the supervised children.
+
+This development loop is **implemented but not yet runtime-verified** because the approved Node 24 dependency installation/build gate has not executed successfully yet.
+
+API production-style start after a successful build:
 
 ```bash
 pnpm --filter @brovexa/api start
@@ -88,8 +106,6 @@ Web development server:
 ```bash
 pnpm --filter @brovexa/web dev
 ```
-
-The API's current `dev` script is not yet a complete source-to-runtime hot-reload workflow; it watches built output, while source compilation still requires an explicit build. This is tracked as M01 developer-experience hardening and must not be described as verified hot reload until executable evidence exists.
 
 ## 7. Health contract
 

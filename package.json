@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "dev:api": "node scripts/dev-api.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
     "verify:foundation:test": "node scripts/verify-foundation.test.mjs",
     "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run build && pnpm run typecheck && pnpm run test"
