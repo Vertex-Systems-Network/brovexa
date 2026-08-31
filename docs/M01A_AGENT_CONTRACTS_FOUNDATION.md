@@ -1,6 +1,6 @@
 # M01A — Executable Agent Contracts Foundation
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING CI / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -14,7 +14,7 @@ The governing rule remains:
 
 ## Implemented contracts
 
-`packages/contracts/src/ai.ts` now defines executable schemas/types for:
+`packages/contracts/src/ai.ts` defines executable schemas/types for:
 
 - `AgentDefinition`
 - autonomy tiers T0–T4
@@ -48,11 +48,21 @@ The contract layer fails closed when:
 12. an evaluator attempts to evaluate the same run that generated the subject result;
 13. an evaluator accepts evidence that is not `verified`.
 
-## Tests
+## Verification evidence
+
+The first hosted run correctly caught an `exactOptionalPropertyTypes` compile mismatch in the new scope contract. The implementation was corrected rather than bypassing the gate.
+
+Final exact source head: `e6c1e379aacae634ccae791b5901552689315d29`.
+
+Hosted FULL GATE run `33435851495`: **PASS**.
+
+- quality/security + build/typecheck/tests + live API observability job `99631967923`: **PASS**
+- PostgreSQL 18 migration + tenant/RBAC regression job `99632659346`: **PASS**
+- canonical worker + Valkey recovery/correlation regression job `99632922997`: **PASS**
+
+PR #17 merged the verified source head to `main` as `de800e0a502830340556dc3d814a4ab0b5714c87`.
 
 `packages/contracts/src/ai.spec.ts` exercises the initial safety boundary, including cross-tenant context isolation and independent evaluator behavior.
-
-The authoritative completion state for this slice is **not VERIFIED** until repository CI passes on the exact branch/PR head and the change is integrated through the normal PR path.
 
 ## Explicit non-scope
 
@@ -69,6 +79,6 @@ This slice does **not** activate or implement:
 - payment/billing provider activation;
 - production deployment.
 
-## Next safe slice after verification
+## Next safe slice
 
-After this contract slice passes CI and integrates, the next M01A batch should implement canonical PostgreSQL persistence for AgentDefinition/AgentRun/ContextReceipt/MemoryRecord/EvalResult with reversible migrations, tenant integrity, append/history semantics and dedicated database verification before runtime orchestration is introduced.
+Implement canonical PostgreSQL persistence for AgentDefinition/AgentRun/ContextReceipt/MemoryRecord/EvalResult with reversible migrations, tenant integrity, append/history semantics and dedicated database verification before runtime orchestration is introduced.
