@@ -68,6 +68,8 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
         AND to_regclass('public.agent_definitions') IS NOT NULL
         AND to_regclass('public.agent_context_receipts') IS NOT NULL
         AND to_regclass('public.agent_runs') IS NOT NULL
+        AND to_regclass('public.memory_records') IS NOT NULL
+        AND to_regclass('public.agent_eval_results') IS NOT NULL
         AS schema_ready
   `);
 
