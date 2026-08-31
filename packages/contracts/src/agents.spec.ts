@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AgentDefinitionSchema,
+  AgentRunSchema,
   ContextReceiptSchema,
   MemoryProvenanceSchema,
   agentAutonomyTierValues,
@@ -62,6 +63,27 @@ describe('agent and memory contracts', () => {
       key: 'agent.control.context',
       autonomyTier: 'T0',
     });
+  });
+
+  it('binds public AgentRun identity to membership and immutable definition hash', () => {
+    const parsed = AgentRunSchema.parse({
+      id: '7dce6275-287a-4638-8294-4f8865399427',
+      workspaceId: '4a42ae1a-53b3-4998-a6f3-50d3e840d0aa',
+      parentRunId: null,
+      requestedByMembershipId: 'd3914853-242a-4129-828e-fe5860b2d1e3',
+      agentKey: 'agent.control.context',
+      agentVersion: 1,
+      definitionHash: 'a'.repeat(64),
+      status: 'pending',
+      correlationId: '8bca2527-f8f7-40a6-acf2-7846d98b5e82',
+      input: {},
+      startedAt: null,
+      completedAt: null,
+      createdAt: '2026-08-31T16:00:00.000Z',
+      updatedAt: '2026-08-31T16:00:00.000Z',
+    });
+    expect(parsed.requestedByMembershipId).toBe('d3914853-242a-4129-828e-fe5860b2d1e3');
+    expect(parsed.definitionHash).toHaveLength(64);
   });
 
   it('requires an evaluator identity when independent evaluation is enabled', () => {
