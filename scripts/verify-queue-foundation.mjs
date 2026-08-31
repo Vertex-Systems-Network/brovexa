@@ -42,8 +42,7 @@ if (failures.length === 0) {
   check(workerRuntime.includes('completeWorkUnitWithEffect'), 'Worker completion must pass through canonical effect guard.');
   check(compose.includes('ghcr.io/valkey-io/valkey:9.1.1-alpine3.24@sha256:de31910896150d5e754a07d57d227cfdde4e258ddd0d1aa4607f2d2f95843715'), 'Valkey local transport must remain pinned by reviewed immutable digest.');
   check(compose.includes('--appendonly", "no"'), 'M01 Valkey transport should remain intentionally non-canonical/ephemeral.');
-  check(workflow.includes('name: Canonical worker + Valkey integration'), 'Hosted CI must include queue/worker integration verification.');
-  check(workflow.includes('pnpm run verify:queue'), 'Hosted CI must execute canonical worker/queue verification.');
+  check(workflow.includes('Canonical worker + Valkey') && workflow.includes('pnpm run verify:queue'), 'Hosted CI must include queue/worker integration verification that executes verify:queue.');
   check(!workflow.includes('dangerouslyAllowAllBuilds'), 'Broad package lifecycle-script execution must remain forbidden.');
   check(workspace.includes("'msgpackr-extract@3.0.4': true"), 'BullMQ native helper allowBuilds entry must remain exact to msgpackr-extract@3.0.4.');
   check(!/msgpackr-extract@[^'\n]*\|\|/.test(workspace), 'msgpackr-extract lifecycle trust must not expand to multiple/future versions implicitly.');
