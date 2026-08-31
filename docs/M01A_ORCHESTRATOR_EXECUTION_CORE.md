@@ -1,6 +1,6 @@
 # M01A — Bounded Orchestrator Execution Planning
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO main**
 
 Updated: 2026-09-01
 
@@ -49,7 +49,7 @@ A plan is bound by database constraints to the exact:
 
 The plan envelope is checked against canonical identity columns and step count. Plan rows are append-only through the same fail-closed lifecycle mutation function used by the existing AgentRun/memory history ledgers.
 
-The migration has a reviewed down migration and the canonical PostgreSQL verifier now proves `0006` rollback/reapply behavior.
+The migration has a reviewed down migration and the canonical PostgreSQL verifier proves `0006` rollback/reapply behavior.
 
 ## Planner persistence boundary
 
@@ -115,6 +115,18 @@ The PostgreSQL 18 verification covers:
 - successful plan replay after the run transition.
 
 Existing agent persistence, memory/evaluation, lifecycle, Context Builder, RBAC and worker/Valkey verifiers are reconciled with migration 0006 rather than bypassed.
+
+### Verification evidence
+
+- Verified source head: `67c920132441a81f1c57c9bdcfee552d4e6c69c2`
+- Hosted FULL GATE run: `33446718454`
+- M01 FULL GATE quality and security job: `99667359375` — PASS
+- PostgreSQL 18 migration + RBAC FULL GATE job: `99667811785` — PASS
+- Canonical worker + Valkey FULL GATE job: `99667972293` — PASS
+- Pull request: `#27` — merged
+- Integration merge SHA: `0b721b4b43ce27da8f4f81a351879c07cc6ce25a`
+
+An earlier run on source head `263d8c9938f0342019dd9e331277b3138cb9eccc` correctly failed a TypeScript test-fixture inference issue. The fixture typing was fixed without weakening any gate, and the replacement exact head above passed the complete hosted gate.
 
 ## Explicit non-scope
 

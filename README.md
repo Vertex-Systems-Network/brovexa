@@ -6,19 +6,19 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-09-01**
 
-**Current verified state:** M00 planning/readiness and **M01 — Platform Foundation & Developer Experience are complete**. **M01A — AI Agent Runtime & Memory OS is active**. Five implementation slices are now FULL-GATE verified and integrated: executable governed AI contracts/safety, canonical `AgentDefinition → ContextReceipt → AgentRun` PostgreSQL persistence, durable governed `MemoryRecord` + independent `EvalResult` persistence, append-only AgentRun/memory lifecycle history with transactional projections, and deterministic approved Agent Registry + minimum-necessary Context Builder runtime. The next safe slice is a bounded provider-neutral Orchestrator/Planner execution foundation; provider/model invocation remains separately gated.
+**Current verified state:** M00 planning/readiness and **M01 — Platform Foundation & Developer Experience are complete**. **M01A — AI Agent Runtime & Memory OS is active**. Six implementation slices are now FULL-GATE verified and integrated: executable governed AI contracts/safety, canonical `AgentDefinition → ContextReceipt → AgentRun` PostgreSQL persistence, durable governed `MemoryRecord` + independent `EvalResult` persistence, append-only AgentRun/memory lifecycle history with transactional projections, deterministic approved Agent Registry + minimum-necessary Context Builder runtime, and bounded provider-neutral Orchestrator/Planner execution-plan persistence with exact scope/budget validation. The next safe slice is deterministic plan dispatch into canonical JobRun/WorkUnit state; provider/model invocation remains separately gated.
 
 ### Overall delivery estimate
 
-**Weighted program delivery: ~20% complete**
+**Weighted program delivery: ~21% complete**
 
-`████░░░░░░░░░░░░░░░░ 20%`
+`████░░░░░░░░░░░░░░░░ 21%`
 
 ```mermaid
 pie showData
     title Brovexa weighted delivery estimate
-    "Completed / materially delivered" : 20
-    "Remaining" : 80
+    "Completed / materially delivered" : 21
+    "Remaining" : 79
 ```
 
 > Progress is an evidence-based delivery estimate, not a simple milestone count. Planning/architecture-only work receives limited credit; verified runtime, tests, CI and integrated code receive full credit. Estimates exclude waiting time for provider, legal, commercial or production-infrastructure decisions.
@@ -29,7 +29,7 @@ pie showData
 |---|---|---|---:|---:|
 | M00 | Product, Compliance & Architecture Baseline | Approved readiness baseline; implementation authorized | `████████████████████` **100%** | **0** |
 | M01 | Platform Foundation & Developer Experience | **VERIFIED / INTEGRATED** — monorepo, PostgreSQL migrations, queue/worker, identity/RBAC/tenant primitives, API observability/health, CI/security FULL GATE | `████████████████████` **100%** | **0** |
-| M01A | AI Agent Runtime & Memory OS | **ACTIVE** — executable contracts/safety, canonical Agent/Context/Run persistence, governed Memory/Eval persistence, append-only lifecycle history, exact approved Agent Registry resolution and deterministic tenant-scoped Context Builder are FULL-GATE verified/integrated. Bounded orchestration/execution state, validators and provider/model execution remain | `██████████░░░░░░░░░░` **48%** | **5–8** |
+| M01A | AI Agent Runtime & Memory OS | **ACTIVE** — executable contracts/safety, canonical Agent/Context/Run persistence, governed Memory/Eval persistence, append-only lifecycle history, exact approved Agent Registry + deterministic Context Builder, and immutable bounded Orchestrator/Planner execution-plan state are FULL-GATE verified/integrated. Deterministic WorkUnit dispatch, execution aggregation/validators and provider/model execution remain | `████████████░░░░░░░░` **58%** | **4–7** |
 | M02 | Business Discovery & Source Connectors | Provider-neutral contracts/source policy planned; production connectors not implemented/activated | `█░░░░░░░░░░░░░░░░░░░` **5%** | **8–12** |
 | M02A | Global Acquisition Studio & Background Research | Geography/taxonomy/Research Job Builder/background-execution contracts planned; feature implementation not started | `█░░░░░░░░░░░░░░░░░░░` **5%** | **12–18** |
 | M03 | Entity Resolution & Contact Enrichment | Canonical model planned; enrichment remains provider/legal gated | `█░░░░░░░░░░░░░░░░░░░` **5%** | **7–10** |
@@ -44,20 +44,20 @@ pie showData
 | M09 | Security, Reliability, Scale & Cost Controls | Reusable foundation controls already delivered in M01; production hardening/load/backup/DR remain | `███░░░░░░░░░░░░░░░░░` **15%** | **10–14** |
 | M10 | Beta, Production Readiness & Launch | End-to-end beta/release/production verification not started | `░░░░░░░░░░░░░░░░░░░░` **0%** | **10–15** |
 | MX | Continuous Product & Market Intelligence | Workflow/contracts documented; continuous scout activation intentionally deferred | `█░░░░░░░░░░░░░░░░░░░` **5%** | **4–8** |
-|  | **Total remaining** | **Full planned program, sequential engineering effort** | **~80%** | **~124–187 days** |
+|  | **Total remaining** | **Full planned program, sequential engineering effort** | **~79%** | **~123–186 days** |
 
 \* Engineering-day ranges assume focused AI-native development with the existing architecture, small reversible batches and required verification gates. They are not calendar promises and do not include external approval/wait time. Parallel work can reduce calendar time, but dependencies prevent linear speed-up.
 
 ### Delivery interpretation
 
 - **M00 + M01 are complete.** The platform foundation is integrated and verified.
-- **M01A has five verified implementation slices.** Governed executable contracts, canonical AgentDefinition/ContextReceipt/AgentRun persistence, durable MemoryRecord/EvalResult persistence, append-only AgentRun/memory lifecycle history, and deterministic approved Agent Registry + minimum-necessary Context Builder runtime are integrated.
-- **Next M01A gap:** bounded provider-neutral Orchestrator/Planner execution state that consumes approved definitions + persisted context, creates governed run/work state, enforces validators/budgets and uses the existing lifecycle transitions. Actual model/provider invocation remains a separate later gate.
+- **M01A has six verified implementation slices.** Governed executable contracts, canonical AgentDefinition/ContextReceipt/AgentRun persistence, durable MemoryRecord/EvalResult persistence, append-only AgentRun/memory lifecycle history, deterministic approved Agent Registry + minimum-necessary Context Builder runtime, and bounded immutable Orchestrator/Planner execution-plan state are integrated.
+- **Next M01A gap:** deterministic plan dispatch from an already-validated `AgentExecutionPlan` DAG into canonical JobRun/WorkUnit state with stable idempotency, dependency readiness/unlocking, cancellation/recovery/checkpoints and budget reservation/accounting. Actual model/provider invocation remains a separate later gate.
 - **Wave A / first usable intelligence product** requires substantial work across the rest of M01A, M02/M02A, M03–M06A plus selected M07/M08 capabilities.
 - **Production launch** additionally requires M08A/M08B, M09 and M10 gates plus provider/legal/commercial decisions.
 - Current code is a strong governed foundation, but the majority of user-facing intelligence, acquisition, lead, client and commercial capability is still ahead.
 
-Evidence basis: `docs/CHECKPOINT.md`, `docs/M01A_AGENT_CONTRACTS_FOUNDATION.md`, `docs/M01A_AGENT_PERSISTENCE_CORE.md`, `docs/M01A_MEMORY_EVALUATION_PERSISTENCE.md`, `docs/M01A_AGENT_MEMORY_LIFECYCLE.md`, `docs/M01A_AGENT_CONTEXT_RUNTIME.md`, `docs/PROJECT_PLAN.md`, `docs/CAPABILITY_TRACEABILITY_MATRIX.md`, `docs/LAUNCH_SCOPE_WAVES.md`, repository runtime tree and hosted FULL-GATE evidence.
+Evidence basis: `docs/CHECKPOINT.md`, `docs/M01A_AGENT_CONTRACTS_FOUNDATION.md`, `docs/M01A_AGENT_PERSISTENCE_CORE.md`, `docs/M01A_MEMORY_EVALUATION_PERSISTENCE.md`, `docs/M01A_AGENT_MEMORY_LIFECYCLE.md`, `docs/M01A_AGENT_CONTEXT_RUNTIME.md`, `docs/M01A_ORCHESTRATOR_EXECUTION_CORE.md`, `docs/PROJECT_PLAN.md`, `docs/CAPABILITY_TRACEABILITY_MATRIX.md`, `docs/LAUNCH_SCOPE_WAVES.md`, repository runtime tree and hosted FULL-GATE evidence.
 
 ## Core product pipeline
 
@@ -86,6 +86,7 @@ M01A progress does not activate production model providers, source connectors, p
 - M01A memory/evaluation checkpoint: `docs/M01A_MEMORY_EVALUATION_PERSISTENCE.md`
 - M01A lifecycle checkpoint: `docs/M01A_AGENT_MEMORY_LIFECYCLE.md`
 - M01A context runtime checkpoint: `docs/M01A_AGENT_CONTEXT_RUNTIME.md`
+- M01A orchestrator execution checkpoint: `docs/M01A_ORCHESTRATOR_EXECUTION_CORE.md`
 - Engineering governance: `docs/ENGINEERING_CONSTITUTION.md`
 - Capability traceability: `docs/CAPABILITY_TRACEABILITY_MATRIX.md`
 - Project plan: `docs/PROJECT_PLAN.md`
