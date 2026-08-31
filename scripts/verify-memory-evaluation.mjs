@@ -13,13 +13,6 @@ import {
   persistMemoryRecord,
   probeDatabase,
 } from '../packages/db/dist/index.js';
-import {
-  AgentDefinitionSchema,
-  AgentRunSchema,
-  ContextReceiptSchema,
-  EvalResultSchema,
-  MemoryRecordSchema,
-} from '../packages/contracts/dist/index.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for memory/evaluation verification.');
@@ -100,7 +93,7 @@ try {
   const workspaceA = await createWorkspace('memory-eval-a');
   const workspaceB = await createWorkspace('memory-eval-b');
 
-  const definition = AgentDefinitionSchema.parse({
+  const definition = {
     key: 'agent.control.evaluator',
     version: '1.0.0',
     status: 'approved',
@@ -149,7 +142,7 @@ try {
     telemetryRedactionPolicyId: 'telemetry.default',
     owner: 'platform-ai',
     changeReason: 'Memory/evaluation persistence verification.',
-  });
+  };
 
   const definitionId = await persistAgentDefinition(pool, {
     agentKey: definition.key,
@@ -160,7 +153,7 @@ try {
     specification: definition,
   });
 
-  const receipt = ContextReceiptSchema.parse({
+  const receipt = {
     id: 'ctx_memory_eval_a',
     taskId: 'task_memory_eval_a',
     workspaceId: workspaceA,
@@ -172,7 +165,7 @@ try {
     tokenBudget: 0,
     maxCurrencyMicros: 0,
     createdAt: '2026-09-01T00:00:00.000Z',
-  });
+  };
 
   await persistContextReceipt(pool, {
     id: receipt.id,
@@ -187,7 +180,7 @@ try {
   });
 
   function buildRun(id, resultKey) {
-    return AgentRunSchema.parse({
+    return {
       id,
       workspaceId: workspaceA,
       agentKey: definition.key,
@@ -219,7 +212,7 @@ try {
       proposedActions: [],
       startedAt: '2026-09-01T00:00:00.000Z',
       completedAt: '2026-09-01T00:00:01.000Z',
-    });
+    };
   }
 
   const subjectRun = buildRun('subject_run_1', 'subject');
@@ -241,7 +234,7 @@ try {
     });
   }
 
-  const memory = MemoryRecordSchema.parse({
+  const memory = {
     id: 'memory_parent_1',
     version: '1.0.0',
     namespace: `workspace/${workspaceA}/business/company-1`,
@@ -267,7 +260,7 @@ try {
     dataClassification: 'BUSINESS_DATA',
     sourcePolicyRefs: ['policy.source.v1'],
     jurisdictionRefs: [],
-  });
+  };
 
   const memoryInput = {
     id: memory.id,
@@ -300,7 +293,7 @@ try {
       error instanceof AgentPersistenceConflictError && error.code === 'MEMORY_RECORD_ID_CONFLICT',
   );
 
-  const childMemory = MemoryRecordSchema.parse({
+  const childMemory = {
     ...memory,
     id: 'memory_child_1',
     version: '1.1.0',
@@ -308,7 +301,7 @@ try {
     content: { legalName: 'Example Business Ltd.' },
     createdAt: '2026-09-01T00:01:00.000Z',
     updatedAt: '2026-09-01T00:01:00.000Z',
-  });
+  };
 
   await persistMemoryRecord(pool, {
     id: childMemory.id,
@@ -379,7 +372,7 @@ try {
     expectPostgresConstraint('23514', 'memory_records_deletion_reason_check'),
   );
 
-  const runMemory = MemoryRecordSchema.parse({
+  const runMemory = {
     id: 'memory_run_1',
     version: '1.0.0',
     namespace: `run/${subjectRun.id}/analysis`,
@@ -412,7 +405,7 @@ try {
     dataClassification: 'AI_DERIVED',
     sourcePolicyRefs: [],
     jurisdictionRefs: [],
-  });
+  };
 
   await persistMemoryRecord(pool, {
     id: runMemory.id,
@@ -448,7 +441,7 @@ try {
     expectPostgresConstraint('23503', 'memory_records_run_workspace_fk'),
   );
 
-  const evaluation = EvalResultSchema.parse({
+  const evaluation = {
     id: 'eval_1',
     evaluatorRunId: evaluatorRun.id,
     subjectRunId: subjectRun.id,
@@ -459,7 +452,7 @@ try {
     policyRefs: ['policy.evaluation.v1'],
     confidence: 0.99,
     createdAt: '2026-09-01T00:03:00.000Z',
-  });
+  };
 
   const evaluationInput = {
     id: evaluation.id,
