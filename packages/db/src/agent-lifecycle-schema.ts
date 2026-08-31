@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { check, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { agentRuns, persistedAgentRunStatusValues, type PersistedAgentRunStatus } from './agent-run-schema';
+import { agentRuns, type PersistedAgentRunStatus } from './agent-run-schema';
 import { memoryRecords, type PersistedMemoryStatus } from './memory-record-schema';
 import { workspaces } from './schema';
 
@@ -40,17 +40,11 @@ export const agentRunTransitions = pgTable(
     check('agent_run_transitions_reason_check', sql`length(btrim(${table.reasonCode})) > 0`),
     check(
       'agent_run_transitions_from_status_check',
-      sql`${table.fromStatus} in (${sql.join(
-        persistedAgentRunStatusValues.map((value) => sql`${value}`),
-        sql`, `,
-      )})`,
+      sql`${table.fromStatus} in ('queued', 'running', 'succeeded', 'failed', 'blocked', 'budget_stopped', 'cancelled', 'review_required')`,
     ),
     check(
       'agent_run_transitions_to_status_check',
-      sql`${table.toStatus} in (${sql.join(
-        persistedAgentRunStatusValues.map((value) => sql`${value}`),
-        sql`, `,
-      )})`,
+      sql`${table.toStatus} in ('queued', 'running', 'succeeded', 'failed', 'blocked', 'budget_stopped', 'cancelled', 'review_required')`,
     ),
     check('agent_run_transitions_change_check', sql`${table.fromStatus} <> ${table.toStatus}`),
   ],
