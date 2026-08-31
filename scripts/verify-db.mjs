@@ -43,6 +43,9 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS agent_runs CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_context_receipts CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_definitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS authorization_audit_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_membership_roles CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_role_permissions CASCADE');
@@ -71,6 +74,7 @@ try {
     '0000_workspace_foundation',
     '0001_job_execution_foundation',
     '0002_identity_authorization_foundation',
+    '0003_agent_runtime_core',
   ]);
 
   const probe = await probeDatabase(pool);
@@ -125,16 +129,15 @@ try {
   );
   assert.equal(preferenceCount.rows[0]?.count, 0);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_runtime_core');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
-    '0002_identity_authorization_foundation',
-  ]);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0003_agent_runtime_core']);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_runtime_core');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0001_job_execution_foundation');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0001_job_execution_foundation');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0000_workspace_foundation');
 
   const afterRollback = await pool.query(`
@@ -142,18 +145,25 @@ try {
       to_regclass('public.workspaces')::text AS workspaces,
       to_regclass('public.users')::text AS users,
       to_regclass('public.job_runs')::text AS job_runs,
-      to_regclass('public.job_work_units')::text AS job_work_units
+      to_regclass('public.job_work_units')::text AS job_work_units,
+      to_regclass('public.agent_definitions')::text AS agent_definitions,
+      to_regclass('public.agent_context_receipts')::text AS agent_context_receipts,
+      to_regclass('public.agent_runs')::text AS agent_runs
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
   assert.equal(afterRollback.rows[0]?.users, null);
   assert.equal(afterRollback.rows[0]?.job_runs, null);
   assert.equal(afterRollback.rows[0]?.job_work_units, null);
+  assert.equal(afterRollback.rows[0]?.agent_definitions, null);
+  assert.equal(afterRollback.rows[0]?.agent_context_receipts, null);
+  assert.equal(afterRollback.rows[0]?.agent_runs, null);
 
   const reapplied = await applyPendingMigrations(pool, migrationsDir);
   assert.deepEqual(reapplied, [
     '0000_workspace_foundation',
     '0001_job_execution_foundation',
     '0002_identity_authorization_foundation',
+    '0003_agent_runtime_core',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
