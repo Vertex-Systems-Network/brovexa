@@ -1,6 +1,6 @@
 # M01A — Memory & Evaluation Persistence
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -79,9 +79,19 @@ The database fails closed when:
 
 Same-ID/same-content retries are idempotent. Same-ID conflicting content, scope or lineage fails with an explicit `AgentPersistenceConflictError`.
 
-## Verification
+## Verification evidence
 
-`scripts/verify-memory-evaluation.mjs` exercises:
+PR #21 final implementation head: `55a44516745d2fd6c1a57c42d72ef02e595ac653`.
+
+Before the final verification run, current `main` was explicitly integrated into the feature branch so the FULL GATE exercised the actual merge context rather than a stale base.
+
+Hosted CI run `33439957270` completed successfully on that exact head:
+
+- M01 FULL GATE quality/security: **PASS**
+- PostgreSQL 18 migration + RBAC FULL GATE: **PASS**
+- canonical worker + Valkey FULL GATE: **PASS**
+
+The PostgreSQL lane executed `scripts/verify-memory-evaluation.mjs` through canonical `pnpm run verify:db` and covered:
 
 - migration/readiness;
 - memory idempotency and conflicting replay;
@@ -98,13 +108,15 @@ Same-ID/same-content retries are idempotent. Same-ID conflicting content, scope 
 - verified-evidence acceptance rule;
 - cross-workspace evaluation rejection.
 
-The script is chained into the canonical `pnpm run verify:db` database gate without changing the guarded root command.
+A CI defect discovered during verification was corrected without weakening the guarded root database command: the memory/evaluation DB integration harness was decoupled from a compiled Contracts-package runtime dependency because `verify:db` intentionally builds only the DB package. Contract validation remains covered by the canonical quality/unit gate.
+
+PR #21 was merged to `main` as `dabf4a03efd6a2c4ce2aeeca8cd22abc6f688998` only after the final current-main FULL GATE passed.
 
 ## Explicit non-scope
 
 This slice does not implement:
 
-- mutable AgentRun transition/history semantics;
+- AgentRun transition/history semantics;
 - memory supersession transaction APIs;
 - retention sweeper/deletion jobs;
 - embedding/vector retrieval;
@@ -115,6 +127,6 @@ This slice does not implement:
 - external tool execution;
 - source connectors, outreach, billing or deployment.
 
-## Next safe slice after verification
+## Next safe slice
 
 Implement append-only AgentRun transition/history semantics and explicit memory supersession/deletion transaction primitives. Then add deterministic Agent Registry + Context Builder retrieval/runtime before any model execution path.
