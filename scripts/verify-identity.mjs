@@ -58,6 +58,9 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS agent_runs CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_context_receipts CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_definitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS authorization_audit_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_membership_roles CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_role_permissions CASCADE');
@@ -94,6 +97,7 @@ try {
     '0000_workspace_foundation',
     '0001_job_execution_foundation',
     '0002_identity_authorization_foundation',
+    '0003_agent_runtime_core',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
@@ -293,6 +297,7 @@ try {
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.assigned'));
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.removed'));
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_runtime_core');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
   const afterRollback = await pool.query(`
@@ -300,15 +305,18 @@ try {
       to_regclass('public.workspaces')::text AS workspaces,
       to_regclass('public.job_runs')::text AS job_runs,
       to_regclass('public.users')::text AS users,
-      to_regclass('public.workspace_memberships')::text AS memberships
+      to_regclass('public.workspace_memberships')::text AS memberships,
+      to_regclass('public.agent_definitions')::text AS agent_definitions
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, 'workspaces');
   assert.equal(afterRollback.rows[0]?.job_runs, 'job_runs');
   assert.equal(afterRollback.rows[0]?.users, null);
   assert.equal(afterRollback.rows[0]?.memberships, null);
+  assert.equal(afterRollback.rows[0]?.agent_definitions, null);
 
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
     '0002_identity_authorization_foundation',
+    '0003_agent_runtime_core',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
