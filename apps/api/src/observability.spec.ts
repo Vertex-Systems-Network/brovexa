@@ -17,11 +17,13 @@ describe('API request correlation', () => {
     );
   });
 
-  it('extracts a W3C trace ID but rejects the forbidden zero trace ID', () => {
+  it('extracts only valid W3C version-00 trace IDs', () => {
     expect(
       extractTraceId('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'),
     ).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
     expect(extractTraceId('00-00000000000000000000000000000000-00f067aa0ba902b7-01')).toBeNull();
+    expect(extractTraceId('00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01')).toBeNull();
+    expect(extractTraceId('ff-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01')).toBeNull();
   });
 
   it('sets response correlation headers and request context', () => {
