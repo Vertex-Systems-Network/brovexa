@@ -33,6 +33,7 @@ if (process.env.BROVEXA_DB_TEST_ALLOW_RESET !== 'true') {
 const pool = createPgPool({ connectionString: databaseUrl, max: 6 });
 const connection = parseQueueRedisUrl(queueRedisUrl);
 const migrationsDir = resolve('packages/db/migrations');
+const correlationIdsSeen = new Set();
 
 async function waitFor(label, predicate, timeoutMs = 10_000) {
   const deadline = Date.now() + timeoutMs;
@@ -86,13 +87,17 @@ try {
 
   const handlers = {
     'foundation.retry-once': async (context) => {
+      correlationIdsSeen.add(context.correlationId);
       if (context.attempt === 1) throw new RetryableWorkError('TEST_TRANSIENT');
       return { effectKey: 'retry-once.effect', effectData: { attempt: context.attempt } };
     },
-    'foundation.recover': async (context) => ({
-      effectKey: 'recovery.effect',
-      effectData: { attempt: context.attempt },
-    }),
+    'foundation.recover': async (context) => {
+      correlationIdsSeen.add(context.correlationId);
+      return {
+        effectKey: 'recovery.effect',
+        effectData: { attempt: context.attempt },
+      };
+    },
     'foundation.permanent': async () => {
       throw new PermanentWorkError('TEST_PERMANENT');
     },
@@ -145,6 +150,11 @@ try {
   );
   assert.equal((await getWorkUnitStatus(pool, retryWork.workUnitId))?.attemptCount, 2);
   assert.equal(await countWorkEffects(pool, retryWork.workUnitId), 1);
+  assert.equal(
+    correlationIdsSeen.has(retryWork.correlationId),
+    true,
+    'Canonical PostgreSQL correlation ID must survive queue delivery and reach the worker handler.',
+  );
 
   await ensureWorkDelivery(runtime.queue, {
     workUnitId: retryWork.workUnitId,
@@ -172,6 +182,11 @@ try {
   );
   assert.equal((await getWorkUnitStatus(pool, recoveryWork.workUnitId))?.attemptCount, 2);
   assert.equal(await countWorkEffects(pool, recoveryWork.workUnitId), 1);
+  assert.equal(
+    correlationIdsSeen.has(recoveryWork.correlationId),
+    true,
+    'Recovered work must preserve its canonical correlation ID through redelivery.',
+  );
 
   const cancelledWork = await createCanonicalWork(pool, {
     workspaceId,
