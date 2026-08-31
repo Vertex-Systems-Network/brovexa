@@ -4,13 +4,9 @@ import {
   HttpException,
   HttpStatus,
   type ArgumentsHost,
-  type CallHandler,
   type ExceptionFilter,
-  type ExecutionContext,
-  type NestInterceptor,
 } from '@nestjs/common';
 import type { ApiError } from '@brovexa/contracts';
-import type { Observable } from 'rxjs';
 
 const requestIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const traceparentPattern = /^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/i;
@@ -68,21 +64,38 @@ function ensureCorrelation(request: CorrelatedRequest): { requestId: string; tra
   return { requestId, traceId };
 }
 
-export function requestContextMiddleware(
-  request: CorrelatedRequest,
-  response: Pick<CorrelationResponse, 'setHeader'>,
-  next: () => void,
-): void {
-  const { requestId, traceId } = ensureCorrelation(request);
-  response.setHeader('x-request-id', requestId);
-  response.setHeader('x-trace-id', traceId);
-  next();
-}
-
 export function sanitizeRequestPath(request: Pick<CorrelatedRequest, 'originalUrl' | 'url'>): string {
   const rawPath = request.originalUrl ?? request.url ?? '/';
   const withoutQuery = rawPath.split('?', 1)[0] || '/';
   return withoutQuery.slice(0, 512);
+}
+
+export function requestContextMiddleware(
+  request: CorrelatedRequest,
+  response: CorrelationResponse,
+  next: () => void,
+): void {
+  const { requestId, traceId } = ensureCorrelation(request);
+  const startedAt = process.hrtime.bigint();
+
+  response.setHeader('x-request-id', requestId);
+  response.setHeader('x-trace-id', traceId);
+  response.once('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    console.info(
+      JSON.stringify({
+        event: 'api.request.completed',
+        requestId,
+        traceId,
+        method: request.method ?? 'UNKNOWN',
+        path: sanitizeRequestPath(request),
+        statusCode: response.statusCode,
+        durationMs: Number(durationMs.toFixed(3)),
+      }),
+    );
+  });
+
+  next();
 }
 
 interface PublicErrorDetails {
@@ -185,32 +198,5 @@ export class ApiExceptionFilter implements ExceptionFilter {
       requestId,
       traceId,
     });
-  }
-}
-
-export class RequestLoggingInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const http = context.switchToHttp();
-    const request = http.getRequest<CorrelatedRequest>();
-    const response = http.getResponse<CorrelationResponse>();
-    const { requestId, traceId } = ensureCorrelation(request);
-    const startedAt = process.hrtime.bigint();
-
-    response.once('finish', () => {
-      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      console.info(
-        JSON.stringify({
-          event: 'api.request.completed',
-          requestId,
-          traceId,
-          method: request.method ?? 'UNKNOWN',
-          path: sanitizeRequestPath(request),
-          statusCode: response.statusCode,
-          durationMs: Number(durationMs.toFixed(3)),
-        }),
-      );
-    });
-
-    return next.handle();
   }
 }
