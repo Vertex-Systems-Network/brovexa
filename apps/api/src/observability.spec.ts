@@ -38,7 +38,11 @@ describe('API request correlation', () => {
 
     requestContextMiddleware(
       request,
-      { setHeader: (name, value) => headers.set(name, value) },
+      {
+        statusCode: 200,
+        setHeader: (name, value) => headers.set(name, value),
+        once: () => undefined,
+      },
       next,
     );
 
@@ -49,7 +53,41 @@ describe('API request correlation', () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it('removes query strings before request paths reach structured logs', () => {
+  it('logs every middleware completion without query-string data', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    let finish = () => undefined;
+
+    requestContextMiddleware(
+      {
+        headers: { 'x-request-id': 'req-log' },
+        method: 'GET',
+        originalUrl: '/businesses?token=secret&email=user@example.com',
+      },
+      {
+        statusCode: 404,
+        setHeader: () => undefined,
+        once: (_event, listener) => {
+          finish = listener;
+        },
+      },
+      () => undefined,
+    );
+    finish();
+
+    expect(info).toHaveBeenCalledOnce();
+    const serialized = String(info.mock.calls[0]?.[0]);
+    const event = JSON.parse(serialized) as Record<string, unknown>;
+    expect(event.event).toBe('api.request.completed');
+    expect(event.requestId).toBe('req-log');
+    expect(event.method).toBe('GET');
+    expect(event.path).toBe('/businesses');
+    expect(event.statusCode).toBe(404);
+    expect(serialized).not.toContain('secret');
+    expect(serialized).not.toContain('user@example.com');
+    info.mockRestore();
+  });
+
+  it('removes query strings from request paths', () => {
     expect(sanitizeRequestPath({ originalUrl: '/businesses?token=secret&email=user@example.com' })).toBe(
       '/businesses',
     );
