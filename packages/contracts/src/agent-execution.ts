@@ -54,6 +54,22 @@ export const AgentExecutionPlanSchema = z
 
     const keys = new Set<string>();
     plan.steps.forEach((step, index) => {
+      if (step.agentKey === 'agent.control.orchestrator') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['steps', index, 'agentKey'],
+          message: 'Execution plan steps cannot recursively target the orchestrator.',
+        });
+      }
+
+      if (step.budget.maxConcurrency !== 1) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['steps', index, 'budget', 'maxConcurrency'],
+          message: 'Nested specialist concurrency is not enabled in the bounded execution foundation.',
+        });
+      }
+
       if (keys.has(step.key)) {
         ctx.addIssue({
           code: 'custom',
@@ -62,10 +78,27 @@ export const AgentExecutionPlanSchema = z
         });
       }
       keys.add(step.key);
+
+      const arrays = [
+        ['dependencies', step.dependencies],
+        ['toolKeys', step.toolKeys],
+        ['commandKeys', step.commandKeys],
+        ['policyRefs', step.policyRefs],
+        ['canonicalRefs', step.canonicalRefs],
+        ['memoryRefs', step.memoryRefs],
+      ] as const;
+      for (const [field, values] of arrays) {
+        if (new Set(values).size !== values.length) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['steps', index, field],
+            message: `${field} must not contain duplicate identifiers.`,
+          });
+        }
+      }
     });
 
     plan.steps.forEach((step, index) => {
-      const dependencies = new Set<string>();
       step.dependencies.forEach((dependency, dependencyIndex) => {
         if (dependency === step.key) {
           ctx.addIssue({
@@ -81,14 +114,6 @@ export const AgentExecutionPlanSchema = z
             message: `Unknown plan dependency: ${dependency}.`,
           });
         }
-        if (dependencies.has(dependency)) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['steps', index, 'dependencies', dependencyIndex],
-            message: `Duplicate plan dependency: ${dependency}.`,
-          });
-        }
-        dependencies.add(dependency);
       });
     });
 
@@ -112,7 +137,6 @@ export const AgentExecutionPlanSchema = z
     }
 
     for (const step of plan.steps) {
-      visiting.clear();
       if (!visit(step.key)) {
         ctx.addIssue({
           code: 'custom',
