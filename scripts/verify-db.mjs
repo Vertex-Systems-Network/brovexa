@@ -194,3 +194,4 @@ try {
 await import('./verify-agent-persistence.mjs');
 await import('./verify-memory-evaluation.mjs');
 await import('./verify-agent-memory-lifecycle.mjs');
+await import('./verify-agent-context-runtime.mjs');
