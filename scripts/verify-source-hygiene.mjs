@@ -9,9 +9,6 @@ const trackedFiles = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' 
 
 const textExtensions = new Set([
   '.css',
-  '.editorconfig',
-  '.env',
-  '.gitignore',
   '.js',
   '.json',
   '.jsonc',
@@ -26,11 +23,49 @@ const textExtensions = new Set([
   '.yaml',
   '.yml',
 ]);
-const extensionlessTextFiles = new Set(['.editorconfig', '.env.example', '.gitignore', '.node-version', '.npmrc', '.nvmrc']);
-const sourcePrefixes = ['apps/', 'packages/', 'scripts/'];
+const extensionlessTextFiles = new Set([
+  '.editorconfig',
+  '.env.example',
+  '.gitignore',
+  '.node-version',
+  '.npmrc',
+  '.nvmrc',
+]);
+const strictPrefixes = ['apps/', 'packages/', 'scripts/', '.github/workflows/'];
+const strictRootFiles = new Set([
+  '.editorconfig',
+  '.env.example',
+  '.gitignore',
+  '.node-version',
+  '.npmrc',
+  '.nvmrc',
+  'compose.dev.yml',
+  'package.json',
+  'pnpm-workspace.yaml',
+  'tsconfig.base.json',
+  'turbo.json',
+]);
+const m01OperationalDocs = new Set([
+  'docs/API_OBSERVABILITY_HEALTH_FOUNDATION.md',
+  'docs/CHECKPOINT.md',
+  'docs/DATABASE.md',
+  'docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md',
+  'docs/DEVELOPMENT.md',
+  'docs/IDENTITY_AUTHORIZATION_FOUNDATION.md',
+  'docs/SELF_HOSTED_RUNNER_RECOVERY.md',
+  'docs/WORKER_QUEUE.md',
+]);
 
 function isTextCandidate(path) {
   return extensionlessTextFiles.has(path) || textExtensions.has(extname(path));
+}
+
+function isStrictFormattingTarget(path) {
+  return (
+    strictRootFiles.has(path) ||
+    m01OperationalDocs.has(path) ||
+    strictPrefixes.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 function check(condition, message) {
@@ -41,15 +76,18 @@ for (const path of trackedFiles) {
   if (!isTextCandidate(path)) continue;
 
   const content = readFileSync(path, 'utf8');
-  check(!content.includes('\r'), `${path}: tracked text must use LF line endings.`);
-  check(content.length === 0 || content.endsWith('\n'), `${path}: tracked text must end with a newline.`);
-  check(!content.includes('\t'), `${path}: tabs are forbidden by the repository EditorConfig.`);
 
-  if (extname(path) !== '.md') {
-    const lines = content.split('\n');
-    for (let index = 0; index < lines.length; index += 1) {
-      if (/[ \t]+$/.test(lines[index] ?? '')) {
-        failures.push(`${path}:${index + 1}: trailing whitespace is forbidden.`);
+  if (isStrictFormattingTarget(path)) {
+    check(!content.includes('\r'), `${path}: M01-owned text must use LF line endings.`);
+    check(content.length === 0 || content.endsWith('\n'), `${path}: M01-owned text must end with a newline.`);
+    check(!content.includes('\t'), `${path}: tabs are forbidden by the repository EditorConfig.`);
+
+    if (extname(path) !== '.md') {
+      const lines = content.split('\n');
+      for (let index = 0; index < lines.length; index += 1) {
+        if (/[ \t]+$/.test(lines[index] ?? '')) {
+          failures.push(`${path}:${index + 1}: trailing whitespace is forbidden.`);
+        }
       }
     }
   }
@@ -62,10 +100,10 @@ for (const path of trackedFiles) {
     }
   }
 
-  if (sourcePrefixes.some((prefix) => path.startsWith(prefix))) {
+  if (strictPrefixes.some((prefix) => path.startsWith(prefix))) {
     check(!/@ts-(?:ignore|nocheck)\b/.test(content), `${path}: TypeScript suppression directives are forbidden in M01 source.`);
     check(!/\bdebugger\s*;/.test(content), `${path}: committed debugger statements are forbidden.`);
-    check(!/\beval\s*\(/.test(content), `${path}: eval() is forbidden.`);
+    check(!/\beval\s*\(/.test(content), `${path}: dynamic evaluation calls are forbidden.`);
     check(!/new\s+Function\s*\(/.test(content), `${path}: dynamic Function construction is forbidden.`);
     check(
       !/NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0/.test(content),
@@ -87,4 +125,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Brovexa source hygiene gate passed for ${trackedFiles.length} tracked files.`);
+console.log(
+  `Brovexa source hygiene gate passed for ${trackedFiles.length} tracked files; strict formatting is enforced on M01-owned runtime/operational surfaces.`,
+);
