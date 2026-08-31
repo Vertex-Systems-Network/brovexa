@@ -45,6 +45,7 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS agent_execution_plans CASCADE');
   await pool.query('DROP TABLE IF EXISTS memory_record_lifecycle_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_run_transitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_eval_results CASCADE');
@@ -82,6 +83,7 @@ try {
     '0003_agent_runtime_core',
     '0004_memory_evaluation_core',
     '0005_agent_memory_lifecycle',
+    '0006_agent_execution_plan',
   ]);
 
   const workspace = await pool.query(
