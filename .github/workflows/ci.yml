@@ -49,6 +49,9 @@ jobs:
       - name: Verify M01 FULL GATE readiness contract
         run: node scripts/verify-m01-full-gate.mjs
 
+      - name: Verify M01A agent-memory readiness contract
+        run: node scripts/verify-m01a-foundation.mjs
+
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.23.0
 
@@ -68,7 +71,7 @@ jobs:
     name: PostgreSQL 18 migration + RBAC FULL GATE
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     services:
       postgres:
         image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
@@ -109,6 +112,12 @@ jobs:
 
       - name: Verify tenant isolation and RBAC contract
         run: pnpm run verify:identity
+        env:
+          DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
+          BROVEXA_DB_TEST_ALLOW_RESET: "true"
+
+      - name: Verify M01A agent registry and durable memory contract
+        run: pnpm run verify:agent-memory
         env:
           DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
           BROVEXA_DB_TEST_ALLOW_RESET: "true"
