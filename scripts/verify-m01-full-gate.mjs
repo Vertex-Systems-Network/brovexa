@@ -36,10 +36,9 @@ if (failures.length === 0) {
   check(root.scripts?.['audit:dependencies'] === 'pnpm audit --audit-level high', 'Root audit:dependencies must fail on high/critical registry advisories.');
 
   for (const command of [
-    'pnpm run verify:format',
-    'pnpm run lint',
-    'pnpm run verify:no-secrets',
-    'pnpm run verify:m01:full-gate',
+    'node scripts/verify-source-hygiene.mjs',
+    'node scripts/verify-no-secrets.mjs',
+    'node scripts/verify-m01-full-gate.mjs',
     'pnpm run audit:dependencies',
     'pnpm run quality:runtime',
     'pnpm run verify:dev-api',
@@ -50,7 +49,15 @@ if (failures.length === 0) {
     check(workflow.includes(command), `Hosted CI FULL GATE must execute: ${command}`);
   }
 
-  check(workflow.includes('pnpm install --frozen-lockfile'), 'Hosted CI must prove a clean frozen-lockfile installation.');
+  const installIndex = workflow.indexOf('pnpm install --frozen-lockfile');
+  const hygieneIndex = workflow.indexOf('node scripts/verify-source-hygiene.mjs');
+  const secretIndex = workflow.indexOf('node scripts/verify-no-secrets.mjs');
+  const readinessIndex = workflow.indexOf('node scripts/verify-m01-full-gate.mjs');
+  check(installIndex > 0, 'Hosted CI must prove a clean frozen-lockfile installation.');
+  check(hygieneIndex >= 0 && hygieneIndex < installIndex, 'Source hygiene must execute before dependency installation.');
+  check(secretIndex >= 0 && secretIndex < installIndex, 'Tracked-secret verification must execute before dependency installation.');
+  check(readinessIndex >= 0 && readinessIndex < installIndex, 'M01 readiness contract must execute before dependency installation.');
+
   check(workflow.includes('name: M01 FULL GATE quality and security'), 'Hosted CI quality job must be explicitly identified as the M01 FULL GATE quality/security lane.');
   check(workflow.includes('name: PostgreSQL 18 migration + RBAC FULL GATE'), 'Hosted CI database job must identify migration + RBAC FULL GATE coverage.');
   check(workflow.includes('name: Canonical worker + Valkey FULL GATE'), 'Hosted CI queue job must identify recovery/idempotency FULL GATE coverage.');
