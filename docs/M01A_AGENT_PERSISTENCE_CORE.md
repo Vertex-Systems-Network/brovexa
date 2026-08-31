@@ -1,6 +1,6 @@
 # M01A — Agent Persistence Core
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -75,9 +75,17 @@ These constraints make cross-tenant association failure a database property rath
 
 Create operations are retry-safe: the same identifier/content is idempotent, while a conflicting replay fails with an explicit persistence conflict.
 
-## Verification
+## Verification evidence
 
-`pnpm run verify:db` now includes `scripts/verify-agent-persistence.mjs` after the general migration test. The dedicated verification covers:
+PR #19 exact implementation head: `cd321289ef42d10c69e9db6eae6ce8782b407eef`.
+
+Hosted CI run `33437473216` completed successfully before merge:
+
+- M01 FULL GATE quality/security: PASS
+- PostgreSQL 18 migration + RBAC FULL GATE: PASS
+- canonical worker + Valkey FULL GATE: PASS
+
+The PostgreSQL lane includes `scripts/verify-agent-persistence.mjs`, covering:
 
 - migration application/readiness;
 - same-version definition idempotency;
@@ -88,7 +96,7 @@ Create operations are retry-safe: the same identifier/content is idempotent, whi
 - deterministic/provider route mismatch rejection;
 - tenant-scoped run reads.
 
-The slice is **not VERIFIED** until hosted FULL GATE passes on the exact PR head and the PR is integrated to `main`.
+PR #19 was merged to `main` as `0b8e52d31f4804b9f88d924a810d80ad39e97297` after exact-head verification.
 
 ## Explicit non-scope
 
@@ -105,6 +113,6 @@ This slice intentionally does not implement:
 - production source connectors;
 - outreach, billing or deployment.
 
-## Next safe slice after verification
+## Next safe slice
 
-Add history-preserving AgentRun transitions plus durable MemoryRecord and evaluator persistence in separate small batches, then introduce the deterministic Agent Registry/Context Builder runtime before any model execution path.
+Implement durable `MemoryRecord` + `EvalResult` persistence with tenant integrity, revision lineage, deletion/supersession semantics and independent evaluator/run constraints. After that, add history-preserving AgentRun transitions, then deterministic Agent Registry/Context Builder runtime before any model execution path.
