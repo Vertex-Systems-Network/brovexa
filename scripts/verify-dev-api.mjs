@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -12,6 +13,9 @@ const initialVersion = '0.1.0';
 const reloadVersion = '0.1.0-dev-reload';
 const timeoutMs = 45_000;
 const pollMs = 250;
+const testRequestId = 'dev-smoke-request-123';
+const testTraceId = '4bf92f3577b34da6a3ce929d0e0e4736';
+const testTraceparent = `00-${testTraceId}-00f067aa0ba902b7-01`;
 
 const originalSource = await readFile(sourcePath, 'utf8');
 if (!originalSource.includes(`version: '${initialVersion}'`)) {
@@ -53,6 +57,51 @@ async function waitForVersion(expectedVersion, label) {
   throw new Error(`Timed out waiting for ${label}: ${lastError}.\n${output}`);
 }
 
+async function waitForOutput(fragment, label) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (output.includes(fragment)) return;
+    if (child?.exitCode !== null && child?.exitCode !== undefined) {
+      throw new Error(`dev:api supervisor exited before ${label} (code=${child.exitCode}).\n${output}`);
+    }
+    await delay(pollMs);
+  }
+  throw new Error(`Timed out waiting for ${label}.\n${output}`);
+}
+
+async function verifyCorrelationAndErrorContract() {
+  const response = await fetch(`${healthUrl}?token=must-not-appear-in-logs`, {
+    headers: {
+      'x-request-id': testRequestId,
+      traceparent: testTraceparent,
+    },
+    signal: AbortSignal.timeout(2_000),
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-request-id'), testRequestId);
+  assert.equal(response.headers.get('x-trace-id'), testTraceId);
+
+  await waitForOutput(`"requestId":"${testRequestId}"`, 'structured request correlation log');
+  assert.equal(output.includes('must-not-appear-in-logs'), false, 'Request query data leaked into logs.');
+
+  const missingResponse = await fetch(`http://127.0.0.1:${port}/missing?token=must-not-echo`, {
+    headers: {
+      'x-request-id': testRequestId,
+      traceparent: testTraceparent,
+    },
+    signal: AbortSignal.timeout(2_000),
+  });
+  assert.equal(missingResponse.status, 404);
+  assert.equal(missingResponse.headers.get('x-request-id'), testRequestId);
+  assert.equal(missingResponse.headers.get('x-trace-id'), testTraceId);
+  assert.deepEqual(await missingResponse.json(), {
+    code: 'NOT_FOUND',
+    message: 'The requested resource was not found.',
+    requestId: testRequestId,
+    traceId: testTraceId,
+  });
+}
+
 async function stopChild() {
   if (!child || child.exitCode !== null) return;
 
@@ -80,6 +129,7 @@ try {
   child.on('error', (error) => { output += `\nspawn error: ${error instanceof Error ? error.message : String(error)}\n`; });
 
   await waitForVersion(initialVersion, 'initial API health response');
+  await verifyCorrelationAndErrorContract();
 
   const mutatedSource = originalSource.replace(`version: '${initialVersion}'`, `version: '${reloadVersion}'`);
   await writeFile(sourcePath, mutatedSource);
@@ -88,7 +138,7 @@ try {
   await writeFile(sourcePath, originalSource);
   await waitForVersion(initialVersion, 'restored source-to-runtime response');
 
-  console.log('Brovexa dev:api source-to-runtime reload smoke passed.');
+  console.log('Brovexa dev:api correlation/error/reload smoke passed.');
 } finally {
   await writeFile(sourcePath, originalSource);
   await stopChild();
