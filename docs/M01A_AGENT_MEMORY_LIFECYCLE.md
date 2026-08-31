@@ -1,6 +1,6 @@
 # M01A — AgentRun & Memory Lifecycle
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -106,7 +106,21 @@ This slice adds:
 
 Existing migration, Agent persistence, Memory/Evaluation, identity/RBAC and worker/queue destructive verification harnesses are reconciled with migration `0005` so the FULL GATE validates the complete current schema rather than an outdated migration list.
 
-This slice is **not VERIFIED** until hosted FULL GATE passes on the exact PR head and the PR is integrated to `main`.
+### Hosted FULL GATE evidence
+
+Verified source head: `a7e08036e7cc2a26dab73e4d96603871199e5f29`
+
+Pull request: **#23 — `feat(m01a): add AgentRun and memory lifecycle history`**
+
+Exact-head/current-main merge-context run: `33442282019` — **PASS**
+
+- M01 FULL GATE quality and security — job `99653086487`: **PASS**
+- PostgreSQL 18 migration + RBAC FULL GATE — job `99654342428`: **PASS**
+- Canonical worker + Valkey FULL GATE — job `99654522199`: **PASS**
+
+PR #23 was merged to `main` as `1530c42be9f568ab7eb54fa443379f2158e61615` after all three lanes passed on the exact verified source head.
+
+A prior run failed only the source-hygiene trailing-newline guard; the source was corrected without weakening the guard, and the new exact head then passed the complete FULL GATE.
 
 ## Explicit non-scope
 
