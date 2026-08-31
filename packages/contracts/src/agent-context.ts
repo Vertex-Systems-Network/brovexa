@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import type { AgentDefinition, ContextReceiptItem, MemoryStatus } from './agents';
+import { sha256Hex } from './sha256';
 
 export type ContextSourceKind = 'policy' | 'canonical' | 'memory';
 
@@ -244,17 +244,15 @@ export function buildContextSelection(input: BuildContextSelectionInput): Contex
   }
 
   const selectedItems = selected.map(toReceiptItem);
-  const selectionDigest = createHash('sha256')
-    .update(
-      JSON.stringify({
-        workspaceId: input.workspaceId,
-        agentKey: input.definition.key,
-        agentVersion: input.definition.version,
-        contextVersion: input.definition.contextVersion,
-        selectedItems,
-      }),
-    )
-    .digest('hex');
+  const selectionDigest = sha256Hex(
+    JSON.stringify({
+      workspaceId: input.workspaceId,
+      agentKey: input.definition.key,
+      agentVersion: input.definition.version,
+      contextVersion: input.definition.contextVersion,
+      selectedItems,
+    }),
+  );
 
   return {
     selectedItems,
