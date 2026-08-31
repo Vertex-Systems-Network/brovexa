@@ -1,6 +1,6 @@
 # M01A — Deterministic Agent Registry & Context Builder Runtime
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -117,7 +117,19 @@ The PostgreSQL 18 integration verification covers:
 - cross-tenant user authorization rejection;
 - run-scoped memory inclusion only for the matching run.
 
-This slice is **not VERIFIED** until the exact PR head passes the hosted FULL GATE on the current `main` merge context and is integrated to `main`.
+### Hosted FULL GATE evidence
+
+Verified source head: `2e9c76d5b571eea0aa497c60cb2f8a99dde627bd`
+
+Pull request: **#25 — `feat(m01a): add deterministic Agent Registry and Context Builder`**
+
+Exact-head/current-main merge-context run: `33443959594` — **PASS**
+
+- M01 FULL GATE quality and security — job `99658572955`: **PASS**
+- PostgreSQL 18 migration + RBAC FULL GATE — job `99659218677`: **PASS**
+- Canonical worker + Valkey FULL GATE — job `99659406478`: **PASS**
+
+PR #25 was merged to `main` as `857ac0e663d20a7522215f12340fb300aca77d60` after all three lanes passed on the exact verified source head.
 
 ## Explicit non-scope
 
