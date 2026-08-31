@@ -140,7 +140,7 @@ if (failures.length === 0) {
   check(hostedWorkflow.includes('persist-credentials: false'), 'Hosted CI checkout must not persist GitHub credentials.');
   check(!hostedWorkflow.includes('contents: write'), 'Hosted CI must remain read-only.');
   check(hostedWorkflow.includes('pnpm run verify:dev-api'), 'Hosted CI must execute the API source-to-runtime reload smoke gate.');
-  check(hostedWorkflow.includes('name: PostgreSQL 18 migration integration'), 'Hosted CI must include the PostgreSQL 18 database integration job.');
+  check(hostedWorkflow.includes('PostgreSQL 18') && hostedWorkflow.includes('pnpm run verify:db'), 'Hosted CI must include a PostgreSQL 18 database integration job that executes verify:db.');
   check(hostedWorkflow.includes('postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280'), 'Hosted CI PostgreSQL service must be pinned to the reviewed 18.6 image digest.');
   check(hostedWorkflow.includes('pnpm run verify:db'), 'Hosted CI must execute the database migration/data-layer verification gate.');
   check(selfHostedWorkflow.includes('workflow_dispatch:'), 'Self-hosted CI reference must remain manual-only.');
