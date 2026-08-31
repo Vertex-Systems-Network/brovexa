@@ -19,6 +19,8 @@ Every bootstrapped workspace receives three role definitions:
 - `admin`: workspace read, member read/manage, and role read. It intentionally does not receive role-management authority by default.
 - `member`: workspace read only.
 
+Owner bootstrap is a one-shot initialization path. It serializes on the workspace row and refuses to run after canonical owner authority already exists. Later ownership changes must use the authorized role-assignment/revocation flow rather than replay bootstrap.
+
 M01 capabilities are:
 
 - `workspace.read`
@@ -50,6 +52,10 @@ Once a workspace has an owner role, PostgreSQL deferred constraint triggers requ
 
 The check is deferred so legitimate ownership transfer can grant a second owner and revoke the first within one transaction while still preventing removal or suspension of the final active owner.
 
+The canonical owner role identity itself is immutable at the database boundary: it cannot be renamed, converted to a custom role, moved to another workspace, or deleted. This prevents direct-SQL removal of the owner-role sentinel from bypassing the deferred last-active-owner check.
+
+Global user security/admin lifecycle remains a separate control from workspace membership lifecycle, consistent with `IDENTITY_AUTH_LIFECYCLE.md`.
+
 ## Authorization audit events
 
 Security-relevant M01 mutations write `authorization_audit_events` in the same transaction as the canonical state change. Current events cover:
@@ -74,6 +80,8 @@ Permitted M01 implementations include a test/local resolver used by automated te
 
 - tenant A cannot resolve or mutate tenant B membership state;
 - the database rejects cross-tenant membership-role injection;
+- owner bootstrap cannot be replayed to grant a second user owner authority;
+- the canonical owner role cannot be mutated or deleted;
 - a non-owner cannot escalate to owner even if a custom role is accidentally granted role-management capability;
 - the last active owner cannot be removed or suspended;
 - ownership can be transferred before revocation;
