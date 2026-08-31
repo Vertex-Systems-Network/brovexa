@@ -5,12 +5,14 @@ Status: **M01 compensating control while native branch protection is unavailable
 
 ## Verified repository state
 
-On 2026-08-30 the GitHub branch API reported `main` as:
+Re-verified through GitHub on 2026-08-31:
 
+- `main` head: `69dd5adc3a509aa35b0be46f4e0124d15dc8de3c`
 - `protected: false`
 - required status checks: off
+- `rulesets: none observed`
 
-The current connected GitHub toolset supports protection/ruleset reads but does not expose a protection-write operation. Native protection therefore remains preferred but is not falsely claimed as configured.
+The connected GitHub surface supports protection/ruleset reads but does not expose a native branch-protection/ruleset write operation. Native protection remains preferred but must not be falsely reported as configured.
 
 ## Core rule
 
@@ -18,7 +20,7 @@ The current connected GitHub toolset supports protection/ruleset reads but does 
 
 Use:
 
-`short-lived branch → reviewed PR → executable evidence where applicable → explicit integration → checkpoint`
+`short-lived branch → reviewed PR → executable evidence → explicit integration → checkpoint`
 
 ## Compensating controls
 
@@ -27,77 +29,72 @@ Until native protection is verified:
 1. **No direct feature writes to `main`.**
 2. **No force push or shared-history rewrite.**
 3. **No auto-merge.**
-4. Default-branch changes use a narrowly scoped PR with a verified base/head.
-5. Any merge operation must provide/verify the expected PR head SHA immediately before integration.
-6. Product/runtime PRs require the applicable executable quality gate before merge; a planning document or unexecuted test file is not green evidence.
-7. A CI/bootstrap-only PR may be considered separately when the CI infrastructure itself is the blocker, but it must:
-   - contain no product behavior,
-   - contain no secrets/deployment action,
-   - use least-privilege permissions,
-   - receive a recorded review,
-   - remain reversible,
-   - have an explicit owner/integration decision before merge.
-8. Planning PR #1, M01 implementation PR #2 and default-branch CI bootstrap PR #3 remain separate change streams.
-9. An accidental direct write is an incident: preserve history, revert safely, document the event, and do not hide it with force push/rebase.
-10. Required checks may not be bypassed merely to accelerate delivery once executable checks are available.
+4. Default-branch changes use a narrowly scoped PR with verified base/head.
+5. Any explicit merge must verify the expected PR head SHA immediately before integration.
+6. Product/runtime PRs require applicable executable quality/security evidence before merge; plans or unexecuted test files are not green evidence.
+7. Bootstrap/infrastructure exceptions must be narrow, reversible, least-privilege, reviewed, and explicitly approved before integration.
+8. Planning, product implementation, and default-branch infrastructure remain separate change streams.
+9. An accidental direct write is an incident: preserve history, revert safely, document the event, and never hide it with force push/rebase.
+10. Required checks may not be bypassed merely to accelerate delivery once executable checks exist.
 
-## Current PR routing
+## Exercised integration evidence
 
-### PR #1 — Planning baseline
+The compensating path has already been exercised on default-branch CI bootstrap/hardening changes:
 
-- base: `main`
-- scope: planning/documentation
-- remains separate from runtime implementation
+- reviewed replacement PR #4 was integrated with explicit owner approval and expected-head verification;
+- reviewed replacement PR #6 was integrated with explicit owner approval and expected-head verification;
+- no auto-merge or history rewrite was used;
+- current default-branch self-hosted dispatcher is manual-only and least privilege for the M01 branch.
 
-### PR #2 — M01 platform foundation
+This proves the compensating workflow can be followed, but it does not turn native protection on.
 
-- base: `planning/brovexa-baseline`
-- head: `m01/platform-foundation`
-- scope: M01 runtime/quality foundation
-- remains draft/unmerged while `ABD-259` lacks dependency/build/type/test execution evidence
+## Current M01 routing
 
-### PR #3 — Default-branch self-hosted dispatch bootstrap
-
-- base: `main`
-- head: `m01/ci-dispatch-bootstrap`
-- scope: exactly one manual-only workflow enabling `workflow_dispatch` from the default branch
-- no product code, database, deployment, source connector, billing, outreach or Market Scout behavior
-- no auto-merge
-- requires explicit integration decision because it changes default-branch CI surface
+- PR #1: planning baseline, separate and unmerged.
+- PR #2: M01 implementation tracker, draft/unmerged.
+- PR #8: verified ABD-262 identity/RBAC/tenant stack, unmerged.
+- PR #9: verified ABD-263 API/observability/health stack, unmerged.
+- ABD-264 FULL GATE work is stacked from the exact verified ABD-263 head and remains subject to the same review/evidence/integration policy.
 
 ## Desired native protection state
 
-When repository plan/permissions allow, prefer native GitHub protection/rulesets that enforce the intent above, including as appropriate:
+When repository permissions/tooling allow, prefer native GitHub protection/rulesets that enforce the intent above, including as appropriate:
 
-- pull-request-based changes to `main`
-- block force pushes and branch deletion
-- required quality/status checks once stable/executable
-- conversation resolution before merge
-- review/ownership rules appropriate to the actual team size
-- restricted bypass capability
+- pull-request-based changes to `main`;
+- block force pushes and branch deletion;
+- required stable quality/security status checks;
+- conversation resolution before merge;
+- review/ownership rules appropriate to actual team size;
+- restricted, auditable bypass capability.
 
 Do not enable a rule that permanently deadlocks a one-maintainer repository without a documented recovery path.
 
-## CI-specific bootstrap exception
+## Self-hosted dispatcher boundary
 
-The current hosted-runner blocker prevents normal executable checks before a default-branch dispatcher exists. A one-file manual dispatcher may therefore be integrated before product CI is green only if all of these are true:
+Default-branch `.github/workflows/m01-self-hosted-dispatch.yml` remains:
 
-- failure is verified as runner/infrastructure rather than application failure;
-- workflow is manual-only;
-- GitHub token permissions are least privilege;
-- self-hosted execution is limited to trusted M01 refs;
-- action dependencies are immutable-pinned;
-- checkout credentials are not persisted;
-- no secrets or deployment credentials are needed;
-- PR diff has recorded SELF REVIEW;
-- owner explicitly authorizes the default-branch integration.
+- manual `workflow_dispatch` only;
+- `contents: read`;
+- `[self-hosted, Windows, X64]`;
+- immutable Action SHAs;
+- `persist-credentials: false`;
+- fixed checkout to exactly `m01/platform-foundation`;
+- no caller-controlled target ref;
+- no deployment/provider secrets.
 
-This exception does not authorize merging PR #2 or later product changes without executable evidence.
+The implementation-branch `.github/workflows/ci-self-hosted.yml` remains a reference mirror, not an automatic local-runner PR/push workflow.
+
+## ABD-266 exit rule
+
+ABD-266 can leave In Progress only when the M01 FULL GATE records the actual protection state and either:
+
+1. native branch/ruleset protection is verified; or
+2. the documented compensating policy is explicitly accepted as the M01 handoff control and its auditable integration path remains enforced.
 
 ## Release-state semantics
 
-A merge to `main` is not automatically a release. Brovexa continues to distinguish:
+A merge to `main` is not automatically a release. Brovexa distinguishes:
 
 `BUILT → DEPLOYED → RELEASED → PRODUCTION VERIFIED`
 
-M01 currently authorizes foundation development only; production deployment remains outside scope.
+M01 authorizes foundation development only; production deployment remains outside scope.

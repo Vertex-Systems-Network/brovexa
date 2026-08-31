@@ -13,9 +13,9 @@ concurrency:
 
 jobs:
   quality:
-    name: Build, typecheck, test
+    name: M01 FULL GATE quality and security
     runs-on: ubuntu-slim
-    timeout-minutes: 15
+    timeout-minutes: 18
 
     steps:
       - name: Checkout
@@ -37,20 +37,35 @@ jobs:
       - name: Verify queue foundation contract
         run: node scripts/verify-queue-foundation.mjs
 
+      - name: Verify tracked source formatting
+        run: node scripts/verify-source-hygiene.mjs
+
+      - name: Lint M01 source/security invariants
+        run: node scripts/verify-source-hygiene.mjs
+
+      - name: Verify no tracked secrets
+        run: node scripts/verify-no-secrets.mjs
+
+      - name: Verify M01 FULL GATE readiness contract
+        run: node scripts/verify-m01-full-gate.mjs
+
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.23.0
 
       - name: Install dependencies from committed lockfile
         run: pnpm install --frozen-lockfile
 
+      - name: Audit dependency advisories
+        run: pnpm run audit:dependencies
+
       - name: Run runtime quality gate
         run: pnpm run quality:runtime
 
-      - name: Verify API source-to-runtime reload loop
+      - name: Verify API observability and source-to-runtime reload
         run: pnpm run verify:dev-api
 
   database:
-    name: PostgreSQL 18 migration integration
+    name: PostgreSQL 18 migration + RBAC FULL GATE
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -92,8 +107,14 @@ jobs:
           DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
           BROVEXA_DB_TEST_ALLOW_RESET: "true"
 
+      - name: Verify tenant isolation and RBAC contract
+        run: pnpm run verify:identity
+        env:
+          DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m01_test
+          BROVEXA_DB_TEST_ALLOW_RESET: "true"
+
   queue:
-    name: Canonical worker + Valkey integration
+    name: Canonical worker + Valkey FULL GATE
     needs: database
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -141,7 +162,7 @@ jobs:
       - name: Install dependencies from committed lockfile
         run: pnpm install --frozen-lockfile
 
-      - name: Verify canonical worker/queue contract
+      - name: Verify canonical worker/queue recovery and correlation contract
         run: pnpm run verify:queue
         env:
           DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_queue_test

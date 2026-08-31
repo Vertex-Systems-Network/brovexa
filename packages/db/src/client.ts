@@ -52,6 +52,13 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
       current_setting('server_version') AS server_version,
       current_setting('server_version_num') AS server_version_num,
       to_regclass('public.workspaces') IS NOT NULL
+        AND to_regclass('public.users') IS NOT NULL
+        AND to_regclass('public.workspace_memberships') IS NOT NULL
+        AND to_regclass('public.permissions') IS NOT NULL
+        AND to_regclass('public.workspace_roles') IS NOT NULL
+        AND to_regclass('public.workspace_membership_roles') IS NOT NULL
+        AND to_regclass('public.workspace_role_permissions') IS NOT NULL
+        AND to_regclass('public.authorization_audit_events') IS NOT NULL
         AND to_regclass('public.job_runs') IS NOT NULL
         AND to_regclass('public.job_work_units') IS NOT NULL
         AND to_regclass('public.job_effects') IS NOT NULL

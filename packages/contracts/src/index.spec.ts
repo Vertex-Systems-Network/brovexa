@@ -26,25 +26,37 @@ describe('HealthResponseSchema', () => {
 });
 
 describe('ApiErrorSchema', () => {
-  it('supports a safe error without a request ID', () => {
-    expect(
-      ApiErrorSchema.parse({
-        code: 'FOUNDATION_ERROR',
-        message: 'Safe public message',
-      }),
-    ).toEqual({
-      code: 'FOUNDATION_ERROR',
-      message: 'Safe public message',
-    });
-  });
-
-  it('supports a correlation request ID', () => {
+  it('requires request and trace correlation identifiers', () => {
     expect(
       ApiErrorSchema.parse({
         code: 'FOUNDATION_ERROR',
         message: 'Safe public message',
         requestId: 'req_123',
-      }).requestId,
-    ).toBe('req_123');
+        traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      }),
+    ).toEqual({
+      code: 'FOUNDATION_ERROR',
+      message: 'Safe public message',
+      requestId: 'req_123',
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    });
+  });
+
+  it('rejects missing correlation and malformed trace IDs', () => {
+    expect(() =>
+      ApiErrorSchema.parse({
+        code: 'FOUNDATION_ERROR',
+        message: 'Safe public message',
+      }),
+    ).toThrow();
+
+    expect(() =>
+      ApiErrorSchema.parse({
+        code: 'FOUNDATION_ERROR',
+        message: 'Safe public message',
+        requestId: 'req_123',
+        traceId: 'not-a-trace-id',
+      }),
+    ).toThrow();
   });
 });
