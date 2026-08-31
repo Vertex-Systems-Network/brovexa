@@ -13,7 +13,7 @@ import type { ApiError } from '@brovexa/contracts';
 import type { Observable } from 'rxjs';
 
 const requestIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-const traceparentPattern = /^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$/i;
+const traceparentPattern = /^00-([0-9a-f]{32})-([0-9a-f]{16})-[0-9a-f]{2}$/i;
 const publicErrorCodePattern = /^[A-Z][A-Z0-9_]{1,63}$/;
 
 export interface CorrelatedRequest {
@@ -55,7 +55,8 @@ export function extractTraceId(value: string | string[] | undefined): string | n
 
   const match = traceparentPattern.exec(candidate);
   const traceId = match?.[1]?.toLowerCase();
-  if (!traceId || /^0{32}$/.test(traceId)) return null;
+  const parentId = match?.[2]?.toLowerCase();
+  if (!traceId || !parentId || /^0{32}$/.test(traceId) || /^0{16}$/.test(parentId)) return null;
   return traceId;
 }
 
