@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { AgentExecutionPlanSchema } from './agent-execution';
+import {
+  AgentExecutionPlanSchema,
+  type AgentExecutionPlan,
+  type AgentExecutionStep,
+} from './agent-execution';
 
-function step(key: string, dependencies: string[] = []) {
+function step(key: string, dependencies: string[] = []): AgentExecutionStep {
   return {
     key,
     agentKey: `agent.research.${key}`,
@@ -24,7 +28,7 @@ function step(key: string, dependencies: string[] = []) {
   };
 }
 
-function plan() {
+function plan(): AgentExecutionPlan {
   return {
     id: 'plan_1',
     workspaceId: 'workspace_1',
