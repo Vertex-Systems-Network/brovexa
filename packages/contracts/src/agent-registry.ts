@@ -28,6 +28,8 @@ export type AgentRegistryErrorCode =
   | 'AUTONOMY_TIER_NOT_ALLOWED'
   | 'EXTERNAL_TOOL_ACCESS_NOT_ALLOWED'
   | 'TOOL_ACCESS_EXCEEDS_AUTONOMY'
+  | 'CANONICAL_COMMAND_NOT_ALLOWED'
+  | 'COMMAND_ACCESS_EXCEEDS_AUTONOMY'
   | 'MEMORY_ACCESS_EXCEEDS_AUTONOMY'
   | 'SYSTEM_PROCEDURAL_MEMORY_WRITE_NOT_ALLOWED'
   | 'AGENT_DEFINITION_NOT_FOUND';
@@ -45,6 +47,7 @@ export class AgentRegistryError extends Error {
 export interface AgentRegistryOptions {
   maxAutonomyTier?: AgentAutonomyTier;
   allowExternalToolAccess?: boolean;
+  allowedCanonicalCommands?: readonly string[];
 }
 
 function definitionId(key: string, version: number): string {
@@ -106,10 +109,12 @@ export class AgentRegistry {
   readonly #definitions = new Map<string, AgentDefinition>();
   readonly #maxAutonomyTier: AgentAutonomyTier;
   readonly #allowExternalToolAccess: boolean;
+  readonly #allowedCanonicalCommands: ReadonlySet<string>;
 
   constructor(definitions: readonly AgentDefinition[] = [], options: AgentRegistryOptions = {}) {
     this.#maxAutonomyTier = options.maxAutonomyTier ?? 'T2';
     this.#allowExternalToolAccess = options.allowExternalToolAccess ?? false;
+    this.#allowedCanonicalCommands = new Set(options.allowedCanonicalCommands ?? ['memory.propose']);
     for (const definition of definitions) this.register(definition);
   }
 
@@ -137,6 +142,21 @@ export class AgentRegistry {
         throw new AgentRegistryError(
           'EXTERNAL_TOOL_ACCESS_NOT_ALLOWED',
           `${id} requests external tool access while the registry is internal-only.`,
+        );
+      }
+    }
+
+    if (definition.canonicalCommands.length > 0 && autonomyRank[definition.autonomyTier] < autonomyRank.T1) {
+      throw new AgentRegistryError(
+        'COMMAND_ACCESS_EXCEEDS_AUTONOMY',
+        `${id} cannot declare canonical commands below T1.`,
+      );
+    }
+    for (const command of definition.canonicalCommands) {
+      if (!this.#allowedCanonicalCommands.has(command)) {
+        throw new AgentRegistryError(
+          'CANONICAL_COMMAND_NOT_ALLOWED',
+          `${id} requests unreviewed canonical command ${command}.`,
         );
       }
     }
