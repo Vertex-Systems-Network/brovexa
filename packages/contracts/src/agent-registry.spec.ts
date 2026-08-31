@@ -89,6 +89,42 @@ describe('AgentRegistry', () => {
     ).toThrowError(expectRegistryCode('TOOL_ACCESS_EXCEEDS_AUTONOMY'));
   });
 
+  it('rejects canonical commands below proposal autonomy', () => {
+    expect(
+      () => new AgentRegistry([definition({ canonicalCommands: ['memory.propose'] })]),
+    ).toThrowError(expectRegistryCode('COMMAND_ACCESS_EXCEEDS_AUTONOMY'));
+  });
+
+  it('allows only explicitly reviewed canonical commands in foundation mode', () => {
+    const allowed = new AgentRegistry([
+      definition({
+        key: 'agent.control.memory_curator',
+        autonomyTier: 'T2',
+        tools: [{ key: 'memory.proposal.write', access: 'internal.write' }],
+        canonicalCommands: ['memory.propose'],
+        memoryCapabilities: [
+          {
+            scope: 'workspace',
+            actions: ['read', 'propose'],
+            memoryTypes: ['semantic'],
+          },
+        ],
+      }),
+    ]);
+    expect(allowed.get('agent.control.memory_curator', 1).canonicalCommands).toEqual(['memory.propose']);
+
+    expect(
+      () =>
+        new AgentRegistry([
+          definition({
+            autonomyTier: 'T2',
+            tools: [],
+            canonicalCommands: ['workspace.delete'],
+          }),
+        ]),
+    ).toThrowError(expectRegistryCode('CANONICAL_COMMAND_NOT_ALLOWED'));
+  });
+
   it('never lets ordinary agent definitions mutate system procedural memory', () => {
     expect(
       () =>
