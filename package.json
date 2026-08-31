@@ -1,0 +1,36 @@
+{
+  "name": "brovexa",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=24.20.0 <25",
+    "pnpm": "11.23.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "dev:api": "node scripts/dev-api.mjs",
+    "verify:dev-api": "node scripts/verify-dev-api.mjs",
+    "verify:db": "pnpm --filter @brovexa/db build && node scripts/verify-db.mjs",
+    "verify:identity": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && node scripts/verify-identity.mjs",
+    "verify:queue:foundation": "node scripts/verify-queue-foundation.mjs",
+    "verify:queue": "pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs",
+    "verify:foundation": "node scripts/verify-foundation.mjs",
+    "verify:foundation:test": "node scripts/verify-foundation.test.mjs",
+    "verify:format": "node scripts/verify-source-hygiene.mjs",
+    "lint": "node scripts/verify-source-hygiene.mjs",
+    "verify:no-secrets": "node scripts/verify-no-secrets.mjs",
+    "verify:m01:full-gate": "node scripts/verify-m01-full-gate.mjs",
+    "audit:dependencies": "pnpm audit --audit-level high",
+    "quality:runtime": "pnpm run build && pnpm run typecheck && pnpm run test",
+    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run verify:queue:foundation && pnpm run verify:format && pnpm run lint && pnpm run verify:no-secrets && pnpm run quality:runtime"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.0",
+    "turbo": "2.10.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}

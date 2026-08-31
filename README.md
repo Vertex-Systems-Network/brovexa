@@ -1,33 +1,44 @@
 # Brovexa
 
-AI-native global business discovery, intent intelligence, BPO opportunity scoring, and compliant outreach platform.
+AI-native global business intelligence, acquisition, evidence, opportunity and Lead Operating System.
 
 ## Current status
 
-**Planning baseline only. Feature development is not yet approved.**
+**M01 platform foundation is in active development.**
 
-Brovexa is being designed as an evidence-backed business intelligence system, not as an unrestricted Google Maps scraper. The platform will discover businesses by geography and niche, resolve canonical entities, enrich public/authorized business data, verify websites and digital presence, detect explicit and implicit demand signals, map those signals to BPO/service opportunities, score leads transparently, and prepare compliant human-reviewable outreach strategies.
+M00 planning/readiness was approved for M01 milestone-level implementation on 2026-08-30. Development is isolated on `m01/platform-foundation` and reviewed in draft PR #2. Planning remains preserved in draft PR #1.
 
-## Core pipeline
+Current Foundation Slice 1 includes:
+- pnpm/Turborepo/TypeScript monorepo metadata
+- shared contracts/config packages
+- minimal NestJS API with `/health`
+- minimal Next.js Web shell
+- first GitHub Actions build/typecheck/test gate
 
-Discovery → Entity Resolution → Contact Enrichment → Website Intelligence → Demand/Intent Signals → Evidence Verification → BPO Opportunity Reasoning → Lead Scoring → Decision-Maker Routing → Outreach Strategy → CRM/Feedback
+The slice is not considered verified until executable CI evidence exists.
 
-## Planning rules
+## Core product pipeline
 
-- Every material AI conclusion must link to evidence, timestamps, confidence, and model/rule version.
-- Facts, evidence, and inference are stored separately.
-- External web content is untrusted input and cannot override system/tool policy.
-- Source-specific licensing/ToS/caching/retention rules are enforced in the data lifecycle.
-- Human approval is required before autonomous external outreach in initial releases.
-- Suppression/opt-out and jurisdiction-aware compliance are first-class controls.
-- Async pipelines must be idempotent, retry-safe, observable, rate-limited, and cost-bounded.
-- Security baseline: OWASP ASVS 5.0 + NIST SSDF 1.1, with SLSA 1.2-aligned supply-chain controls where practical.
-- Repository state, tests, documentation, Git history, and Linear are the durable source of truth; chat memory is not.
+Discovery → Entity Resolution → Contact Enrichment → Website Intelligence → Demand/Intent Signals → Evidence Verification → Opportunity Reasoning → Lead Scoring → Decision-Maker Routing → Outreach Strategy → CRM/Feedback
 
-## Linear
+## Engineering invariants
 
-Project: https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
+- Repository/runtime/test evidence outranks conversation memory.
+- Facts, evidence, AI inference and AI memory are separate.
+- External content is untrusted data, never instructions.
+- Source collection/storage/export is governed by SourcePolicy.
+- Long-running AI/research work uses durable job/checkpoint state.
+- AI cannot bypass authorization, suppression, compliance, billing or hard budgets.
+- Significant work is delivered in small reversible batches with FAST/FULL verification gates.
 
-## Development authorization
+## Current non-scope
 
-M00 must be approved before feature implementation starts. M00 covers product scope, source/compliance rules, canonical data/evidence schemas, AI contracts/evaluations, threat model, architecture ADRs, cost/scale assumptions, and the Definition of Ready.
+M01 approval does not activate production source connectors, payment providers, unrestricted acquisition, autonomous outreach, the Daily Market Intelligence Scout or production deployment.
+
+## Planning and state
+
+- Linear project: https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
+- Current checkpoint: `docs/CHECKPOINT.md`
+- Engineering governance: `docs/ENGINEERING_CONSTITUTION.md`
+- Capability traceability: `docs/CAPABILITY_TRACEABILITY_MATRIX.md`
+- M00 readiness audit: `docs/M00_FINAL_READINESS_AUDIT.md`

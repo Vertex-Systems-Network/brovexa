@@ -1,193 +1,175 @@
 # Brovexa Project Checkpoint
 
-## Authorization state
+Updated: 2026-08-31
 
-**Planning Only. Feature development is not authorized.**
+## Project state
 
-Repository baseline before planning: `main` at initial commit `49673ebd8d40133eaa00d3bd8d760ce4b372fd5a`, effectively no product implementation.
+`ACTIVE_EXISTING_PROJECT`
 
-Planning branch: `planning/brovexa-baseline`
-Draft PR: #1
+M01 — Platform Foundation & Developer Experience has passed its executable FULL GATE on the integrated stacked implementation. It is **VERIFIED / READY FOR EXPLICIT INTEGRATION HANDOFF**, not merged, deployed, released, or production-verified.
 
-PR #1 remains documentation/planning only and must not be treated as development consent.
+## Authorization
 
-## Product definition
+Approved implementation scope: **M01 milestone**.
 
-Brovexa is planned as an AI-native global business discovery, evidence, signal, opportunity and Lead Intelligence Operating System with:
+Still separately gated: production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and later legal/provider/commercial decisions.
 
-- public website + identity/onboarding + packages/billing
-- Web operator control plane
-- Windows-first Desktop client
-- shared Chrome/Chromium + Firefox extension
-- provider-neutral APIs/webhooks/CRM/imports
-- AI Agent OS + durable backend memory
-- Global Acquisition Studio + policy-aware background ResearchJobs
-- global geography/classification registry
-- universal signal/opportunity ontology
-- BPO/custom-service opportunity reasoning
-- Lead Intelligence OS + AI Lead Copilot
-- controlled/compliant outreach workflow
-- governed 24-hour Market Intelligence Scout.
+## VCS state
 
-## Canonical planning documents
+- default branch: `main`
+- observed `main` head: `69dd5adc3a509aa35b0be46f4e0124d15dc8de3c`
+- planning PR #1: draft/unmerged
+- M01 implementation tracker PR #2: draft/unmerged
+- ABD-262 stacked PR #8: verified/unmerged
+- ABD-263 stacked PR #9: verified/unmerged
+- ABD-264 FULL GATE PR #10: draft/unmerged
+- ABD-264 branch: `hannanishfaq510/abd-264-m016-run-foundation-full-gate-and-readiness-handoff`
+- ABD-264 dependency base: verified ABD-263 head `421720a57ece7a932eedd4ebb794c393b62475fd`
 
-Core:
-- `docs/PROJECT_PLAN.md`
-- `docs/ENGINEERING_CONSTITUTION.md`
-- `docs/PREDEVELOPMENT_7_DAY_CLOSURE.md`
-- `docs/M00_COMPLETENESS_MATRIX.md`
+Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes are being made through remote GitHub tooling.
 
-Product/data/AI:
-- `docs/PRODUCT_SCOPE_SERVICE_TAXONOMY.md`
-- `docs/SERVICE_TAXONOMY_REGISTRY.md`
-- `docs/GLOBAL_GEOGRAPHY_CLASSIFICATION_REGISTRY.md`
-- `docs/GLOBAL_ACQUISITION_STUDIO.md`
-- `docs/UNIVERSAL_SIGNAL_ONTOLOGY.md`
-- `docs/CANONICAL_DATA_PROVENANCE.md`
-- `docs/AI_AGENT_MEMORY_OS.md`
-- `docs/AI_AGENT_CONTRACTS_EVALS.md`
-- `docs/LEAD_INTELLIGENCE_OS.md`
-- `docs/CRM_INTEGRATION_SYNC.md`
+## Default-branch security
 
-Security/compliance/clients:
-- `docs/SOURCE_POLICY_MATRIX.md`
-- `docs/JURISDICTION_OUTREACH_POLICY.md`
-- `docs/THREAT_MODEL.md`
-- `docs/CROSS_CLIENT_TRUST.md`
-- `docs/IDENTITY_AUTH_LIFECYCLE.md`
-- `docs/CLIENT_SURFACES.md`
+GitHub was re-read on 2026-08-31:
 
-Architecture/operations:
-- `docs/TECH_STACK_UI.md`
-- `docs/ARCHITECTURE_ADR_BASELINE.md`
-- `docs/RELIABILITY_CAPACITY_COST.md`
+- `main` protected: **false**
+- required status checks: **off**
+- repository rulesets observed: **none**
 
-Commercial/public:
-- `docs/WEBSITE_AUTH_BILLING.md`
-- `docs/PUBLIC_WEBSITE_COMMERCIAL_LIFECYCLE.md`
-- `docs/LAUNCH_SCOPE_WAVES.md`
+Native protection is therefore not claimed. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the accepted compensating M01 control: PR-only integration, no force push/history rewrite, no auto-merge, executable evidence before product/runtime integration, and expected-head SHA verification for any explicit merge.
 
-Market intelligence:
-- `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`
-- `docs/DAILY_MARKET_SCOUT_EXECUTION.md`
+The compensating path has already been exercised by prior owner-approved default-branch CI bootstrap/hardening integrations. Linear `ABD-266` can be handed off as **compensating-control exit satisfied / native protection still unavailable**, provided integration continues to obey this policy.
 
-## Architecture decisions now stable enough for downstream M00
+## M01 verification state
 
-Accepted initial direction:
+### ABD-259 — monorepo foundation / executable CI
 
-- pnpm workspace monorepo; Turborepo unless validation finds a material blocker
-- Next.js + React + TypeScript Web
-- NestJS modular monolith API + TypeScript workers
-- PostgreSQL 18.x canonical store
-- Drizzle-first typed PostgreSQL/data-layer validation with reviewed parameterized SQL escape hatch
-- PostgreSQL relational/full-text/trigram + pgvector initially
-- Redis + BullMQ execution while PostgreSQL owns durable ResearchJob/WorkUnit/checkpoint truth
-- S3-compatible policy-aware object storage
-- REST/OpenAPI/JSON Schema + generated clients and signed/versioned webhooks
-- Tauri 2 Windows-first Desktop
-- WXT shared Chrome/Firefox extension
-- OpenTelemetry-compatible server observability
-- Python only for workloads with material ecosystem advantage
-- no initial Kubernetes, mandatory microservices, OpenSearch, Temporal, Kafka, dedicated vector DB or GraphQL.
+State: **VERIFIED / DONE**.
 
-Temporal/OpenSearch/service extraction have measurable adoption triggers.
+Final hosted evidence: run `33312134186`, job `99258997531`.
 
-Identity uses an OIDC/OAuth-compatible boundary; exact identity provider remains a Human Decision. Exact hosting/cloud/managed offerings remain ADR/Human decisions.
+Verified Node/pnpm pins, frozen lockfile, foundation guardrails, builds, TypeScript checks, tests and live API reload behavior.
 
-## Durable execution / cost invariants
+### ABD-260 — PostgreSQL migration / data layer
 
-- Queue/Redis is never canonical workflow state.
-- Worker/Redis restart must recover runnable work from PostgreSQL state.
-- Externally costly/non-idempotent operations need deterministic idempotency protection.
-- ResearchJobs have hard/warning budgets for APIs/search/fetch/model/tokens/credits/cost/runtime/concurrency.
-- Agents cannot expand approved hard budgets or geography/source/purpose.
-- Usage and Research Credit debits are immutable/idempotent ledger entries.
-- System retry/restore/replay may not double-charge.
-- Fair scheduling/backpressure preserves interactive capacity and respects provider limits.
+State: **VERIFIED / DONE**.
 
-## AI/memory state
+Final evidence: GitHub Actions run `33333195961`.
 
-Agent pattern:
+Verified PostgreSQL 18.6 migration apply/rollback/re-apply, checksum journal, constraints, transaction rollback, readiness/schema checks and destructive-test safety guards.
 
-`Trigger → Orchestrator → Context Builder → bounded specialists → validators → Evidence Verifier → Independent Evaluator → canonical state → Memory Curator/checkpoint`.
+### ABD-261 — durable worker / queue foundation
 
-Every production AgentDefinition is versioned with tool/source permissions, memory scopes, autonomy, schemas, model/prompt/skill versions, budgets, validators, fallbacks and eval suite.
+State: **VERIFIED / DONE**.
 
-Durable memory types: working/run, semantic, episodic, procedural, entity, Lead, research, workspace/user. Memory is not raw chat history and never competes with canonical domain state. Vector indexes are derived/rebuildable. Conflicts/staleness/supersession/deletion are explicit.
+Final evidence: GitHub Actions run `33334936386`.
 
-## Acquisition / geography / signals
+Verified PostgreSQL-canonical work truth, BullMQ/Valkey transport, idempotency/effect dedupe, retry/backoff, cancellation, review/dead-letter behavior, restart recovery, worker readiness and queue metrics.
 
-Research Job Builder:
+### ABD-262 — identity / RBAC / tenant primitives
 
-`Objective → Geography → Industry/Niche → Business/Digital/Contact Filters → Signals → Sources → Depth/Quality → Output → Schedule → Budget → Preflight → Run`.
+State: **VERIFIED ON STACKED PR #8 / AWAITING INTEGRATION**.
 
-Global geo/classification uses internal stable IDs with versioned mappings to UN M49, ISO 3166, attributed gazetteer data, ISIC, NACE, NAICS and provider categories. External codes are mappings, not Brovexa canonical IDs.
+Final exact head: `c13a0e12b40aa364fa54465408cdabb88f58f55c`.
+Final evidence: GitHub Actions run `33369721378`.
 
-`Internet` is never an unrestricted connector. Every source has SourceCapability + ConnectorPolicy.
+Verified deny-by-default tenant authorization, cross-tenant FK enforcement, stale grant revalidation, one-shot owner bootstrap, immutable canonical owner role, last-active-owner safeguards, authorization audit events, provider-neutral auth/session boundary and API tenant-context tests.
 
-Signals use versioned SignalDefinition and immutable/history-preserving SignalObservation. Explicit demand remains distinct from inferred need; absence signals require active verification.
+No hosted identity provider or production auth secret was activated.
 
-## Lead OS state
+### ABD-263 — API / observability / health
 
-Business, Location, Contact, Evidence, Signal, Opportunity, Lead and Deal are separate canonical objects.
+State: **VERIFIED ON STACKED PR #9 / AWAITING INTEGRATION**.
 
-Lead lifecycle categories and transitions are server-authoritative and history-preserving. Duplicate-pursuit decisions, qualification/score history, routing, buying-role gaps, tasks/SLA, nurture/reactivation, re-research, CRM field authority and compliance/contactability are defined.
+Final exact head: `421720a57ece7a932eedd4ebb794c393b62475fd`.
+Final evidence: GitHub Actions run `33371785178`.
 
-AI Lead Copilot proposes/explains/researches/drafts but cannot bypass suppression, routing authority, compliance or approval gates.
+- quality/build/typecheck/unit + live API smoke job `99424328348`: PASS
+- PostgreSQL 18 + tenant/RBAC regression job `99424892965`: PASS
+- canonical worker + Valkey regression job `99425085741`: PASS
 
-## Public website / commercial state
+Verified bounded/generated request IDs, strict W3C version-00 trace correlation, stable correlated public API errors, internal-error redaction, middleware-boundary structured request logs, query-string redaction, process health and fail-closed database/schema readiness.
 
-Homepage/product planning now uses real-product/synthetic-fixture proof rather than generic marketing imagery. Feature visuals are planned for Discovery, Job progress, Business 360, Signals, Evidence, Opportunity reasoning, Lead OS, Buying Committee, Agent Trace, Memory, extensions/Desktop, Market Scout and Compliance.
+No OpenTelemetry exporter/collector, telemetry SaaS, production secret or production deployment was activated.
 
-Signup funnel aims at first evidence-backed useful result, not merely account creation.
+### ABD-266 — default-branch protection / compensating controls
 
-Provisional package hypothesis remains:
-- Free $0
-- Launch $49/mo
-- Pro $149/mo
-- Growth $399/mo
-- Enterprise custom
+State: **COMPENSATING CONTROL VERIFIED FOR M01 HANDOFF / NATIVE PROTECTION OFF**.
 
-Entitlements and Research Credits are separate. Exact included credits and final prices remain provisional until representative unit economics exist.
+Observed state remains `protected:false`, required checks off, rulesets none observed. Native protection cannot be configured through the connected write surface and is not falsely claimed.
 
-Paddle is the current preferred **validation candidate** for a Pakistani/global SaaS MoR launch model; Stripe remains direct-control comparison and Lemon Squeezy MoR alternative. No provider is activated/selected until actual Brovexa legal entity onboarding, terms, payouts, fees and requirements are verified.
+M01 exit relies on the documented compensating policy, which has been exercised with reviewed PRs, explicit integration decisions and expected-head merges. Any future default-branch integration must continue to enforce that policy until native protection becomes available.
 
-Checkout/subscription/tax/refund/dunning/over-limit states are provider-neutral and server-reconciled. Browser redirect success alone never grants durable paid access. Payment failure/downgrade cannot silently delete customer data.
+### ABD-264 — M01 FULL GATE
 
-## Market Intelligence Scout
+State: **VERIFIED / READY FOR EXPLICIT INTEGRATION HANDOFF**.
 
-Daily scout is specified but disabled. Future implementation uses bounded research lanes, prior ScoutState, evidence verification, meaningful-delta detection, GitHub/Linear dedupe, Add/Experiment/Watch/Reject proposals, independent evaluator/security review and hard budgets.
+Executable FULL GATE evidence on implementation head `d7ba75a6441904e421f46a29250a9ed09a0f68be`:
 
-It cannot auto-code, merge, change dependencies/policies/pricing, enable connectors, send outreach or publish procedural memory.
+GitHub Actions run `33376913400`: **PASS**
 
-## Seven-day readiness control
+- M01 FULL GATE quality/security job `99440391465`: PASS
+  - foundation + negative guardrails
+  - queue foundation guardrails
+  - deterministic M01-owned format/source-hygiene check
+  - source-security lint invariants
+  - tracked-secret scan
+  - Plan↔Reality/readiness contract
+  - clean frozen-lockfile install
+  - `pnpm audit --audit-level high`: PASS
+  - production builds, typecheck and unit tests
+  - live API health/readiness/correlation/error/redaction/reload smoke
+- PostgreSQL 18 migration + RBAC FULL GATE job `99440903839`: PASS
+  - migration apply/rollback/re-apply and data-layer regression
+  - tenant isolation/RBAC regression
+- canonical worker + Valkey FULL GATE job `99441082704`: PASS
+  - idempotency/effect dedupe
+  - retry/cancellation/review/dead-letter behavior
+  - restart recovery from PostgreSQL
+  - canonical correlation ID preserved PostgreSQL → queue delivery → worker handler
 
-Target remains Aug 30–Sep 5, 2026 for pre-development readiness, not full implementation.
+This checkpoint update is documentation/evidence reconciliation only. The PR head after this commit must receive its own final CI PASS before integration; that final exact-head run is recorded in PR/Linear evidence without another code mutation.
 
-Hard final controls:
-- `ABD-252` exhaustive option/use-case/dependency traceability matrix
-- `ABD-253` adversarial contradiction/omission/readiness audit
-- `ABD-215` explicit M00 owner approval gate
-- explicit owner development consent after review.
+## ABD-216 acceptance criteria reconciliation
 
-## Remaining material pre-development gaps
+- Fresh setup reproducible from documented instructions: **VERIFIED** by clean hosted checkout, pinned Node/pnpm, frozen-lockfile install and refreshed runbook.
+- CI fails closed on required quality gates: **VERIFIED**; FULL GATE development exposed and stopped on foundation, queue and formatting failures before fixes.
+- No secrets committed: **VERIFIED** by tracked-secret scan plus `.env` tracking guard.
+- Queue jobs prove idempotent retry behavior: **VERIFIED**.
+- Migrations apply and roll back in test: **VERIFIED**.
+- Basic auth/RBAC/tenant boundaries have automated tests: **VERIFIED**.
+- Observability traces request/job correlation: **VERIFIED** via API request/trace correlation and canonical job correlation through worker execution.
+- Repository checkpoint documents exact verified state: **SATISFIED by this checkpoint plus final exact-head PR evidence**.
 
-1. Complete source-by-source launch connector policy/field/retention/licensing matrix for actual selected providers.
-2. Exact production jurisdiction/channel legal review profiles beyond current engineering baseline.
-3. Physical PostgreSQL table/index/migration benchmark validation and final data-layer spike.
-4. Exact identity provider Human Decision.
-5. Exact production hosting/cloud/Postgres/Redis/S3/region and IaC/deployment workflow.
-6. Map/tile provider policy/ADR if map UI ships in Wave A.
-7. Representative source/search/enrichment/model cost pilots; final package credit allowances/prices/gross-margin target.
-8. Actual Brovexa operating legal entity + payment-provider onboarding/fees/terms verification.
-9. Final AI numeric release thresholds from representative golden/pilot datasets.
-10. Complete workspace/admin/notification/developer-API/platform-ops cross-cutting contracts (`ABD-256`).
-11. Populate exhaustive `ABD-252` traceability matrix across every option/state/failure/permission/cost/compliance/test.
-12. Run `ABD-253` adversarial final audit.
-13. Evaluate `ABD-215`; do not infer authorization from `continue`.
+## Supply-chain posture
 
-## Implementation state
+- exact direct dependency pins
+- committed lockfile
+- CI frozen-lockfile only
+- pnpm 11 supply-chain policy checks enabled
+- exact reviewed lifecycle-script allowlist only
+- immutable GitHub Action SHAs
+- steady-state hosted CI `contents: read`
+- tracked-secret gate
+- high/critical dependency advisory audit in FULL GATE
 
-No production feature code, DB migrations, auth/payment integration, connector, AI runtime, geography registry, ResearchJob runner, signal engine, Lead OS, Web/Desktop/extension client or daily GitHub scout has been enabled/implemented as product work yet.
+The dependency audit is time-sensitive evidence as of the cited run; future integration/release checks must rerun it rather than assuming advisories remain unchanged.
 
-Next safe action is remaining M00 closure and final audit, then present development-consent decision.
+## Known limitations / not verified as production
+
+- native GitHub default-branch protection/rulesets are not configured;
+- legacy planning documents outside M01-owned runtime/operational surfaces are not mass-reformatted merely to satisfy EditorConfig newline hygiene; this avoids unrelated historical churn;
+- no production environment/deployment has been executed;
+- no hosted DB/queue/identity/telemetry provider is selected or activated;
+- OpenTelemetry SDK/exporter/collector is not part of the M01 foundation;
+- local developer working-copy state is unknown;
+- M01 stacked PRs remain unmerged pending explicit integration decision.
+
+## Next safe action
+
+1. Obtain final exact-head CI PASS for PR #10 after this checkpoint-only commit.
+2. Record self-review with no remaining blocking M01 FULL GATE findings.
+3. Persist final run/job IDs in PR #10 and Linear ABD-264/ABD-266 evidence.
+4. Freeze PR #10.
+5. Do not auto-merge. Any integration must follow `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` and verify expected head SHA immediately before merge.
+6. Production/provider/legal gates remain closed after M01 integration.
