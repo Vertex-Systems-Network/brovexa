@@ -38,8 +38,13 @@ function definition(overrides: Partial<AgentDefinition> = {}): AgentDefinition {
   };
 }
 
-function expectRegistryCode(code: AgentRegistryError['code']) {
-  return (error: unknown) => error instanceof AgentRegistryError && error.code === code;
+function captureCode(work: () => unknown): AgentRegistryError['code'] | null {
+  try {
+    work();
+    return null;
+  } catch (error) {
+    return error instanceof AgentRegistryError ? error.code : null;
+  }
 }
 
 describe('AgentRegistry', () => {
@@ -60,13 +65,11 @@ describe('AgentRegistry', () => {
 
   it('rejects duplicate key/version registration', () => {
     const registry = new AgentRegistry([definition()]);
-    expect(() => registry.register(definition())).toThrowError(
-      expect.objectContaining({ code: 'DUPLICATE_AGENT_DEFINITION' }),
-    );
+    expect(captureCode(() => registry.register(definition()))).toBe('DUPLICATE_AGENT_DEFINITION');
   });
 
   it('rejects external tool access in the provider-neutral foundation registry', () => {
-    expect(
+    const code = captureCode(
       () =>
         new AgentRegistry([
           definition({
@@ -74,11 +77,12 @@ describe('AgentRegistry', () => {
             tools: [{ key: 'source.search', access: 'external.read' }],
           }),
         ]),
-    ).toThrowError(expectRegistryCode('EXTERNAL_TOOL_ACCESS_NOT_ALLOWED'));
+    );
+    expect(code).toBe('EXTERNAL_TOOL_ACCESS_NOT_ALLOWED');
   });
 
   it('rejects write tools that exceed the declared autonomy tier', () => {
-    expect(
+    const code = captureCode(
       () =>
         new AgentRegistry([
           definition({
@@ -86,11 +90,12 @@ describe('AgentRegistry', () => {
             tools: [{ key: 'memory.write', access: 'internal.write' }],
           }),
         ]),
-    ).toThrowError(expectRegistryCode('TOOL_ACCESS_EXCEEDS_AUTONOMY'));
+    );
+    expect(code).toBe('TOOL_ACCESS_EXCEEDS_AUTONOMY');
   });
 
   it('never lets ordinary agent definitions mutate system procedural memory', () => {
-    expect(
+    const code = captureCode(
       () =>
         new AgentRegistry([
           definition({
@@ -104,12 +109,14 @@ describe('AgentRegistry', () => {
             ],
           }),
         ]),
-    ).toThrowError(expectRegistryCode('SYSTEM_PROCEDURAL_MEMORY_WRITE_NOT_ALLOWED'));
+    );
+    expect(code).toBe('SYSTEM_PROCEDURAL_MEMORY_WRITE_NOT_ALLOWED');
   });
 
   it('enforces the configured maximum autonomy tier', () => {
-    expect(
+    const code = captureCode(
       () => new AgentRegistry([definition({ autonomyTier: 'T3', tools: [] })]),
-    ).toThrowError(expectRegistryCode('AUTONOMY_TIER_NOT_ALLOWED'));
+    );
+    expect(code).toBe('AUTONOMY_TIER_NOT_ALLOWED');
   });
 });
