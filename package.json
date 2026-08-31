@@ -15,6 +15,7 @@
     "verify:dev-api": "node scripts/verify-dev-api.mjs",
     "verify:db": "pnpm --filter @brovexa/db build && node scripts/verify-db.mjs",
     "verify:identity": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && node scripts/verify-identity.mjs",
+    "verify:agent-memory": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && node scripts/verify-agent-memory.mjs",
     "verify:queue:foundation": "node scripts/verify-queue-foundation.mjs",
     "verify:queue": "pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
@@ -23,9 +24,10 @@
     "lint": "node scripts/verify-source-hygiene.mjs",
     "verify:no-secrets": "node scripts/verify-no-secrets.mjs",
     "verify:m01:full-gate": "node scripts/verify-m01-full-gate.mjs",
+    "verify:m01a:foundation": "node scripts/verify-m01a-foundation.mjs",
     "audit:dependencies": "pnpm audit --audit-level high",
     "quality:runtime": "pnpm run build && pnpm run typecheck && pnpm run test",
-    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run verify:queue:foundation && pnpm run verify:format && pnpm run lint && pnpm run verify:no-secrets && pnpm run quality:runtime"
+    "quality": "pnpm run verify:foundation && pnpm run verify:foundation:test && pnpm run verify:queue:foundation && pnpm run verify:format && pnpm run lint && pnpm run verify:no-secrets && pnpm run verify:m01a:foundation && pnpm run quality:runtime"
   },
   "devDependencies": {
     "@types/node": "24.13.0",
