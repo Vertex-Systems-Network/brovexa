@@ -6,7 +6,7 @@ Updated: 2026-08-31
 
 `ACTIVE_EXISTING_PROJECT`
 
-M01 — Platform Foundation & Developer Experience is explicitly approved and active. ABD-259 through ABD-263 have executable verification evidence. ABD-264 M01 FULL GATE is the current serialized lane.
+M01 — Platform Foundation & Developer Experience has passed its executable FULL GATE on the integrated stacked implementation. It is **VERIFIED / READY FOR EXPLICIT INTEGRATION HANDOFF**, not merged, deployed, released, or production-verified.
 
 ## Authorization
 
@@ -22,6 +22,7 @@ Still separately gated: production connectors, payment-provider activation, unre
 - M01 implementation tracker PR #2: draft/unmerged
 - ABD-262 stacked PR #8: verified/unmerged
 - ABD-263 stacked PR #9: verified/unmerged
+- ABD-264 FULL GATE PR #10: draft/unmerged
 - ABD-264 branch: `hannanishfaq510/abd-264-m016-run-foundation-full-gate-and-readiness-handoff`
 - ABD-264 dependency base: verified ABD-263 head `421720a57ece7a932eedd4ebb794c393b62475fd`
 
@@ -35,9 +36,9 @@ GitHub was re-read on 2026-08-31:
 - required status checks: **off**
 - repository rulesets observed: **none**
 
-`docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` is therefore the active compensating control. Linear `ABD-266` remains open through M01 FULL GATE.
+Native protection is therefore not claimed. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the accepted compensating M01 control: PR-only integration, no force push/history rewrite, no auto-merge, executable evidence before product/runtime integration, and expected-head SHA verification for any explicit merge.
 
-Required compensating behavior remains PR-only integration, no force push/history rewrite, no auto-merge, executable evidence before product/runtime integration, and expected-head SHA verification for any explicit merge.
+The compensating path has already been exercised by prior owner-approved default-branch CI bootstrap/hardening integrations. Linear `ABD-266` can be handed off as **compensating-control exit satisfied / native protection still unavailable**, provided integration continues to obey this policy.
 
 ## M01 verification state
 
@@ -93,26 +94,52 @@ No OpenTelemetry exporter/collector, telemetry SaaS, production secret or produc
 
 ### ABD-266 — default-branch protection / compensating controls
 
-State: **IN PROGRESS THROUGH FULL GATE**.
+State: **COMPENSATING CONTROL VERIFIED FOR M01 HANDOFF / NATIVE PROTECTION OFF**.
 
-Native protection is still OFF and no repository rulesets were observed. The documented compensating path has been exercised successfully on prior default-branch CI bootstrap/hardening integrations, but M01 FULL GATE must record and hand off the actual state rather than claiming native protection.
+Observed state remains `protected:false`, required checks off, rulesets none observed. Native protection cannot be configured through the connected write surface and is not falsely claimed.
+
+M01 exit relies on the documented compensating policy, which has been exercised with reviewed PRs, explicit integration decisions and expected-head merges. Any future default-branch integration must continue to enforce that policy until native protection becomes available.
 
 ### ABD-264 — M01 FULL GATE
 
-State: **IMPLEMENTED BUT NOT VERIFIED / ACTIVE**.
+State: **VERIFIED / READY FOR EXPLICIT INTEGRATION HANDOFF**.
 
-Current FULL GATE completion work adds or strengthens:
+Executable FULL GATE evidence on implementation head `d7ba75a6441904e421f46a29250a9ed09a0f68be`:
 
-- deterministic format/source-hygiene verification;
-- deterministic source-security lint checks;
-- tracked-secret scanning;
-- dependency vulnerability audit policy (`high`/`critical` fail threshold);
-- explicit canonical job correlation assertion across PostgreSQL → queue → worker handler;
-- fresh-setup/runbook reconciliation;
-- checkpoint and Plan↔Reality drift checks;
-- explicit default-branch protection/ruleset handoff state.
+GitHub Actions run `33376913400`: **PASS**
 
-ABD-264 is not Done until exact-head hosted evidence passes the complete quality/security, PostgreSQL/RBAC and worker/Valkey gates.
+- M01 FULL GATE quality/security job `99440391465`: PASS
+  - foundation + negative guardrails
+  - queue foundation guardrails
+  - deterministic M01-owned format/source-hygiene check
+  - source-security lint invariants
+  - tracked-secret scan
+  - Plan↔Reality/readiness contract
+  - clean frozen-lockfile install
+  - `pnpm audit --audit-level high`: PASS
+  - production builds, typecheck and unit tests
+  - live API health/readiness/correlation/error/redaction/reload smoke
+- PostgreSQL 18 migration + RBAC FULL GATE job `99440903839`: PASS
+  - migration apply/rollback/re-apply and data-layer regression
+  - tenant isolation/RBAC regression
+- canonical worker + Valkey FULL GATE job `99441082704`: PASS
+  - idempotency/effect dedupe
+  - retry/cancellation/review/dead-letter behavior
+  - restart recovery from PostgreSQL
+  - canonical correlation ID preserved PostgreSQL → queue delivery → worker handler
+
+This checkpoint update is documentation/evidence reconciliation only. The PR head after this commit must receive its own final CI PASS before integration; that final exact-head run is recorded in PR/Linear evidence without another code mutation.
+
+## ABD-216 acceptance criteria reconciliation
+
+- Fresh setup reproducible from documented instructions: **VERIFIED** by clean hosted checkout, pinned Node/pnpm, frozen-lockfile install and refreshed runbook.
+- CI fails closed on required quality gates: **VERIFIED**; FULL GATE development exposed and stopped on foundation, queue and formatting failures before fixes.
+- No secrets committed: **VERIFIED** by tracked-secret scan plus `.env` tracking guard.
+- Queue jobs prove idempotent retry behavior: **VERIFIED**.
+- Migrations apply and roll back in test: **VERIFIED**.
+- Basic auth/RBAC/tenant boundaries have automated tests: **VERIFIED**.
+- Observability traces request/job correlation: **VERIFIED** via API request/trace correlation and canonical job correlation through worker execution.
+- Repository checkpoint documents exact verified state: **SATISFIED by this checkpoint plus final exact-head PR evidence**.
 
 ## Supply-chain posture
 
@@ -126,22 +153,23 @@ ABD-264 is not Done until exact-head hosted evidence passes the complete quality
 - tracked-secret gate
 - high/critical dependency advisory audit in FULL GATE
 
+The dependency audit is time-sensitive evidence as of the cited run; future integration/release checks must rerun it rather than assuming advisories remain unchanged.
+
 ## Known limitations / not verified as production
 
 - native GitHub default-branch protection/rulesets are not configured;
+- legacy planning documents outside M01-owned runtime/operational surfaces are not mass-reformatted merely to satisfy EditorConfig newline hygiene; this avoids unrelated historical churn;
 - no production environment/deployment has been executed;
 - no hosted DB/queue/identity/telemetry provider is selected or activated;
 - OpenTelemetry SDK/exporter/collector is not part of the M01 foundation;
 - local developer working-copy state is unknown;
-- M01 stacked PRs remain unmerged pending integration decision after FULL GATE.
+- M01 stacked PRs remain unmerged pending explicit integration decision.
 
 ## Next safe action
 
-1. Wire the FULL GATE static/security checks into hosted CI.
-2. Execute clean frozen dependency install and dependency audit.
-3. Execute production builds, typecheck, unit tests and live API observability/reload smoke.
-4. Execute PostgreSQL migration + identity/RBAC regression.
-5. Execute canonical worker + Valkey idempotency/recovery/correlation regression.
-6. Record exact-head evidence and self-review.
-7. Reconcile ABD-266 from the observed native-protection state and compensating-control acceptance.
-8. Only then decide M01 FULL GATE handoff/integration; do not auto-merge or activate production.
+1. Obtain final exact-head CI PASS for PR #10 after this checkpoint-only commit.
+2. Record self-review with no remaining blocking M01 FULL GATE findings.
+3. Persist final run/job IDs in PR #10 and Linear ABD-264/ABD-266 evidence.
+4. Freeze PR #10.
+5. Do not auto-merge. Any integration must follow `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` and verify expected head SHA immediately before merge.
+6. Production/provider/legal gates remain closed after M01 integration.
