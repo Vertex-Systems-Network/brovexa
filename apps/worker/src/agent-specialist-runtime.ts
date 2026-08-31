@@ -169,6 +169,31 @@ function asPermanent(error: AgentSpecialistExecutionError): PermanentWorkError {
   return new PermanentWorkError(error.code, error.message);
 }
 
+function assertHandlerIdentityBeforeAdmission(
+  workContext: WorkHandlerContext,
+  registryVersion: string,
+  agentKey: string,
+  agentVersion: string,
+): void {
+  const payload = workContext.payload;
+  if (payload.handlerRegistryVersion !== registryVersion) {
+    throw new PermanentWorkError(
+      'AGENT_SPECIALIST_REGISTRY_VERSION_MISMATCH',
+      `WorkUnit requires handler registry ${String(payload.handlerRegistryVersion)}, not ${registryVersion}.`,
+    );
+  }
+  if (
+    workContext.workType !== agentKey ||
+    payload.agentKey !== agentKey ||
+    payload.agentVersion !== agentVersion
+  ) {
+    throw new PermanentWorkError(
+      'AGENT_SPECIALIST_HANDLER_IDENTITY_MISMATCH',
+      `Registered specialist handler does not match ${String(payload.agentKey)}@${String(payload.agentVersion)}.`,
+    );
+  }
+}
+
 function buildHandler(
   options: DeterministicSpecialistRegistryOptions,
   agentKey: string,
@@ -178,9 +203,15 @@ function buildHandler(
     let runId: string | null = null;
     let runStatus: 'queued' | 'running' | null = null;
     let runUpdatedAt: Date | null = null;
-    let preparedPayload: AgentSpecialistWorkPayload | null = null;
 
     try {
+      assertHandlerIdentityBeforeAdmission(
+        workContext,
+        options.registryVersion,
+        agentKey,
+        registration.agentVersion,
+      );
+
       const prepared = await prepareAgentSpecialistAttempt(options.pool, {
         workspaceId: workContext.workspaceId,
         jobRunId: workContext.jobRunId,
@@ -191,20 +222,6 @@ function buildHandler(
         workVersion: workContext.workVersion,
         payload: workContext.payload,
       });
-      preparedPayload = prepared.payload;
-
-      if (prepared.payload.handlerRegistryVersion !== options.registryVersion) {
-        throw new PermanentWorkError(
-          'AGENT_SPECIALIST_REGISTRY_VERSION_MISMATCH',
-          `WorkUnit requires handler registry ${prepared.payload.handlerRegistryVersion}, not ${options.registryVersion}.`,
-        );
-      }
-      if (prepared.payload.agentKey !== agentKey || prepared.payload.agentVersion !== registration.agentVersion) {
-        throw new PermanentWorkError(
-          'AGENT_SPECIALIST_HANDLER_IDENTITY_MISMATCH',
-          `Registered specialist handler does not match ${prepared.payload.agentKey}@${prepared.payload.agentVersion}.`,
-        );
-      }
 
       if (prepared.replayResult) {
         return executionEffect(
