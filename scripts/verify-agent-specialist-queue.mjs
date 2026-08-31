@@ -342,9 +342,11 @@ try {
   const childContexts = await pool.query(
     `SELECT id, agent_key, agent_version, run_scope_id, receipt
      FROM agent_context_receipts
-     WHERE workspace_id = $1 AND id LIKE 'ctx-specialist-%'
+     WHERE workspace_id = $1
+       AND agent_key = $2
+       AND id LIKE 'ctx-specialist-%'
      ORDER BY id`,
-    [workspaceId],
+    [workspaceId, specialist.key],
   );
   assert.equal(childContexts.rows.length, 2);
   assert.ok(childContexts.rows.every((row) => row.agent_key === specialist.key));
