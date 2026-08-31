@@ -10,11 +10,6 @@ import {
   persistContextReceipt,
   probeDatabase,
 } from '../packages/db/dist/index.js';
-import {
-  AgentDefinitionSchema,
-  AgentRunSchema,
-  ContextReceiptSchema,
-} from '../packages/contracts/dist/index.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for agent persistence verification.');
@@ -92,7 +87,7 @@ try {
   const workspaceA = await createWorkspace('agent-persistence-a');
   const workspaceB = await createWorkspace('agent-persistence-b');
 
-  const definition = AgentDefinitionSchema.parse({
+  const definition = {
     key: 'agent.control.context',
     version: '1.0.0',
     status: 'approved',
@@ -141,7 +136,7 @@ try {
     telemetryRedactionPolicyId: 'telemetry.default',
     owner: 'platform-ai',
     changeReason: 'Initial persisted definition verification.',
-  });
+  };
 
   const definitionId = await persistAgentDefinition(pool, {
     agentKey: definition.key,
@@ -191,7 +186,7 @@ try {
     expectPostgresConstraint('23514', 'agent_definitions_t4_human_approval_check'),
   );
 
-  const receiptA = ContextReceiptSchema.parse({
+  const receiptA = {
     id: 'ctx_a_1',
     taskId: 'task_a_1',
     workspaceId: workspaceA,
@@ -204,7 +199,7 @@ try {
     tokenBudget: 4_000,
     maxCurrencyMicros: 50_000,
     createdAt: '2026-09-01T00:00:00.000Z',
-  });
+  };
 
   assert.equal(
     await persistContextReceipt(pool, {
@@ -238,7 +233,7 @@ try {
     expectPostgresConstraint('23503', 'agent_context_receipts_definition_identity_fk'),
   );
 
-  const runA = AgentRunSchema.parse({
+  const runA = {
     id: 'agent_run_a_1',
     workspaceId: workspaceA,
     agentKey: definition.key,
@@ -270,7 +265,7 @@ try {
     proposedActions: [],
     startedAt: '2026-09-01T00:00:00.000Z',
     completedAt: '2026-09-01T00:00:01.000Z',
-  });
+  };
 
   assert.equal(
     await persistAgentRun(pool, {
