@@ -194,8 +194,8 @@ export type AgentDefinition = z.infer<typeof AgentDefinitionSchema>;
 
 export interface MemoryNamespaceScope {
   workspaceId: string;
-  userId?: string;
-  runId?: string;
+  userId?: string | undefined;
+  runId?: string | undefined;
 }
 
 export function isMemoryNamespaceAllowed(namespace: string, scope: MemoryNamespaceScope): boolean {
