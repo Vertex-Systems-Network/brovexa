@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import { AgentDefinitionSchema, type AgentDefinition } from './agents';
+import { sha256Hex } from './sha256';
 
 function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -15,5 +15,5 @@ function stableValue(value: unknown): unknown {
 
 export function hashAgentDefinition(candidate: AgentDefinition): string {
   const definition = AgentDefinitionSchema.parse(candidate);
-  return createHash('sha256').update(JSON.stringify(stableValue(definition))).digest('hex');
+  return sha256Hex(JSON.stringify(stableValue(definition)));
 }
