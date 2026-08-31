@@ -6,7 +6,7 @@ Updated: 2026-09-01
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with seven FULL-GATE verified implementation slices integrated to `main`.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with eight FULL-GATE verified implementation slices integrated to `main`.**
 
 This means the governed platform foundation plus the current AI runtime/memory foundations are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production providers/connectors/payments/outreach.
 
@@ -19,12 +19,13 @@ Still separately gated: production model/provider execution, production connecto
 ## VCS / integration state
 
 - default branch: `main`
-- current integrated `main` head at this checkpoint branch base: `2a455d561472417a8b353b0303bb848b94e0cdf2`
+- current integrated `main` head at this checkpoint branch base: `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
 - original planning PR #1: closed unmerged; superseded by same-head replacement PR #12
 - planning integration PR #12: merged as `0c9ce138fe0b4dc80ce60c33f291cb00b0a59859`
 - consolidated M01 stack PR #11: merged into `m01/platform-foundation` as `825bddeb00a2d571e5e8132b077fb9707b2021e0`
 - final M01 default-branch integration PR #13: merged to `main` as `c82c46649033988c5f90d0e4407a47d02aab4d8a`
 - M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged to `main` as `2a455d561472417a8b353b0303bb848b94e0cdf2`
+- M01A deterministic specialist execution bridge PR #31: exact source head `18340eed0d1be87e27cbe60b2b4777ba6113fc30`, merged to `main` as `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
 - legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may remain closed/unmerged
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes were performed through remote GitHub tooling.
@@ -102,7 +103,7 @@ Exact-head run `33377314942`: PASS.
 
 ## M01A verification state
 
-State: **ACTIVE — seven verified/integrated slices**.
+State: **ACTIVE — eight verified/integrated slices**.
 
 Integrated slices:
 
@@ -112,7 +113,8 @@ Integrated slices:
 4. append-only AgentRun transitions and explicit memory supersession/deletion lifecycle;
 5. deterministic approved Agent Registry and minimum-necessary Context Builder runtime;
 6. bounded immutable provider-neutral Orchestrator/Planner `AgentExecutionPlan` persistence;
-7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation.
+7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation;
+8. deterministic specialist execution bridge with per-attempt child ContextReceipt/AgentRun trace, retry lifecycle, canonical checkpoints/budgets and structured governed result persistence.
 
 ### Seventh-slice exact evidence — deterministic plan dispatcher
 
@@ -126,9 +128,21 @@ Integrated slices:
 
 The first dispatcher CI attempt `33448973098` exposed a test-fixture problem rather than a runtime defect: the verifier tried to suspend the only active owner and the existing `workspace_requires_active_owner` invariant correctly rejected it. The fixture was corrected to revoke a normal member while retaining the active owner. No RBAC or lifecycle invariant was weakened.
 
-Current evidence-based estimate: M01A approximately **68%** complete with approximately **3–5 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+### Eighth-slice exact evidence — deterministic specialist execution bridge
 
-Current remaining M01A gaps include the deterministic specialist handler registry/execution bridge, provider/model routing and invocation, governed specialist/orchestrator result aggregation with evaluator separation, and broader pause/review/resume runtime behavior.
+- source head: `18340eed0d1be87e27cbe60b2b4777ba6113fc30`
+- PR #31: `feat(m01a): add deterministic specialist execution bridge`
+- exact-head FULL GATE run `33452361663`: PASS
+- quality/security job `99684875670`: PASS
+- PostgreSQL 18 migration + RBAC job `99685310855`: PASS
+- canonical worker + Valkey job `99685494095`: PASS
+- merge SHA: `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
+
+The first specialist-bridge run `33452024750` passed quality, PostgreSQL/RBAC and the pre-existing canonical worker integration verifier. The new specialist verifier then failed because its broad child-context selector also counted the parent ContextReceipt (`3` rows instead of the expected `2`). The selector was tightened by exact specialist agent identity; runtime behavior was unchanged, and the final exact-head run passed all lanes.
+
+Current evidence-based estimate: M01A approximately **78%** complete with approximately **2–4 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+
+Current remaining M01A gaps include deterministic completed-DAG aggregation and validator/evaluator handoff, broader pause/review/resume runtime behavior, and separately gated provider/model routing and invocation.
 
 ## Integration verification layers
 
@@ -154,7 +168,7 @@ The same compensating integration discipline is being applied to M01A: each impl
 - Migrations apply and roll back in test: **VERIFIED**.
 - Auth/RBAC/tenant boundaries have automated tests: **VERIFIED**.
 - Request/job correlation is traceable: **VERIFIED**.
-- Durable project checkpoint reflects actual M01 integration state: **VERIFIED**.
+- Durable project checkpoint reflects actual M01/M01A integration state: **VERIFIED by this checkpoint PR once merged**.
 
 ## Supply-chain posture
 
@@ -184,5 +198,5 @@ Dependency advisory evidence is time-sensitive and must be rerun on future integ
 
 1. Verify and merge this M01A progress/checkpoint-only PR through normal hosted FULL GATE and expected-head integration.
 2. Start a fresh implementation branch from the resulting `main` head.
-3. Implement the deterministic specialist handler registry/execution bridge: validate `AgentExecutionWorkPayload`, map exact specialist definitions to supported handlers, create specialist AgentRun lifecycle state, preserve checkpoint/budget/cancellation semantics, and return structured governed results.
-4. Keep production provider/model routing and invocation in a separate later slice after the deterministic bridge is independently FULL-GATE verified.
+3. Implement deterministic completed-DAG aggregation and validator/evaluator handoff: consume canonical specialist outcomes, validate exact plan completion, progress orchestrator lifecycle state, and fail closed to explicit review/failure states when acceptance cannot be proven.
+4. Keep production provider/model routing and invocation in a separate later slice after deterministic aggregation/evaluator handoff is independently FULL-GATE verified.
