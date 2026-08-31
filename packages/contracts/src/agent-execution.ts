@@ -21,6 +21,62 @@ export const AgentExecutionStepSchema = z.object({
 });
 export type AgentExecutionStep = z.infer<typeof AgentExecutionStepSchema>;
 
+export const AgentExecutionWorkPayloadSchema = z
+  .object({
+    version: z.literal('1.0.0'),
+    dispatchId: IdentifierSchema,
+    handlerRegistryVersion: VersionSchema,
+    planId: IdentifierSchema,
+    planVersion: z.number().int().min(1).max(1_000_000),
+    workspaceId: IdentifierSchema,
+    orchestratorRunId: IdentifierSchema,
+    contextReceiptId: IdentifierSchema,
+    maxParallelism: z.number().int().min(1).max(256),
+    stepKey: StepKeySchema,
+    agentKey: AgentKeySchema,
+    agentVersion: VersionSchema,
+    dependencies: z.array(StepKeySchema).max(64),
+    toolKeys: z.array(IdentifierSchema).max(128),
+    commandKeys: z.array(IdentifierSchema).max(128),
+    policyRefs: z.array(IdentifierSchema).min(1).max(128),
+    canonicalRefs: z.array(IdentifierSchema).max(512),
+    memoryRefs: z.array(IdentifierSchema).max(512),
+    budget: AgentBudgetSchema,
+  })
+  .superRefine((payload, ctx) => {
+    if (payload.agentKey === 'agent.control.orchestrator') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['agentKey'],
+        message: 'Dispatched specialist work cannot recursively target the orchestrator.',
+      });
+    }
+    if (payload.budget.maxConcurrency !== 1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['budget', 'maxConcurrency'],
+        message: 'Dispatched specialist work must reserve exactly one concurrency slot.',
+      });
+    }
+    for (const [field, values] of [
+      ['dependencies', payload.dependencies],
+      ['toolKeys', payload.toolKeys],
+      ['commandKeys', payload.commandKeys],
+      ['policyRefs', payload.policyRefs],
+      ['canonicalRefs', payload.canonicalRefs],
+      ['memoryRefs', payload.memoryRefs],
+    ] as const) {
+      if (new Set(values).size !== values.length) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [field],
+          message: `${field} must not contain duplicate identifiers.`,
+        });
+      }
+    }
+  });
+export type AgentExecutionWorkPayload = z.infer<typeof AgentExecutionWorkPayloadSchema>;
+
 export const AgentExecutionPlanSchema = z
   .object({
     id: IdentifierSchema,
