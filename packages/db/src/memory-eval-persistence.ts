@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { AgentPersistenceConflictError } from './agent-persistence';
 import type {
   PersistedDataClassification,
@@ -58,7 +58,7 @@ function assertConfidence(value: number): void {
 }
 
 export async function persistMemoryRecord(
-  pool: Pool,
+  pool: Pool | PoolClient,
   input: PersistMemoryRecordInput,
 ): Promise<string> {
   assertConfidence(input.confidence);

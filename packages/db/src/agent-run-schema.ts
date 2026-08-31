@@ -40,6 +40,7 @@ export const agentRuns = pgTable(
     providerId: text('provider_id'),
     modelId: text('model_id'),
     status: text('status').$type<PersistedAgentRunStatus>().notNull(),
+    lastTransitionId: text('last_transition_id'),
     envelope: jsonb('envelope').$type<Record<string, unknown>>().notNull(),
     startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }),
     completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
