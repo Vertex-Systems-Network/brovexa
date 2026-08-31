@@ -129,7 +129,7 @@ try {
 
   await assert.rejects(
     () => pool.query('DELETE FROM workspace_roles WHERE id = $1', [bootstrapA.ownerRoleId]),
-    expectPostgresCode('23503'),
+    expectPostgresCode('23001'),
   );
   await assert.rejects(
     () =>
