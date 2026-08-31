@@ -6,7 +6,7 @@ Updated: 2026-08-31
 
 `ACTIVE_EXISTING_PROJECT`
 
-M01 — Platform Foundation & Developer Experience is explicitly approved and active.
+M01 — Platform Foundation & Developer Experience is explicitly approved and active. ABD-259 through ABD-263 have executable verification evidence. ABD-264 M01 FULL GATE is the current serialized lane.
 
 ## Authorization
 
@@ -17,28 +17,27 @@ Still separately gated: production connectors, payment-provider activation, unre
 ## VCS state
 
 - default branch: `main`
-- current `main`: `69dd5adc3a509aa35b0be46f4e0124d15dc8de3c`
+- observed `main` head: `69dd5adc3a509aa35b0be46f4e0124d15dc8de3c`
 - planning PR #1: draft/unmerged
-- M01 implementation branch: `m01/platform-foundation`
-- M01 implementation PR #2: draft/unmerged
-- current verified implementation head before this checkpoint: `014b1a847391df7cab7eb5a9a7f91065aa5f1ab4`
-- final ABD-260 verification run: `33333195961`
+- M01 implementation tracker PR #2: draft/unmerged
+- ABD-262 stacked PR #8: verified/unmerged
+- ABD-263 stacked PR #9: verified/unmerged
+- ABD-264 branch: `hannanishfaq510/abd-264-m016-run-foundation-full-gate-and-readiness-handoff`
+- ABD-264 dependency base: verified ABD-263 head `421720a57ece7a932eedd4ebb794c393b62475fd`
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes are being made through remote GitHub tooling.
 
 ## Default-branch security
 
-`main` remains verified `protected:false` with required checks off. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control and Linear `ABD-266` remains open through the M01 FULL GATE.
+GitHub was re-read on 2026-08-31:
 
-Owner-approved least-privilege default-branch self-hosted dispatcher remains:
+- `main` protected: **false**
+- required status checks: **off**
+- repository rulesets observed: **none**
 
-- manual-only
-- `contents: read`
-- `[self-hosted, Windows, X64]`
-- immutable Action pins
-- `persist-credentials: false`
-- fixed checkout to exactly `m01/platform-foundation`
-- no caller-controlled target ref
+`docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` is therefore the active compensating control. Linear `ABD-266` remains open through M01 FULL GATE.
+
+Required compensating behavior remains PR-only integration, no force push/history rewrite, no auto-merge, executable evidence before product/runtime integration, and expected-head SHA verification for any explicit merge.
 
 ## M01 verification state
 
@@ -48,91 +47,72 @@ State: **VERIFIED / DONE**.
 
 Final hosted evidence: run `33312134186`, job `99258997531`.
 
-Verified under Node `24.20.0` + pnpm `11.23.0`:
+Verified Node/pnpm pins, frozen lockfile, foundation guardrails, builds, TypeScript checks, tests and live API reload behavior.
 
-- zero-dependency foundation preflight
-- negative regression guardrails
-- committed `pnpm-lock.yaml`
-- frozen-lockfile installation
-- Config/Contracts/API builds
-- Next.js production build
-- TypeScript 7 typecheck
-- Vitest foundation suite
-- deterministic API source → compile → runtime reload smoke
-
-The API development loop uses bounded polling instead of native filesystem watching and keeps the last-good runtime alive across compile failures.
-
-### ABD-260 — PostgreSQL migration/data layer
+### ABD-260 — PostgreSQL migration / data layer
 
 State: **VERIFIED / DONE**.
 
-Final GitHub Actions run `33333195961`:
+Final evidence: GitHub Actions run `33333195961`.
 
-- quality/dev-loop job `99315413253`: PASS
-- PostgreSQL 18 migration integration job `99315636396`: PASS
+Verified PostgreSQL 18.6 migration apply/rollback/re-apply, checksum journal, constraints, transaction rollback, readiness/schema checks and destructive-test safety guards.
 
-Verified behavior:
+### ABD-261 — durable worker / queue foundation
 
-- PostgreSQL `18.6` immutable service image
-- `@brovexa/db` Drizzle/node-postgres foundation
-- canonical `workspaces` tenant root
-- workspace-scoped FK child contract
-- reviewed SQL up/down migrations
-- migration checksum journal
-- advisory-lock serialization
-- transaction-wrapped migration apply/rollback
-- caller-visible migration result state only after successful COMMIT
-- exact unique constraint rejection by SQLSTATE `23505`
-- exact FK rejection by SQLSTATE `23503`
-- cascade delete behavior
-- transaction rollback behavior
-- explicit down migration
-- successful re-apply
-- DB readiness/schema probe
-- destructive integration-test safety guard (`BROVEXA_DB_TEST_ALLOW_RESET=true` + `*_test` DB name)
+State: **VERIFIED / DONE**.
 
-No production database/provider/secret was activated.
+Final evidence: GitHub Actions run `33334936386`.
 
-## Current active lane — ABD-261 durable worker/queue foundation
+Verified PostgreSQL-canonical work truth, BullMQ/Valkey transport, idempotency/effect dedupe, retry/backoff, cancellation, review/dead-letter behavior, restart recovery, worker readiness and queue metrics.
 
-State: **IN PROGRESS**.
+### ABD-262 — identity / RBAC / tenant primitives
 
-Goal: introduce queue/worker execution transport without allowing queue state to become canonical workflow truth.
+State: **VERIFIED ON STACKED PR #8 / AWAITING INTEGRATION**.
 
-Locked principles:
+Final exact head: `c13a0e12b40aa364fa54465408cdabb88f58f55c`.
+Final evidence: GitHub Actions run `33369721378`.
 
-- PostgreSQL remains canonical job/work-unit/checkpoint truth.
-- Queue state is transport/execution state only.
-- Restart recovery must derive runnable work from PostgreSQL.
-- Idempotency/effect guards live in PostgreSQL.
-- Queue delivery cannot mark business completion without a canonical DB state transition.
-- Retryable/permanent/cancelled/DLQ/review states are explicit.
-- Worker readiness and correlation/metrics contracts are required.
-- No hosted Redis/Valkey provider or production credentials are activated in M01.
+Verified deny-by-default tenant authorization, cross-tenant FK enforcement, stale grant revalidation, one-shot owner bootstrap, immutable canonical owner role, last-active-owner safeguards, authorization audit events, provider-neutral auth/session boundary and API tenant-context tests.
 
-Current ecosystem preflight:
+No hosted identity provider or production auth secret was activated.
 
-- BullMQ `6.3.2` is current but is a recently released v6 major with pluggable Redis/PostgreSQL backends.
-- BullMQ `5.81.4` remains an actively published v5 line.
-- Valkey `9.1.1` is current stable.
-- Final queue-runtime pin must be chosen from executable compatibility/stability/supply-chain evidence, not latest-version bias.
-- Do not assume every Redis-compatible implementation is BullMQ-compatible.
+### ABD-263 — API / observability / health
 
-## Technology pins currently verified
+State: **VERIFIED ON STACKED PR #9 / AWAITING INTEGRATION**.
 
-- Node.js `24.20.0`
-- pnpm `11.23.0`
-- TypeScript `7.0.2`
-- Next.js `16.3.3`
-- React `19.2.8`
-- NestJS `12.0.1`
-- Vitest `4.1.11`
-- Zod `4.5.4`
-- PostgreSQL `18.6`
-- Drizzle ORM `0.45.2`
-- Drizzle Kit `0.31.10`
-- `pg` `8.23.0`
-- `@types/pg` `8.23.1`
+Final exact head: `421720a57ece7a932eedd4ebb794c393b62475fd`.
+Final evidence: GitHub Actions run `33371785178`.
+
+- quality/build/typecheck/unit + live API smoke job `99424328348`: PASS
+- PostgreSQL 18 + tenant/RBAC regression job `99424892965`: PASS
+- canonical worker + Valkey regression job `99425085741`: PASS
+
+Verified bounded/generated request IDs, strict W3C version-00 trace correlation, stable correlated public API errors, internal-error redaction, middleware-boundary structured request logs, query-string redaction, process health and fail-closed database/schema readiness.
+
+No OpenTelemetry exporter/collector, telemetry SaaS, production secret or production deployment was activated.
+
+### ABD-266 — default-branch protection / compensating controls
+
+State: **IN PROGRESS THROUGH FULL GATE**.
+
+Native protection is still OFF and no repository rulesets were observed. The documented compensating path has been exercised successfully on prior default-branch CI bootstrap/hardening integrations, but M01 FULL GATE must record and hand off the actual state rather than claiming native protection.
+
+### ABD-264 — M01 FULL GATE
+
+State: **IMPLEMENTED BUT NOT VERIFIED / ACTIVE**.
+
+Current FULL GATE completion work adds or strengthens:
+
+- deterministic format/source-hygiene verification;
+- deterministic source-security lint checks;
+- tracked-secret scanning;
+- dependency vulnerability audit policy (`high`/`critical` fail threshold);
+- explicit canonical job correlation assertion across PostgreSQL → queue → worker handler;
+- fresh-setup/runbook reconciliation;
+- checkpoint and Plan↔Reality drift checks;
+- explicit default-branch protection/ruleset handoff state.
+
+ABD-264 is not Done until exact-head hosted evidence passes the complete quality/security, PostgreSQL/RBAC and worker/Valkey gates.
 
 ## Supply-chain posture
 
@@ -140,28 +120,28 @@ Current ecosystem preflight:
 - committed lockfile
 - CI frozen-lockfile only
 - pnpm 11 supply-chain policy checks enabled
-- no broad lifecycle-script bypass
-- only exact currently locked esbuild versions are allowed to execute lifecycle scripts
+- exact reviewed lifecycle-script allowlist only
 - immutable GitHub Action SHAs
 - steady-state hosted CI `contents: read`
+- tracked-secret gate
+- high/critical dependency advisory audit in FULL GATE
 
-## M01 gates
+## Known limitations / not verified as production
 
-- `ABD-259` — executable monorepo/CI verification — **DONE**
-- `ABD-260` — PostgreSQL harness/data layer — **DONE**
-- `ABD-261` — durable worker/queue foundation — **IN PROGRESS**
-- `ABD-262` — identity/RBAC/tenant enforcement — dependency-gated by stable DB contract; not started
-- `ABD-263` — API/observability/health — later coordinated M01 lane
-- `ABD-266` — default-branch protection/compensating controls — remains open through FULL GATE
-- `ABD-264` — M01 FULL GATE — final integration/readiness handoff
+- native GitHub default-branch protection/rulesets are not configured;
+- no production environment/deployment has been executed;
+- no hosted DB/queue/identity/telemetry provider is selected or activated;
+- OpenTelemetry SDK/exporter/collector is not part of the M01 foundation;
+- local developer working-copy state is unknown;
+- M01 stacked PRs remain unmerged pending integration decision after FULL GATE.
 
 ## Next safe action
 
-1. Finalize the smallest stable queue transport/runtime selection for ABD-261.
-2. Extend canonical PostgreSQL schema with job/work-unit/effect/idempotency records through reviewed migrations.
-3. Add worker boundary, queue naming/version conventions, retry/backoff/error classification and cancellation model.
-4. Add Redis/Valkey-compatible local/CI transport only after executable compatibility is proven.
-5. Prove idempotent retry, restart recovery from PostgreSQL, cancellation, failed-retry/DLQ behavior and worker readiness in CI.
-6. Close ABD-261 only from executable evidence, then advance the next dependency-unblocked M01 lane.
-
-PR #2 remains draft/unmerged; no auto-merge or production activation is authorized by this checkpoint.
+1. Wire the FULL GATE static/security checks into hosted CI.
+2. Execute clean frozen dependency install and dependency audit.
+3. Execute production builds, typecheck, unit tests and live API observability/reload smoke.
+4. Execute PostgreSQL migration + identity/RBAC regression.
+5. Execute canonical worker + Valkey idempotency/recovery/correlation regression.
+6. Record exact-head evidence and self-review.
+7. Reconcile ABD-266 from the observed native-protection state and compensating-control acceptance.
+8. Only then decide M01 FULL GATE handoff/integration; do not auto-merge or activate production.
