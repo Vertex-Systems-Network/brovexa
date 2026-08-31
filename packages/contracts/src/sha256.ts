@@ -63,7 +63,7 @@ export function sha256Hex(value: string): string {
     bytes.push(Number((bitLength >> shift) & 0xffn));
   }
 
-  const hash = [...initialHash];
+  const hash: number[] = [...initialHash];
   const words = new Array<number>(64).fill(0);
 
   for (let offset = 0; offset < bytes.length; offset += 64) {
