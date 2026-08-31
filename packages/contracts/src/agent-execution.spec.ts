@@ -51,9 +51,25 @@ describe('AgentExecutionPlan contract', () => {
     ).toBe(false);
   });
 
+  it('rejects recursive orchestrator steps', () => {
+    const candidate = plan();
+    candidate.steps[0] = { ...step('discover'), agentKey: 'agent.control.orchestrator' };
+    expect(AgentExecutionPlanSchema.safeParse(candidate).success).toBe(false);
+  });
+
   it('rejects duplicate and unknown dependencies', () => {
     const candidate = plan();
     candidate.steps[1] = step('verify', ['discover', 'discover', 'missing']);
+    expect(AgentExecutionPlanSchema.safeParse(candidate).success).toBe(false);
+  });
+
+  it('rejects duplicate scope/tool identifiers', () => {
+    const candidate = plan();
+    candidate.steps[0] = {
+      ...step('discover'),
+      toolKeys: ['tool.search', 'tool.search'],
+      policyRefs: ['policy.research.v1', 'policy.research.v1'],
+    };
     expect(AgentExecutionPlanSchema.safeParse(candidate).success).toBe(false);
   });
 
@@ -65,5 +81,14 @@ describe('AgentExecutionPlan contract', () => {
 
   it('rejects parallelism above plan width', () => {
     expect(AgentExecutionPlanSchema.safeParse({ ...plan(), maxParallelism: 3 }).success).toBe(false);
+  });
+
+  it('rejects nested specialist concurrency', () => {
+    const candidate = plan();
+    candidate.steps[0] = {
+      ...step('discover'),
+      budget: { ...step('discover').budget, maxConcurrency: 2 },
+    };
+    expect(AgentExecutionPlanSchema.safeParse(candidate).success).toBe(false);
   });
 });
