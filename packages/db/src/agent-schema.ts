@@ -1,5 +1,6 @@
 export * from './agent-context-schema';
 export * from './agent-definition-schema';
+export * from './agent-execution-schema';
 export * from './agent-lifecycle-schema';
 export * from './agent-run-schema';
 export * from './eval-result-schema';
