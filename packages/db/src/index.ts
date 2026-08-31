@@ -3,6 +3,7 @@ export * from './agent-execution-dispatcher';
 export * from './agent-execution-persistence';
 export * from './agent-persistence';
 export * from './agent-schema';
+export * from './agent-specialist-execution';
 export * from './client';
 export * from './identity';
 export * from './jobs';
