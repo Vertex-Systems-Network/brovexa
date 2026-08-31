@@ -41,6 +41,8 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS agent_eval_results CASCADE');
+  await pool.query('DROP TABLE IF EXISTS memory_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_runs CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_context_receipts CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_definitions CASCADE');
@@ -81,6 +83,7 @@ try {
     '0001_job_execution_foundation',
     '0002_identity_authorization_foundation',
     '0003_agent_runtime_core',
+    '0004_memory_evaluation_core',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
