@@ -44,7 +44,7 @@ Resource-level guards compare the resource workspace with the resolved tenant co
 
 A resolved `WorkspaceAuthorizationContext` is useful for request propagation and read guards, but writes do not trust it as a durable permission snapshot. Membership and role mutations re-check the actor's active user, workspace, membership, and required permission inside the database transaction before changing state.
 
-This prevents a stale context from retaining authority after a concurrent suspension or role revocation.
+This prevents a stale context from retaining authority after a concurrent suspension or role revocation. Integration verification explicitly captures an elevated context, revokes its role grant, and proves the stale context cannot perform another mutation.
 
 ## Last-active-owner invariant
 
@@ -72,6 +72,8 @@ Audit details contain canonical IDs and role keys only; authentication credentia
 
 `@brovexa/contracts` exposes `SessionAuthAdapter` and an `AuthenticatedPrincipal` containing user/session/authentication metadata. The adapter boundary deliberately excludes workspace and RBAC claims.
 
+The API tenant-context resolver is unit-tested to fail before PostgreSQL authorization lookup when no authenticated principal exists, and to derive canonical workspace authorization only from the authenticated Brovexa `userId` plus the requested workspace.
+
 Permitted M01 implementations include a test/local resolver used by automated tests. Password storage, OIDC configuration, passkey enrollment, MFA, recovery workflows, production session cookies/tokens, and any hosted IdP remain gated by the auth/session/provider ADR described in `IDENTITY_AUTH_LIFECYCLE.md`.
 
 ## Executable evidence
@@ -83,6 +85,7 @@ Permitted M01 implementations include a test/local resolver used by automated te
 - owner bootstrap cannot be replayed to grant a second user owner authority;
 - the canonical owner role cannot be mutated or deleted;
 - a non-owner cannot escalate to owner even if a custom role is accidentally granted role-management capability;
+- a stale authorization snapshot loses mutation authority after its backing role grant is revoked;
 - the last active owner cannot be removed or suspended;
 - ownership can be transferred before revocation;
 - authorization mutations produce audit events;
