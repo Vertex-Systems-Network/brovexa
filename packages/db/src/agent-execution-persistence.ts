@@ -95,7 +95,7 @@ interface ContextReceiptRow {
 
 interface ExistingPlanRow {
   run_id: string;
-  envelope: Record<string, unknown>;
+  same_plan: boolean;
 }
 
 interface ParsedDefinition {
@@ -104,6 +104,7 @@ interface ParsedDefinition {
   version: string;
   autonomyTier: string;
   requiresHumanApproval: boolean;
+  routingMode: string;
   allowedTools: readonly string[];
   allowedCommands: readonly string[];
   memoryReadScopes: readonly string[];
@@ -156,25 +157,49 @@ function readStringRecord(value: unknown): Record<string, string> | null {
   return Object.fromEntries(entries.map(([key, entry]) => [key.trim(), (entry as string).trim()]));
 }
 
+function readSafeIntegerField(
+  value: Record<string, unknown>,
+  field: AdditiveBudgetField | 'maxConcurrency',
+): number | null {
+  const candidate = value[field];
+  return typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate >= 0
+    ? candidate
+    : null;
+}
+
 function readBudget(value: unknown): AgentExecutionBudgetInput | null {
   if (!isRecord(value)) return null;
-  const budget: AgentExecutionBudgetInput = {
-    maxTokens: Number(value.maxTokens),
-    maxSearches: Number(value.maxSearches),
-    maxApiCalls: Number(value.maxApiCalls),
-    maxCredits: Number(value.maxCredits),
-    maxCurrencyMicros: Number(value.maxCurrencyMicros),
-    maxRuntimeMs: Number(value.maxRuntimeMs),
-    maxConcurrency: Number(value.maxConcurrency),
-  };
+  const maxTokens = readSafeIntegerField(value, 'maxTokens');
+  const maxSearches = readSafeIntegerField(value, 'maxSearches');
+  const maxApiCalls = readSafeIntegerField(value, 'maxApiCalls');
+  const maxCredits = readSafeIntegerField(value, 'maxCredits');
+  const maxCurrencyMicros = readSafeIntegerField(value, 'maxCurrencyMicros');
+  const maxRuntimeMs = readSafeIntegerField(value, 'maxRuntimeMs');
+  const maxConcurrency = readSafeIntegerField(value, 'maxConcurrency');
 
-  for (const field of additiveBudgetFields) {
-    if (!Number.isSafeInteger(budget[field]) || budget[field] < 0) return null;
-  }
-  if (!Number.isInteger(budget.maxConcurrency) || budget.maxConcurrency < 1 || budget.maxConcurrency > 256) {
+  if (
+    maxTokens === null ||
+    maxSearches === null ||
+    maxApiCalls === null ||
+    maxCredits === null ||
+    maxCurrencyMicros === null ||
+    maxRuntimeMs === null ||
+    maxConcurrency === null ||
+    maxConcurrency < 1 ||
+    maxConcurrency > 256
+  ) {
     return null;
   }
-  return budget;
+
+  return {
+    maxTokens,
+    maxSearches,
+    maxApiCalls,
+    maxCredits,
+    maxCurrencyMicros,
+    maxRuntimeMs,
+    maxConcurrency,
+  };
 }
 
 function assertIdentifier(value: string, field: string): void {
@@ -262,6 +287,12 @@ function assertPlanShape(input: PersistAgentExecutionPlanInput): void {
     assertIdentifier(step.key, 'step.key');
     assertIdentifier(step.agentKey, `${step.key}.agentKey`);
     assertIdentifier(step.agentVersion, `${step.key}.agentVersion`);
+    if (!/^[a-z][a-z0-9_.-]{0,127}$/.test(step.key)) {
+      throw new AgentExecutionPlanError(
+        'AGENT_EXECUTION_INPUT_INVALID',
+        `Step key ${step.key} is not a canonical execution identifier.`,
+      );
+    }
     if (!/^agent\.[a-z0-9_.-]+$/.test(step.agentKey) || step.agentKey === 'agent.control.orchestrator') {
       throw new AgentExecutionPlanError(
         'AGENT_EXECUTION_INPUT_INVALID',
@@ -332,6 +363,10 @@ function parseDefinition(row: AgentDefinitionRow): ParsedDefinition {
   const allowedCommands = readStringArray(specification.allowedCommands);
   const memory = isRecord(specification.memory) ? specification.memory : null;
   const memoryReadScopes = memory ? readStringArray(memory.read) : null;
+  const modelPolicy = isRecord(specification.modelPolicy) ? specification.modelPolicy : null;
+  const routingMode = modelPolicy && isNonEmptyString(modelPolicy.routingMode)
+    ? modelPolicy.routingMode.trim()
+    : null;
   const promptVersion = isNonEmptyString(specification.promptVersion)
     ? specification.promptVersion.trim()
     : null;
@@ -356,6 +391,7 @@ function parseDefinition(row: AgentDefinitionRow): ParsedDefinition {
     !allowedTools ||
     !allowedCommands ||
     !memoryReadScopes ||
+    !routingMode ||
     !promptVersion ||
     !skillVersions ||
     !budget
@@ -372,6 +408,7 @@ function parseDefinition(row: AgentDefinitionRow): ParsedDefinition {
     version: row.version,
     autonomyTier: row.autonomy_tier,
     requiresHumanApproval: row.requires_human_approval,
+    routingMode,
     allowedTools,
     allowedCommands,
     memoryReadScopes,
@@ -601,14 +638,13 @@ export async function persistAgentExecutionPlan(
     await assertCurrentWorkspaceRead(client, input.workspaceId, input.userId);
 
     const existingPlan = await client.query<ExistingPlanRow>(
-      `SELECT run_id, envelope
+      `SELECT run_id, envelope = $2::jsonb AS same_plan
        FROM agent_execution_plans
        WHERE id = $1`,
-      [input.id],
+      [input.id, JSON.stringify(planEnvelope)],
     );
     if (existingPlan.rows[0]) {
-      const samePlan = JSON.stringify(existingPlan.rows[0].envelope) === JSON.stringify(planEnvelope);
-      if (!samePlan || existingPlan.rows[0].run_id !== input.runId) {
+      if (!existingPlan.rows[0].same_plan || existingPlan.rows[0].run_id !== input.runId) {
         throw new AgentPersistenceConflictError(
           'AGENT_EXECUTION_PLAN_ID_CONFLICT',
           `Execution plan ${input.id} already exists with different content or scope.`,
@@ -645,7 +681,10 @@ export async function persistAgentExecutionPlan(
       );
     }
 
-    const existingRun = await client.query<{ id: string }>('SELECT id FROM agent_runs WHERE id = $1', [input.runId]);
+    const existingRun = await client.query<{ id: string }>(
+      'SELECT id FROM agent_runs WHERE id = $1',
+      [input.runId],
+    );
     if (existingRun.rows[0]) {
       throw new AgentPersistenceConflictError(
         'AGENT_EXECUTION_RUN_ID_CONFLICT',
@@ -697,10 +736,20 @@ export async function persistAgentExecutionPlan(
       );
     }
     const orchestrator = parseDefinition(orchestratorRow);
-    if (orchestrator.key !== 'agent.control.orchestrator') {
+    if (
+      orchestrator.key !== 'agent.control.orchestrator' ||
+      orchestrator.autonomyTier !== 'T2' ||
+      orchestrator.routingMode !== 'deterministic_only'
+    ) {
       throw new AgentExecutionPlanError(
         'AGENT_EXECUTION_DEFINITION_INVALID',
-        'The resolved orchestrator definition is not agent.control.orchestrator.',
+        'The canonical orchestrator must be an approved deterministic-only T2 definition.',
+      );
+    }
+    if (orchestrator.requiresHumanApproval) {
+      throw new AgentExecutionPlanError(
+        'AGENT_EXECUTION_REVIEW_REQUIRED',
+        'The orchestrator requires a human approval artifact not implemented in this slice.',
       );
     }
     if (input.maxParallelism > orchestrator.budget.maxConcurrency) {
