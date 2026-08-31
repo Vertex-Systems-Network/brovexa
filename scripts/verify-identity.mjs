@@ -39,15 +39,6 @@ function findPostgresError(error) {
   return null;
 }
 
-function expectPostgresCode(expectedCode) {
-  return (error) => {
-    const postgresError = findPostgresError(error);
-    assert.ok(postgresError, `Expected nested PostgreSQL error ${expectedCode}.`);
-    assert.equal(postgresError.code, expectedCode);
-    return true;
-  };
-}
-
 function expectPostgresConstraint(expectedCode, expectedConstraint) {
   return (error) => {
     const postgresError = findPostgresError(error);
@@ -126,6 +117,15 @@ try {
     workspaceId: workspaceB,
     userId: ownerB.id,
   });
+
+  await assert.rejects(
+    () => bootstrapWorkspaceOwner(pool, { workspaceId: workspaceA, userId: extraA.id }),
+    expectAuthorizationCode('WORKSPACE_OWNER_ALREADY_BOOTSTRAPPED'),
+  );
+  await assert.rejects(
+    () => resolveWorkspaceAuthorization(pool, { workspaceId: workspaceA, userId: extraA.id }),
+    expectAuthorizationCode('WORKSPACE_MEMBERSHIP_REQUIRED'),
+  );
 
   await assert.rejects(
     () => pool.query('DELETE FROM workspace_roles WHERE id = $1', [bootstrapA.ownerRoleId]),
