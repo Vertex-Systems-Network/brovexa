@@ -21,6 +21,7 @@ export type AuthorizationErrorCode =
   | 'RESOURCE_NOT_FOUND'
   | 'TENANT_SCOPE_MISMATCH'
   | 'MEMBERSHIP_ALREADY_EXISTS'
+  | 'WORKSPACE_OWNER_ALREADY_BOOTSTRAPPED'
   | 'LAST_ACTIVE_OWNER';
 
 export class AuthorizationError extends Error {
@@ -233,11 +234,27 @@ export async function bootstrapWorkspaceOwner(
 ): Promise<BootstrapWorkspaceOwnerResult> {
   return withPgTransaction(pool, async (client) => {
     const workspace = await client.query<{ status: string }>(
-      'SELECT status FROM workspaces WHERE id = $1 FOR SHARE',
+      'SELECT status FROM workspaces WHERE id = $1 FOR UPDATE',
       [input.workspaceId],
     );
     if (workspace.rows[0]?.status !== 'active') {
       throw new AuthorizationError('WORKSPACE_INACTIVE', 'Workspace is not active.');
+    }
+
+    const ownerRoleExists = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM workspace_roles
+         WHERE workspace_id = $1
+           AND kind = 'owner'
+       ) AS exists`,
+      [input.workspaceId],
+    );
+    if (ownerRoleExists.rows[0]?.exists) {
+      throw new AuthorizationError(
+        'WORKSPACE_OWNER_ALREADY_BOOTSTRAPPED',
+        'Workspace owner authority has already been initialized.',
+      );
     }
 
     const user = await client.query<{ status: string }>(
