@@ -172,3 +172,5 @@ try {
   await resetTestDatabase();
   await pool.end();
 }
+
+await import('./verify-agent-persistence.mjs');
