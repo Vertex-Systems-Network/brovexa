@@ -5,10 +5,11 @@ import {
   resolveWorkspaceAuthorization,
   type WorkspaceAuthorizationContext,
 } from './identity';
-import type {
-  PersistedDataClassification,
-  PersistedMemoryAuthority,
-  PersistedMemoryType,
+import {
+  persistedDataClassificationValues,
+  type PersistedDataClassification,
+  type PersistedMemoryAuthority,
+  type PersistedMemoryType,
 } from './memory-record-schema';
 
 export type AgentContextRuntimeErrorCode =
@@ -120,6 +121,8 @@ const authorityRank: Readonly<Record<PersistedMemoryAuthority, number>> = {
   historical_context: 100,
 };
 
+const supportedDataClassifications = new Set<string>(persistedDataClassificationValues);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -131,6 +134,12 @@ function isNonEmptyString(value: unknown): value is string {
 function readStringArray(value: unknown): string[] | null {
   if (!Array.isArray(value) || value.some((item) => !isNonEmptyString(item))) return null;
   return [...new Set(value.map((item) => item.trim()))];
+}
+
+function readDataClassificationArray(value: unknown): PersistedDataClassification[] | null {
+  const values = readStringArray(value);
+  if (!values || values.some((item) => !supportedDataClassifications.has(item))) return null;
+  return values as PersistedDataClassification[];
 }
 
 function readSafeBudget(value: unknown): number | null {
@@ -237,7 +246,9 @@ function candidateIsReadable(
 ): boolean {
   const readCapabilities = readStringArray(candidate.envelope.readCapabilities);
   if (!readCapabilities || readCapabilities.length === 0) return false;
-  return readCapabilities.some((capability) => authorization.permissions.includes(capability as never));
+  return readCapabilities.some((capability) =>
+    authorization.permissions.some((permission) => permission === capability),
+  );
 }
 
 function estimateTokens(envelope: Record<string, unknown>): number {
@@ -306,7 +317,7 @@ function parseResolvedDefinition(row: AgentDefinitionRow): ResolvedApprovedAgent
   const memory = isRecord(specification.memory) ? specification.memory : null;
   const budget = isRecord(specification.budget) ? specification.budget : null;
   const readScopes = memory ? readStringArray(memory.read) : null;
-  const dataClassifications = readStringArray(specification.dataClassifications);
+  const dataClassifications = readDataClassificationArray(specification.dataClassifications);
   const maxTokens = budget ? readSafeBudget(budget.maxTokens) : null;
   const maxCurrencyMicros = budget ? readSafeBudget(budget.maxCurrencyMicros) : null;
 
@@ -336,7 +347,7 @@ function parseResolvedDefinition(row: AgentDefinitionRow): ResolvedApprovedAgent
     requiresHumanApproval: row.requires_human_approval,
     specification,
     memoryReadScopes: readScopes,
-    dataClassifications: dataClassifications as PersistedDataClassification[],
+    dataClassifications,
     maxTokens,
     maxCurrencyMicros,
   };
@@ -400,17 +411,18 @@ export async function buildAndPersistAgentContext(
     );
   }
   const canonicalRefs = assertBoundedStringList(input.canonicalRefs ?? [], 'canonicalRefs', 512);
-  assertBoundedStringList(input.targetEntityIds ?? [], 'targetEntityIds', 128);
-  assertBoundedStringList(input.targetLeadIds ?? [], 'targetLeadIds', 128);
+  const targetEntityIds = assertBoundedStringList(input.targetEntityIds ?? [], 'targetEntityIds', 128);
+  const targetLeadIds = assertBoundedStringList(input.targetLeadIds ?? [], 'targetLeadIds', 128);
 
   const maxMemoryRefs = input.maxMemoryRefs ?? 32;
-  const candidateLimit = input.candidateLimit ?? Math.max(64, maxMemoryRefs * 8);
   if (!Number.isInteger(maxMemoryRefs) || maxMemoryRefs < 0 || maxMemoryRefs > 128) {
     throw new AgentContextRuntimeError(
       'CONTEXT_INPUT_INVALID',
       'maxMemoryRefs must be an integer from 0 through 128.',
     );
   }
+  const candidateLimit =
+    input.candidateLimit ?? Math.min(512, Math.max(64, maxMemoryRefs * 8));
   if (!Number.isInteger(candidateLimit) || candidateLimit < 1 || candidateLimit > 512) {
     throw new AgentContextRuntimeError(
       'CONTEXT_INPUT_INVALID',
@@ -475,16 +487,22 @@ export async function buildAndPersistAgentContext(
     ],
   );
 
+  const normalizedInput: BuildAgentContextInput = {
+    ...input,
+    canonicalRefs,
+    targetEntityIds,
+    targetLeadIds,
+  };
   const eligible = candidateResult.rows.filter(
     (candidate) =>
-      isNamespaceInsideContextScope(candidate.namespace, input) &&
-      candidateScopeIsConsistent(candidate, input) &&
+      isNamespaceInsideContextScope(candidate.namespace, normalizedInput) &&
+      candidateScopeIsConsistent(candidate, normalizedInput) &&
       definition.memoryReadScopes.some((scope) => memoryScopeMatches(scope, candidate.namespace)) &&
       envelopeMatchesCanonical(candidate) &&
       candidateIsReadable(candidate, authorization),
   );
 
-  const ranked = dedupeAndRankCandidates(eligible, input);
+  const ranked = dedupeAndRankCandidates(eligible, normalizedInput);
   const selectedMemory: SelectedContextMemory[] = [];
   let estimatedMemoryTokens = 0;
 
