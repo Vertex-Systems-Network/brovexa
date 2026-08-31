@@ -88,6 +88,7 @@ export const memoryRecords = pgTable(
     status: text('status').$type<PersistedMemoryStatus>().notNull(),
     retentionPolicyId: text('retention_policy_id').notNull(),
     deletionReason: text('deletion_reason'),
+    lastLifecycleEventId: text('last_lifecycle_event_id'),
     dataClassification: text('data_classification').$type<PersistedDataClassification>().notNull(),
     envelope: jsonb('envelope').$type<Record<string, unknown>>().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
