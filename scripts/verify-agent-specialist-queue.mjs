@@ -13,7 +13,7 @@ import {
   persistAgentExecutionPlan,
   persistContextReceipt,
 } from '../packages/db/dist/index.js';
-import { parseQueueRedisUrl } from '../packages/queue/dist/index.js';
+import { createWorkQueue, parseQueueRedisUrl } from '../packages/queue/dist/index.js';
 import { RetryableWorkError } from '../apps/worker/dist/errors.js';
 import { createDeterministicSpecialistHandlers } from '../apps/worker/dist/agent-specialist-runtime.js';
 import { createCanonicalWorkerRuntime } from '../apps/worker/dist/runtime.js';
@@ -246,6 +246,11 @@ try {
   const workUnitId = dispatch.workUnits[0]?.workUnitId;
   assert.ok(workUnitId);
 
+  const setupQueue = createWorkQueue(connection);
+  await setupQueue.waitUntilReady();
+  await setupQueue.obliterate({ force: true });
+  await setupQueue.close();
+
   let executionCount = 0;
   const handlers = createDeterministicSpecialistHandlers({
     pool,
@@ -303,7 +308,6 @@ try {
   });
 
   await runtime.queue.waitUntilReady();
-  await runtime.queue.obliterate({ force: true });
   assert.equal(await runtime.reconcile(), 1);
 
   await waitFor('specialist retry then success', async () =>
