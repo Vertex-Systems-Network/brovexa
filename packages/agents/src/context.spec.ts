@@ -145,7 +145,6 @@ describe('buildContextSelection', () => {
           required: true,
           authorityClass: 3,
           tokenCost: 100,
-          memoryStatus: undefined,
         }),
         candidate({ referenceId: 'lower-authority', authorityClass: 6, tokenCost: 100 }),
         candidate({ referenceId: 'higher-authority', authorityClass: 4, tokenCost: 100 }),
