@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export * from './agent-context';
+export * from './agent-definition';
+export * from './agent-registry';
 export * from './agents';
 export * from './identity';
 
