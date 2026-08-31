@@ -6,6 +6,7 @@ import {
   agentDefinitionStatusValues,
   agentDefinitions,
   agentExecutionModeValues,
+  agentExecutionPlans,
   agentRuns,
   persistedAgentRunStatusValues,
 } from './agent-schema';
@@ -15,6 +16,7 @@ describe('agent persistence schema contract', () => {
     expect(getTableName(agentDefinitions)).toBe('agent_definitions');
     expect(getTableName(agentContextReceipts)).toBe('agent_context_receipts');
     expect(getTableName(agentRuns)).toBe('agent_runs');
+    expect(getTableName(agentExecutionPlans)).toBe('agent_execution_plans');
   });
 
   it('keeps reviewed definition and autonomy states', () => {
