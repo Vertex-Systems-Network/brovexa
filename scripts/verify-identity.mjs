@@ -244,6 +244,19 @@ try {
   );
 
   await removeWorkspaceRoleAssignment(pool, ownerAContext, {
+    targetMembershipId: memberAMembership.membershipId,
+    roleId: bootstrapA.adminRoleId,
+  });
+  await assert.rejects(
+    () =>
+      assignWorkspaceRole(pool, elevatedNonOwnerContext, {
+        targetMembershipId: memberAMembership.membershipId,
+        roleId: bootstrapA.adminRoleId,
+      }),
+    expectAuthorizationCode('FORBIDDEN'),
+  );
+
+  await removeWorkspaceRoleAssignment(pool, ownerAContext, {
     targetMembershipId: bootstrapA.membershipId,
     roleId: bootstrapA.ownerRoleId,
   });
