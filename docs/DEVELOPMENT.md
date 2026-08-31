@@ -1,6 +1,6 @@
 # Brovexa M01 Development & Verification Runbook
 
-Status: **M01 active / ABD-259 through ABD-263 verified / ABD-264 FULL GATE active**
+Status: **M01 VERIFIED / INTEGRATED TO `main` / not deployed or released**
 
 Repository/runtime/test evidence outranks this document if they conflict.
 
@@ -34,7 +34,7 @@ The API loads repo-root `.env` through Node's native `--env-file-if-exists`. Exi
 
 ## 3. Zero-dependency structural/security checks
 
-Before dependency installation, these checks can run directly with the approved Node runtime:
+Before dependency installation:
 
 ```bash
 node scripts/verify-foundation.mjs
@@ -54,7 +54,7 @@ pnpm run verify:no-secrets
 pnpm run verify:m01:full-gate
 ```
 
-`verify:format` and `lint` intentionally share the deterministic M01 source-hygiene policy: EditorConfig-compatible LF/final-newline/space/trailing-whitespace rules plus repository security lint invariants such as no `@ts-ignore`, `@ts-nocheck`, `debugger`, `eval`, dynamic `Function`, or disabled TLS validation in application/source scripts.
+`verify:format` and `lint` share the deterministic M01 source-hygiene policy: EditorConfig-compatible line/whitespace rules plus repository security lint invariants such as no TypeScript suppression directives, committed debugger statements, dynamic evaluation, dynamic `Function`, or disabled TLS validation in application/source scripts.
 
 ## 4. Dependency installation and supply-chain checks
 
@@ -65,7 +65,7 @@ pnpm install --frozen-lockfile
 pnpm run audit:dependencies
 ```
 
-`pnpm run audit:dependencies` executes `pnpm audit --audit-level high` and fails the FULL GATE for known high/critical registry advisories. Registry availability failures must be classified as CI/dependency-infrastructure failures rather than silently treated as PASS.
+`pnpm run audit:dependencies` executes `pnpm audit --audit-level high`. Registry availability failure is a dependency/CI infrastructure failure, never a silent PASS.
 
 `pnpm-workspace.yaml` retains exact reviewed lifecycle-script and release-age exceptions only. Do not broaden them to wildcards without dependency review.
 
@@ -111,7 +111,7 @@ Equivalent package command:
 pnpm --filter @brovexa/api dev
 ```
 
-`scripts/dev-api.mjs` uses deterministic dependency-free source polling rather than platform-specific native filesystem watchers. It rebuilds Config → Contracts → DB → API and keeps the last-good runtime alive when a reload compile fails.
+`scripts/dev-api.mjs` uses deterministic dependency-free source polling rather than platform-specific native filesystem watchers. It rebuilds Config → Contracts → DB → API and keeps the last-good runtime alive when a reload compile fails. The bounded `poll` loop is intentional for cross-platform/dev-container reliability.
 
 Live executable smoke:
 
@@ -119,15 +119,7 @@ Live executable smoke:
 pnpm run verify:dev-api
 ```
 
-The smoke verifies:
-
-- `/health` process health;
-- safe request/trace correlation headers;
-- `/ready` fail-closed behavior when PostgreSQL is not configured;
-- stable correlated 404 errors;
-- query-string redaction from structured logs;
-- source → compile → runtime reload;
-- restoration of the original source after the temporary mutation.
+The smoke verifies `/health`, safe request/trace correlation headers, fail-closed `/ready`, stable correlated 404 errors, query-string redaction, source → compile → runtime reload, and cleanup/restoration of the temporary source mutation.
 
 Production-style API start after build:
 
@@ -151,20 +143,9 @@ pnpm run verify:identity
 pnpm run verify:queue
 ```
 
-The hosted CI supplies isolated PostgreSQL 18.6 and Valkey 9.1.1 services with immutable image digests.
+Hosted CI supplies isolated PostgreSQL 18.6 and Valkey 9.1.1 services with immutable image digests.
 
-Verified coverage includes:
-
-- migration apply, checksum journal, rollback and re-apply;
-- transaction/constraint behavior;
-- tenant isolation and deny-by-default authorization;
-- one-shot owner bootstrap and last-owner protections;
-- stale authorization snapshot revalidation;
-- queue idempotency and effect dedupe;
-- retry/backoff, cancellation, review/dead-letter outcomes;
-- restart recovery from canonical PostgreSQL state;
-- canonical job correlation ID surviving PostgreSQL → queue delivery → worker handler;
-- worker readiness and transport metrics.
+Verified coverage includes migration apply/rollback/re-apply, tenant isolation/RBAC, owner invariants, stale authorization revalidation, queue idempotency/effect dedupe, retry/backoff, cancellation, review/dead-letter outcomes, restart recovery from PostgreSQL, canonical job correlation PostgreSQL → queue → worker, worker readiness, and transport metrics.
 
 ## 8. Health, readiness and observability
 
@@ -172,20 +153,13 @@ Verified coverage includes:
 
 `GET /ready` is dependency/schema readiness and fails closed when PostgreSQL is unconfigured, unavailable, on the wrong major, or missing the required schema.
 
-The M01 observability foundation provides:
+M01 provides bounded/generated request IDs, W3C version-00 trace-context parsing, correlation response headers, stable correlated public errors, structured redacted completion/failure logs, and canonical queue/job correlation IDs.
 
-- bounded/generated request IDs;
-- W3C version-00 trace-context parsing with safe fallback trace IDs;
-- `x-request-id` and `x-trace-id` response headers;
-- stable correlated public API error envelopes;
-- structured completion/failure logs with query strings stripped;
-- canonical queue/job correlation IDs.
-
-No OpenTelemetry SDK/exporter/collector or telemetry SaaS is activated in M01.
+No OpenTelemetry SDK/exporter/collector or telemetry SaaS was activated in M01.
 
 ## 9. GitHub-hosted CI
 
-`.github/workflows/ci.yml` is the normal PR verification path and, on the ABD-264 stack, the executable M01 FULL GATE.
+`.github/workflows/ci.yml` is the authoritative normal PR verification path now integrated on `main`.
 
 Steady-state controls:
 
@@ -201,6 +175,8 @@ Steady-state controls:
 - canonical worker + Valkey idempotency/recovery/correlation regression;
 - no standing CI write-back job.
 
+M01 final integration was verified in the actual current-`main` merge context by run `33406039572` (#133): quality/security `99533753418`, PostgreSQL+RBAC `99534688415`, and worker+Valkey `99535283167`, all PASS.
+
 ## 10. Manual self-hosted fallback
 
 Operational default-branch workflow:
@@ -211,9 +187,9 @@ Operational default-branch workflow:
 
 It is manual-only, runs on `[self-hosted, Windows, X64]`, and checks out exactly `m01/platform-foundation` with no caller-controlled target ref.
 
-The implementation-branch `.github/workflows/ci-self-hosted.yml` is a **reference mirror**, not the operational dispatch entry point.
+The implementation-branch `.github/workflows/ci-self-hosted.yml` remains a **reference mirror**, not the operational dispatch entry point.
 
-A self-hosted PASS validates that runner path; it does not replace hosted CI when hosted CI is functioning normally.
+Because M01 is now integrated, hosted CI on `main`/PR merge contexts is authoritative. The historical manual dispatcher remains a least-privilege diagnostic/fallback path until deliberately retired or retargeted in a separate reviewed change.
 
 Runner recovery guide:
 
@@ -223,7 +199,7 @@ docs/SELF_HOSTED_RUNNER_RECOVERY.md
 
 ## 11. M01 FULL GATE
 
-Linear `ABD-264` requires clean install, format/lint/typecheck/build, unit/integration/API verification, migration apply/rollback, RBAC/tenant regression, queue idempotency/recovery, dependency/security checks, health/readiness/observability, no-secret/config review, fresh-setup documentation, and checkpoint/Plan↔Reality reconciliation.
+Linear `ABD-264` required clean install, format/lint/typecheck/build, unit/integration/API verification, migration apply/rollback, RBAC/tenant regression, queue idempotency/recovery, dependency/security checks, health/readiness/observability, no-secret/config review, fresh-setup documentation, and checkpoint/Plan↔Reality reconciliation.
 
 Static/readiness portion:
 
@@ -237,15 +213,15 @@ Dependency vulnerability portion:
 pnpm run audit:dependencies
 ```
 
-The complete FULL GATE is the hosted CI workflow because PostgreSQL and Valkey integration require isolated services. A local static PASS is not sufficient to call M01 Done.
+The complete FULL GATE is hosted CI because PostgreSQL and Valkey integration require isolated services. M01 passed the frozen source run `33377314942`, post-stack run `33405687098`, and current-main merge-context run `33406039572` before PR #13 merged.
 
 ## 12. Default-branch integration control
 
-Native `main` protection is currently not configured. The repository therefore uses `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` as the compensating control under Linear `ABD-266`.
+Native `main` protection is not configured. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control under Linear `ABD-266`.
 
-Required behavior includes PR-based integration, no force push/history rewrite, no auto-merge, executable evidence, and expected-head SHA verification for any explicit merge.
+Required behavior includes PR-based integration, no force push/history rewrite, no auto-merge, executable evidence, and expected-head SHA verification for explicit merges.
 
-M01 FULL GATE must record the actual native protection/ruleset state before handoff.
+M01 integration followed this policy. The same policy remains required until native branch/ruleset protection is verified.
 
 ## 13. Failure classification
 
@@ -266,18 +242,19 @@ Use actual evidence:
 - `BASELINE FAILURE`
 - `FLAKY TEST DEFECT`
 
-Do not rerun until a defect happens to pass and hide the failing evidence.
+Do not rerun until a defect happens to pass and hide failing evidence.
 
-## 14. Verified M01 progression
+## 14. M01 progression
 
-- `ABD-259` monorepo/foundation executable baseline — **VERIFIED**
-- `ABD-260` PostgreSQL migration/data layer — **VERIFIED**
-- `ABD-261` durable worker/queue foundation — **VERIFIED**
-- `ABD-262` provider-neutral identity/RBAC/tenant primitives — **VERIFIED on stacked PR #8**
-- `ABD-263` API conventions/observability/health — **VERIFIED on stacked PR #9**
-- `ABD-266` default-branch protection/compensating controls — **OPEN through FULL GATE**
-- `ABD-264` M01 FULL GATE — **ACTIVE**
+- `ABD-259` monorepo/foundation executable baseline — **DONE**
+- `ABD-260` PostgreSQL migration/data layer — **DONE**
+- `ABD-261` durable worker/queue foundation — **DONE**
+- `ABD-262` provider-neutral identity/RBAC/tenant primitives — **DONE / INTEGRATED**
+- `ABD-263` API / observability / health — **DONE / INTEGRATED**
+- `ABD-266` default-branch protection / compensating controls — **DONE VIA COMPENSATING CONTROL**
+- `ABD-264` M01 FULL GATE — **DONE / INTEGRATED**
+- parent `ABD-216` — **ready for final Done reconciliation after the post-integration checkpoint PR merges**
 
 ## 15. Current non-scope
 
-M01 does not activate production deployment, production source connectors, payment providers, unrestricted internet acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout execution, destructive production data actions, or unresolved later legal/provider/commercial gates.
+M01 completion does not activate production deployment, production source connectors, payment providers, unrestricted internet acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout execution, destructive production data actions, or unresolved later legal/provider/commercial gates.
