@@ -34,6 +34,7 @@ CREATE TABLE agent_runs (
   CONSTRAINT agent_runs_requester_workspace_fk
     FOREIGN KEY (requested_by_membership_id, workspace_id)
     REFERENCES workspace_memberships (id, workspace_id)
+    ON DELETE SET NULL (requested_by_membership_id)
 );
 --> statement-breakpoint
 CREATE INDEX agent_runs_workspace_status_created_idx
@@ -123,14 +124,23 @@ CREATE TABLE memory_records (
     jsonb_typeof(provenance) = 'object' AND provenance <> '{}'::jsonb
   ),
   CONSTRAINT memory_records_writer_kind_check CHECK (writer_kind IN ('user', 'agent', 'system', 'curator')),
-  CONSTRAINT memory_records_writer_agent_check CHECK (
+  CONSTRAINT memory_records_writer_identity_check CHECK (
     (
       writer_kind IN ('agent', 'curator')
+      AND agent_run_id IS NOT NULL
       AND writer_agent_key ~ '^agent\.[a-z][a-z0-9_.-]*$'
       AND writer_agent_version > 0
     )
     OR (
-      writer_kind IN ('user', 'system')
+      writer_kind = 'user'
+      AND user_id IS NOT NULL
+      AND writer_agent_key IS NULL
+      AND writer_agent_version IS NULL
+    )
+    OR (
+      writer_kind = 'system'
+      AND user_id IS NULL
+      AND agent_run_id IS NULL
       AND writer_agent_key IS NULL
       AND writer_agent_version IS NULL
     )
@@ -155,10 +165,14 @@ CREATE TABLE memory_records (
   ),
   CONSTRAINT memory_records_user_workspace_fk
     FOREIGN KEY (workspace_id, user_id)
-    REFERENCES workspace_memberships (workspace_id, user_id),
+    REFERENCES workspace_memberships (workspace_id, user_id)
+    ON DELETE SET NULL (user_id),
   CONSTRAINT memory_records_run_workspace_fk
     FOREIGN KEY (agent_run_id, workspace_id)
     REFERENCES agent_runs (id, workspace_id),
+  CONSTRAINT memory_records_writer_run_identity_fk
+    FOREIGN KEY (agent_run_id, workspace_id, writer_agent_key, writer_agent_version)
+    REFERENCES agent_runs (id, workspace_id, agent_key, agent_version),
   CONSTRAINT memory_records_revision_workspace_fk
     FOREIGN KEY (revision_parent_id, workspace_id)
     REFERENCES memory_records (id, workspace_id)
