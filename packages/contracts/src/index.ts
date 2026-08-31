@@ -25,7 +25,8 @@ export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>;
 export const ApiErrorSchema = z.object({
   code: z.string().min(1),
   message: z.string().min(1),
-  requestId: z.string().min(1).optional(),
+  requestId: z.string().min(1).max(128),
+  traceId: z.string().regex(/^[0-9a-f]{32}$/),
 });
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
