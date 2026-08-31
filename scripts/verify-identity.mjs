@@ -58,6 +58,11 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS context_receipts CASCADE');
+  await pool.query('DROP TABLE IF EXISTS memory_conflicts CASCADE');
+  await pool.query('DROP TABLE IF EXISTS memory_records CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_checkpoints CASCADE');
+  await pool.query('DROP TABLE IF EXISTS agent_runs CASCADE');
   await pool.query('DROP TABLE IF EXISTS authorization_audit_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_membership_roles CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspace_role_permissions CASCADE');
@@ -94,6 +99,7 @@ try {
     '0000_workspace_foundation',
     '0001_job_execution_foundation',
     '0002_identity_authorization_foundation',
+    '0003_agent_memory_foundation',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
@@ -293,22 +299,26 @@ try {
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.assigned'));
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.removed'));
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_memory_foundation');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
   const afterRollback = await pool.query(`
     SELECT
       to_regclass('public.workspaces')::text AS workspaces,
       to_regclass('public.job_runs')::text AS job_runs,
       to_regclass('public.users')::text AS users,
-      to_regclass('public.workspace_memberships')::text AS memberships
+      to_regclass('public.workspace_memberships')::text AS memberships,
+      to_regclass('public.agent_runs')::text AS agent_runs
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, 'workspaces');
   assert.equal(afterRollback.rows[0]?.job_runs, 'job_runs');
   assert.equal(afterRollback.rows[0]?.users, null);
   assert.equal(afterRollback.rows[0]?.memberships, null);
+  assert.equal(afterRollback.rows[0]?.agent_runs, null);
 
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
     '0002_identity_authorization_foundation',
+    '0003_agent_memory_foundation',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
