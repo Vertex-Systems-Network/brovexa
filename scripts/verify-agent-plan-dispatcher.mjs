@@ -10,6 +10,7 @@ import {
   completeWorkUnitWithEffect,
   createIdentityUser,
   createPgPool,
+  createWorkspaceMembership,
   dispatchAgentExecutionPlan,
   getAgentExecutionDispatchState,
   listRecoverableWorkUnits,
@@ -19,6 +20,8 @@ import {
   probeDatabase,
   reconcileAgentExecutionDispatch,
   recordAgentExecutionBudgetUsage,
+  resolveWorkspaceAuthorization,
+  setWorkspaceMembershipStatus,
   writeAgentExecutionCheckpoint,
 } from '../packages/db/dist/index.js';
 
@@ -406,16 +409,22 @@ try {
   assert.equal(cancelled.jobRunStatus, 'cancelled');
   assert.ok(cancelled.workUnits.every((work) => work.status === 'cancelled'));
 
-  const authFixture = await createPlanFixture({
+  const ownerBContext = await resolveWorkspaceAuthorization(pool, {
     workspaceId: workspaceB,
     userId: ownerB.id,
+  });
+  const authUser = await createIdentityUser(pool);
+  const authMembership = await createWorkspaceMembership(pool, ownerBContext, authUser.id);
+  const authFixture = await createPlanFixture({
+    workspaceId: workspaceB,
+    userId: authUser.id,
     suffix: 'auth',
     maxParallelism: 1,
   });
-  await pool.query(
-    `UPDATE workspace_memberships SET status = 'suspended' WHERE workspace_id = $1 AND user_id = $2`,
-    [workspaceB, ownerB.id],
-  );
+  await setWorkspaceMembershipStatus(pool, ownerBContext, {
+    targetMembershipId: authMembership.membershipId,
+    status: 'suspended',
+  });
   await assert.rejects(
     () =>
       dispatchAgentExecutionPlan(pool, {
