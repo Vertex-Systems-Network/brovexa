@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AgentExecutionPlanSchema,
+  AgentExecutionWorkPayloadSchema,
   type AgentExecutionPlan,
   type AgentExecutionStep,
 } from './agent-execution';
@@ -94,5 +95,68 @@ describe('AgentExecutionPlan contract', () => {
       budget: { ...step('discover').budget, maxConcurrency: 2 },
     };
     expect(AgentExecutionPlanSchema.safeParse(candidate).success).toBe(false);
+  });
+});
+
+describe('AgentExecutionWorkPayload contract', () => {
+  it('accepts the bounded payload emitted to a specialist WorkUnit', () => {
+    const specialist = step('discover');
+    expect(
+      AgentExecutionWorkPayloadSchema.parse({
+        version: '1.0.0',
+        dispatchId: 'dispatch_1',
+        handlerRegistryVersion: '1.0.0',
+        planId: 'plan_1',
+        planVersion: 1,
+        workspaceId: 'workspace_1',
+        orchestratorRunId: 'run_1',
+        contextReceiptId: 'context_1',
+        maxParallelism: 2,
+        stepKey: specialist.key,
+        agentKey: specialist.agentKey,
+        agentVersion: specialist.agentVersion,
+        dependencies: specialist.dependencies,
+        toolKeys: specialist.toolKeys,
+        commandKeys: specialist.commandKeys,
+        policyRefs: specialist.policyRefs,
+        canonicalRefs: specialist.canonicalRefs,
+        memoryRefs: specialist.memoryRefs,
+        budget: specialist.budget,
+      }).stepKey,
+    ).toBe('discover');
+  });
+
+  it('rejects recursive orchestrator work and nested concurrency', () => {
+    const specialist = step('discover');
+    const payload = {
+      version: '1.0.0' as const,
+      dispatchId: 'dispatch_1',
+      handlerRegistryVersion: '1.0.0',
+      planId: 'plan_1',
+      planVersion: 1,
+      workspaceId: 'workspace_1',
+      orchestratorRunId: 'run_1',
+      contextReceiptId: 'context_1',
+      maxParallelism: 2,
+      stepKey: specialist.key,
+      agentKey: specialist.agentKey,
+      agentVersion: specialist.agentVersion,
+      dependencies: specialist.dependencies,
+      toolKeys: specialist.toolKeys,
+      commandKeys: specialist.commandKeys,
+      policyRefs: specialist.policyRefs,
+      canonicalRefs: specialist.canonicalRefs,
+      memoryRefs: specialist.memoryRefs,
+      budget: specialist.budget,
+    };
+    expect(
+      AgentExecutionWorkPayloadSchema.safeParse({ ...payload, agentKey: 'agent.control.orchestrator' }).success,
+    ).toBe(false);
+    expect(
+      AgentExecutionWorkPayloadSchema.safeParse({
+        ...payload,
+        budget: { ...specialist.budget, maxConcurrency: 2 },
+      }).success,
+    ).toBe(false);
   });
 });
