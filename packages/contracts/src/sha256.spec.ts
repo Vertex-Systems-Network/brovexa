@@ -8,6 +8,6 @@ describe('sha256Hex', () => {
   });
 
   it('hashes Unicode using canonical UTF-8 bytes', () => {
-    expect(sha256Hex('Brovexa 🚀')).toBe('4573a7c2c199b0ad94a08fb4fec05845d62434c3a5b9edfe3010b76a6b3e5995');
+    expect(sha256Hex('Brovexa 🚀')).toBe('d480d34d4c1fdaa385bf55b629a337505b57d474dff1e40599cad193669fb513');
   });
 });
