@@ -118,7 +118,10 @@ export const AgentDefinitionSchema = z
     tools: z.array(ToolCapabilitySchema).max(128),
     canonicalCommands: z.array(z.string().min(1).max(128).regex(keyPattern)).max(128),
     memoryCapabilities: z.array(MemoryCapabilitySchema).max(64),
-    allowedDataClassifications: z.array(DataClassificationSchema).min(1).max(dataClassificationValues.length),
+    allowedDataClassifications: z
+      .array(DataClassificationSchema)
+      .min(1)
+      .max(dataClassificationValues.length),
     budgets: AgentBudgetSchema,
     evaluatorKey: AgentKeySchema.nullable(),
     requiresIndependentEvaluation: z.boolean(),
@@ -146,9 +149,10 @@ export const AgentRunSchema = z.object({
   id: z.string().uuid(),
   workspaceId: z.string().uuid(),
   parentRunId: z.string().uuid().nullable(),
-  requestedByUserId: z.string().uuid().nullable(),
+  requestedByMembershipId: z.string().uuid().nullable(),
   agentKey: AgentKeySchema,
   agentVersion: AgentVersionSchema,
+  definitionHash: z.string().regex(sha256Pattern),
   status: AgentRunStatusSchema,
   correlationId: z.string().uuid(),
   input: z.record(z.string(), z.unknown()),
@@ -180,7 +184,11 @@ export const MemoryProvenanceSchema = z
   })
   .refine(
     (value) =>
-      value.evidenceIds.length + value.factIds.length + value.runIds.length + value.userDecisionIds.length > 0,
+      value.evidenceIds.length +
+        value.factIds.length +
+        value.runIds.length +
+        value.userDecisionIds.length >
+      0,
     { message: 'Durable memory requires at least one provenance reference.' },
   );
 export type MemoryProvenance = z.infer<typeof MemoryProvenanceSchema>;
