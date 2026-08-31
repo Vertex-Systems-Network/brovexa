@@ -1,6 +1,6 @@
 # M01A — Deterministic Agent Plan Dispatcher
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -9,6 +9,18 @@ Updated: 2026-09-01
 This is the seventh reversible implementation slice of **M01A — AI Agent Runtime & Memory OS**. It converts an already-validated immutable `AgentExecutionPlan` into the existing canonical `JobRun` / `WorkUnit` execution foundation without activating model providers, external tools or production specialist handlers.
 
 The implementation deliberately reuses M01 durable queue primitives instead of adding a second execution framework or a new database migration.
+
+## Integration evidence
+
+- final verified source head: `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`
+- PR: #29 — `feat(m01a): add deterministic agent plan dispatcher`
+- exact-head hosted FULL GATE run: `33449897197` — PASS
+- quality/security job: `99677185961` — PASS
+- PostgreSQL 18 migration + RBAC job: `99677793352` — PASS
+- canonical worker + Valkey job: `99678018183` — PASS
+- merged to `main` as: `2a455d561472417a8b353b0303bb848b94e0cdf2`
+
+The first hosted attempt (`33448973098`) correctly exposed a verification-fixture defect: the authorization-revocation scenario tried to suspend the workspace's only active owner, violating the already-governed `workspace_requires_active_owner` invariant. The fixture was corrected to revoke a normal member while preserving the active owner. Runtime behavior, migration structure and the generic identity/RBAC foundation were not weakened to make the test pass.
 
 ## Dispatch boundary
 
@@ -101,7 +113,7 @@ The PostgreSQL integration verifier covers:
 - dependency unlock after prerequisite success;
 - successful canonical JobRun completion only after all plan work succeeds;
 - cancellation of non-running plan work;
-- authorization revocation before dispatch failing closed.
+- authorization revocation before dispatch failing closed while preserving the workspace's active-owner invariant.
 
 Existing migration, RBAC, memory, lifecycle, context, plan, API and worker/Valkey gates remain intact.
 

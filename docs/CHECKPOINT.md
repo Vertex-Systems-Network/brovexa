@@ -1,30 +1,31 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-08-31
+Updated: 2026-09-01
 
 ## Project state
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED, INTEGRATED TO `main`, and ready to close.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with seven FULL-GATE verified implementation slices integrated to `main`.**
 
-This means the M01 development foundation is built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production providers/connectors/payments/outreach.
+This means the governed platform foundation plus the current AI runtime/memory foundations are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production providers/connectors/payments/outreach.
 
 ## Authorization boundary
 
-The approved M01 implementation scope has been completed and integrated.
+The approved M01 implementation scope is complete. M01A implementation is proceeding in small reversible slices under the approved architecture/security boundary.
 
-Still separately gated: production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and unresolved legal/provider/commercial decisions.
+Still separately gated: production model/provider execution, production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and unresolved legal/provider/commercial decisions.
 
 ## VCS / integration state
 
 - default branch: `main`
-- integrated M01 `main` head before this checkpoint PR: `c82c46649033988c5f90d0e4407a47d02aab4d8a`
+- current integrated `main` head at this checkpoint branch base: `2a455d561472417a8b353b0303bb848b94e0cdf2`
 - original planning PR #1: closed unmerged; superseded by same-head replacement PR #12
 - planning integration PR #12: merged as `0c9ce138fe0b4dc80ce60c33f291cb00b0a59859`
 - consolidated M01 stack PR #11: merged into `m01/platform-foundation` as `825bddeb00a2d571e5e8132b077fb9707b2021e0`
 - final M01 default-branch integration PR #13: merged to `main` as `c82c46649033988c5f90d0e4407a47d02aab4d8a`
-- legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may be closed unmerged after this checkpoint is accepted
+- M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged to `main` as `2a455d561472417a8b353b0303bb848b94e0cdf2`
+- legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may remain closed/unmerged
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes were performed through remote GitHub tooling.
 
@@ -86,7 +87,7 @@ Verified bounded request IDs, strict W3C trace correlation, stable correlated sa
 
 State: **DONE VIA COMPENSATING CONTROL / NATIVE PROTECTION OFF**.
 
-The compensating path was exercised repeatedly with reviewed PRs, explicit integration decisions, expected-head merges, no auto-merge, and no history rewrite.
+The compensating path continues to be exercised with reviewed PRs, explicit integration decisions, expected-head merges, no auto-merge, and no history rewrite.
 
 ### ABD-264 — M01 FULL GATE
 
@@ -98,6 +99,36 @@ Exact-head run `33377314942`: PASS.
 - M01 FULL GATE quality/security `99441599943`: PASS
 - PostgreSQL 18 migration + RBAC `99442228132`: PASS
 - canonical worker + Valkey recovery/idempotency/correlation `99442428894`: PASS
+
+## M01A verification state
+
+State: **ACTIVE — seven verified/integrated slices**.
+
+Integrated slices:
+
+1. executable governed Agent/Memory/Eval contracts and safety invariants;
+2. canonical `AgentDefinition → ContextReceipt → AgentRun` PostgreSQL persistence;
+3. durable governed `MemoryRecord` and independent `EvalResult` persistence;
+4. append-only AgentRun transitions and explicit memory supersession/deletion lifecycle;
+5. deterministic approved Agent Registry and minimum-necessary Context Builder runtime;
+6. bounded immutable provider-neutral Orchestrator/Planner `AgentExecutionPlan` persistence;
+7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation.
+
+### Seventh-slice exact evidence — deterministic plan dispatcher
+
+- source head: `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`
+- PR #29: `feat(m01a): add deterministic agent plan dispatcher`
+- exact-head FULL GATE run `33449897197`: PASS
+- quality/security job `99677185961`: PASS
+- PostgreSQL 18 migration + RBAC job `99677793352`: PASS
+- canonical worker + Valkey job `99678018183`: PASS
+- merge SHA: `2a455d561472417a8b353b0303bb848b94e0cdf2`
+
+The first dispatcher CI attempt `33448973098` exposed a test-fixture problem rather than a runtime defect: the verifier tried to suspend the only active owner and the existing `workspace_requires_active_owner` invariant correctly rejected it. The fixture was corrected to revoke a normal member while retaining the active owner. No RBAC or lifecycle invariant was weakened.
+
+Current evidence-based estimate: M01A approximately **68%** complete with approximately **3–5 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+
+Current remaining M01A gaps include the deterministic specialist handler registry/execution bridge, provider/model routing and invocation, governed specialist/orchestrator result aggregation with evaluator separation, and broader pause/review/resume runtime behavior.
 
 ## Integration verification layers
 
@@ -112,7 +143,7 @@ M01 was not merged to `main` from source evidence alone. It passed three verific
 
 PR #13 then merged with expected head `825bddeb00a2d571e5e8132b077fb9707b2021e0` and produced `main` commit `c82c46649033988c5f90d0e4407a47d02aab4d8a`.
 
-The main-only manual self-hosted dispatcher was explicitly checked in PR #13's merge context and remained present.
+The same compensating integration discipline is being applied to M01A: each implementation slice is isolated, verified on its exact current PR head through the hosted FULL GATE, and merged only with an expected-head SHA guard.
 
 ## ABD-216 acceptance criteria reconciliation
 
@@ -123,7 +154,7 @@ The main-only manual self-hosted dispatcher was explicitly checked in PR #13's m
 - Migrations apply and roll back in test: **VERIFIED**.
 - Auth/RBAC/tenant boundaries have automated tests: **VERIFIED**.
 - Request/job correlation is traceable: **VERIFIED**.
-- Durable project checkpoint reflects actual integration state: **VERIFIED by this checkpoint PR once its own CI passes and it is merged**.
+- Durable project checkpoint reflects actual M01 integration state: **VERIFIED**.
 
 ## Supply-chain posture
 
@@ -143,14 +174,15 @@ Dependency advisory evidence is time-sensitive and must be rerun on future integ
 - native GitHub branch protection/rulesets remain unconfigured;
 - no production deployment has occurred;
 - no hosted DB/queue/identity/telemetry provider is activated;
+- no production model/provider or source connector is activated;
 - OpenTelemetry SDK/exporter/collector is not part of M01;
 - local developer working-copy state is unknown;
 - the manual self-hosted M01 dispatcher remains fixed to the historical `m01/platform-foundation` branch and is a fallback/diagnostic path, not the authoritative ongoing `main` CI gate;
-- M01 integration does not authorize production connectors, payments, unrestricted acquisition, autonomous outreach, or later release gates.
+- M01/M01A integration does not authorize production connectors, payments, unrestricted acquisition, autonomous outreach, or later release gates.
 
 ## Next safe action
 
-1. Verify and merge this checkpoint-only PR through normal hosted CI.
-2. Close superseded draft PRs #2/#8/#9/#10 unmerged with integration references.
-3. Reconcile Linear `ABD-216` to Done after this durable checkpoint is on `main`.
-4. Before beginning M01A/M02 feature implementation, preserve their explicit architecture/security/provider gates; no production provider activation is implied by M01 completion.
+1. Verify and merge this M01A progress/checkpoint-only PR through normal hosted FULL GATE and expected-head integration.
+2. Start a fresh implementation branch from the resulting `main` head.
+3. Implement the deterministic specialist handler registry/execution bridge: validate `AgentExecutionWorkPayload`, map exact specialist definitions to supported handlers, create specialist AgentRun lifecycle state, preserve checkpoint/budget/cancellation semantics, and return structured governed results.
+4. Keep production provider/model routing and invocation in a separate later slice after the deterministic bridge is independently FULL-GATE verified.
