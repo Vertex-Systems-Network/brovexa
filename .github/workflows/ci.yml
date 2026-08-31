@@ -37,20 +37,20 @@ jobs:
       - name: Verify queue foundation contract
         run: node scripts/verify-queue-foundation.mjs
 
-      - name: Install pinned pnpm
-        run: npm install --global pnpm@11.23.0
-
       - name: Verify tracked source formatting
-        run: pnpm run verify:format
+        run: node scripts/verify-source-hygiene.mjs
 
       - name: Lint M01 source/security invariants
-        run: pnpm run lint
+        run: node scripts/verify-source-hygiene.mjs
 
       - name: Verify no tracked secrets
-        run: pnpm run verify:no-secrets
+        run: node scripts/verify-no-secrets.mjs
 
       - name: Verify M01 FULL GATE readiness contract
-        run: pnpm run verify:m01:full-gate
+        run: node scripts/verify-m01-full-gate.mjs
+
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.23.0
 
       - name: Install dependencies from committed lockfile
         run: pnpm install --frozen-lockfile
