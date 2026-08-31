@@ -65,6 +65,14 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.kind = 'owner' THEN
+      RAISE EXCEPTION 'owner role identity is immutable'
+        USING ERRCODE = '23514', CONSTRAINT = 'workspace_owner_role_identity_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
   IF OLD.kind = 'owner' AND (
     NEW.kind <> 'owner'
     OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
@@ -84,7 +92,7 @@ END;
 $$;
 --> statement-breakpoint
 CREATE TRIGGER workspace_roles_owner_identity_immutable
-BEFORE UPDATE OF workspace_id, key, kind ON workspace_roles
+BEFORE UPDATE OF workspace_id, key, kind OR DELETE ON workspace_roles
 FOR EACH ROW
 EXECUTE FUNCTION brovexa_internal.enforce_owner_role_identity();
 --> statement-breakpoint
