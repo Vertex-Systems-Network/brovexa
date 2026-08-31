@@ -55,7 +55,7 @@ describe('API request correlation', () => {
 
   it('logs every middleware completion without query-string data', () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    let finish = () => undefined;
+    let finish: () => void = () => undefined;
 
     requestContextMiddleware(
       {
