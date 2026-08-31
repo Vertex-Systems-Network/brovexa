@@ -22,14 +22,18 @@ CREATE TABLE agent_runs (
   CONSTRAINT agent_runs_input_object_check CHECK (jsonb_typeof(input) = 'object'),
   CONSTRAINT agent_runs_parent_not_self_check CHECK (parent_run_id IS NULL OR parent_run_id <> id),
   CONSTRAINT agent_runs_id_workspace_unique UNIQUE (id, workspace_id),
+  CONSTRAINT agent_runs_id_workspace_definition_unique UNIQUE (
+    id,
+    workspace_id,
+    agent_key,
+    agent_version
+  ),
   CONSTRAINT agent_runs_parent_workspace_fk
     FOREIGN KEY (parent_run_id, workspace_id)
-    REFERENCES agent_runs (id, workspace_id)
-    ON DELETE SET NULL,
+    REFERENCES agent_runs (id, workspace_id),
   CONSTRAINT agent_runs_requester_workspace_fk
     FOREIGN KEY (requested_by_membership_id, workspace_id)
     REFERENCES workspace_memberships (id, workspace_id)
-    ON DELETE SET NULL
 );
 --> statement-breakpoint
 CREATE INDEX agent_runs_workspace_status_created_idx
@@ -65,7 +69,7 @@ CREATE INDEX agent_checkpoints_workspace_run_created_idx
 CREATE TABLE memory_records (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  user_id uuid,
   agent_run_id uuid,
   revision_parent_id uuid,
   namespace text NOT NULL,
@@ -149,14 +153,15 @@ CREATE TABLE memory_records (
   CONSTRAINT memory_records_revision_not_self_check CHECK (
     revision_parent_id IS NULL OR revision_parent_id <> id
   ),
+  CONSTRAINT memory_records_user_workspace_fk
+    FOREIGN KEY (workspace_id, user_id)
+    REFERENCES workspace_memberships (workspace_id, user_id),
   CONSTRAINT memory_records_run_workspace_fk
     FOREIGN KEY (agent_run_id, workspace_id)
-    REFERENCES agent_runs (id, workspace_id)
-    ON DELETE SET NULL,
+    REFERENCES agent_runs (id, workspace_id),
   CONSTRAINT memory_records_revision_workspace_fk
     FOREIGN KEY (revision_parent_id, workspace_id)
     REFERENCES memory_records (id, workspace_id)
-    ON DELETE SET NULL
 );
 --> statement-breakpoint
 CREATE INDEX memory_records_workspace_status_type_idx
@@ -266,9 +271,9 @@ CREATE TABLE context_receipts (
   CONSTRAINT context_receipts_items_array_check CHECK (jsonb_typeof(selected_items) = 'array'),
   CONSTRAINT context_receipts_digest_check CHECK (selection_digest ~ '^[0-9a-f]{64}$'),
   CONSTRAINT context_receipts_run_context_unique UNIQUE (agent_run_id, context_version),
-  CONSTRAINT context_receipts_run_workspace_fk
-    FOREIGN KEY (agent_run_id, workspace_id)
-    REFERENCES agent_runs (id, workspace_id)
+  CONSTRAINT context_receipts_run_definition_workspace_fk
+    FOREIGN KEY (agent_run_id, workspace_id, agent_key, agent_version)
+    REFERENCES agent_runs (id, workspace_id, agent_key, agent_version)
     ON DELETE CASCADE
 );
 --> statement-breakpoint
