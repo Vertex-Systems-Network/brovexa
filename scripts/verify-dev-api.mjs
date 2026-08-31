@@ -70,11 +70,12 @@ async function waitForOutput(fragment, label) {
 }
 
 async function verifyCorrelationAndErrorContract() {
+  const headers = {
+    'x-request-id': testRequestId,
+    traceparent: testTraceparent,
+  };
   const response = await fetch(`${healthUrl}?token=must-not-appear-in-logs`, {
-    headers: {
-      'x-request-id': testRequestId,
-      traceparent: testTraceparent,
-    },
+    headers,
     signal: AbortSignal.timeout(2_000),
   });
   assert.equal(response.status, 200);
@@ -84,11 +85,22 @@ async function verifyCorrelationAndErrorContract() {
   await waitForOutput(`"requestId":"${testRequestId}"`, 'structured request correlation log');
   assert.equal(output.includes('must-not-appear-in-logs'), false, 'Request query data leaked into logs.');
 
+  const readinessResponse = await fetch(`http://127.0.0.1:${port}/ready`, {
+    headers,
+    signal: AbortSignal.timeout(2_000),
+  });
+  assert.equal(readinessResponse.status, 503);
+  assert.equal(readinessResponse.headers.get('x-request-id'), testRequestId);
+  assert.equal(readinessResponse.headers.get('x-trace-id'), testTraceId);
+  assert.deepEqual(await readinessResponse.json(), {
+    code: 'DATABASE_NOT_CONFIGURED',
+    message: 'Database readiness is not configured.',
+    requestId: testRequestId,
+    traceId: testTraceId,
+  });
+
   const missingResponse = await fetch(`http://127.0.0.1:${port}/missing?token=must-not-echo`, {
-    headers: {
-      'x-request-id': testRequestId,
-      traceparent: testTraceparent,
-    },
+    headers,
     signal: AbortSignal.timeout(2_000),
   });
   assert.equal(missingResponse.status, 404);
