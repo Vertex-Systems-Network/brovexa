@@ -6,7 +6,7 @@ Updated: 2026-09-01
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with nine FULL-GATE verified implementation slices integrated to `main`.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with ten FULL-GATE verified implementation slices integrated to `main`.**
 
 This means the governed platform foundation plus the current AI runtime/memory foundations are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production providers/connectors/payments/outreach.
 
@@ -19,7 +19,7 @@ Still separately gated: production model/provider execution, production connecto
 ## VCS / integration state
 
 - default branch: `main`
-- current integrated `main` head at this checkpoint branch base: `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
+- current integrated `main` head at this checkpoint branch base: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
 - original planning PR #1: closed unmerged; superseded by same-head replacement PR #12
 - planning integration PR #12: merged as `0c9ce138fe0b4dc80ce60c33f291cb00b0a59859`
 - consolidated M01 stack PR #11: merged into `m01/platform-foundation` as `825bddeb00a2d571e5e8132b077fb9707b2021e0`
@@ -27,6 +27,7 @@ Still separately gated: production model/provider execution, production connecto
 - M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged to `main` as `2a455d561472417a8b353b0303bb848b94e0cdf2`
 - M01A deterministic specialist execution bridge PR #31: exact source head `18340eed0d1be87e27cbe60b2b4777ba6113fc30`, merged to `main` as `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
 - M01A execution aggregation + evaluator handoff PR #33: exact source head `65fa365ef22c481d721bd93ce630f631b67fde46`, merged to `main` as `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
+- M01A evaluator decision + review resolution PR #35: exact source head `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`, merged to `main` as `206e9f00b14674f6ec182751d0b56f85821b6e4b`
 - legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may remain closed/unmerged
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes were performed through remote GitHub tooling.
@@ -104,7 +105,7 @@ Exact-head run `33377314942`: PASS.
 
 ## M01A verification state
 
-State: **ACTIVE — nine verified/integrated slices**.
+State: **ACTIVE — ten verified/integrated slices**.
 
 Integrated slices:
 
@@ -116,7 +117,8 @@ Integrated slices:
 6. bounded immutable provider-neutral Orchestrator/Planner `AgentExecutionPlan` persistence;
 7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation;
 8. deterministic specialist execution bridge with per-attempt child ContextReceipt/AgentRun trace, retry lifecycle, canonical checkpoints/budgets and structured governed result persistence;
-9. deterministic completed-DAG aggregation with exact specialist-result/run/budget validation, explicit orchestrator outcome handling and exact deterministic independent-evaluator handoff.
+9. deterministic completed-DAG aggregation with exact specialist-result/run/budget validation, explicit orchestrator outcome handling and exact deterministic independent-evaluator handoff;
+10. deterministic evaluator decision application with current authorization/definition/context/evidence-policy revalidation, durable independent EvalResult finalization, fail-closed review normalization, and active-owner-only explicit review/resume resolution.
 
 ### Seventh-slice exact evidence — deterministic plan dispatcher
 
@@ -154,9 +156,21 @@ The first specialist-bridge run `33452024750` passed quality, PostgreSQL/RBAC an
 
 The initial aggregation run `33483976613` passed quality/security but the PostgreSQL lane stopped before reaching the new aggregation verifier because the older lifecycle verifier used a fixed `2026-09-01T01:00:00Z` transition time while persisted AgentRun state used current database time. The existing `AGENT_RUN_TRANSITION_TIME_REGRESSION` guard correctly rejected the stale fixture. The verifier was changed to derive transition timestamps from the persisted run `updated_at`; no lifecycle invariant was weakened. The final exact-head run passed the complete DB/RBAC and worker/Valkey gates, including the new aggregation/evaluator integration harness.
 
-Current evidence-based estimate: M01A approximately **86%** complete with approximately **1–3 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+### Tenth-slice exact evidence — evaluator decision + owner review resolution
 
-Current remaining M01A gaps include deterministic independent-evaluator decision application, governed `EvalResult` finalization, explicit review/resume semantics, and separately gated provider/model routing and invocation.
+- source head: `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`
+- PR #35: `feat(m01a): apply evaluator decisions and resolve reviews`
+- exact-head FULL GATE run `33489635395`: PASS
+- quality/security job `99797806016`: PASS
+- PostgreSQL 18 migration + RBAC job `99798572515`: PASS
+- canonical worker + Valkey job `99798867860`: PASS
+- merge SHA: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
+
+The exact-head run passed source/security/runtime quality, the complete PostgreSQL 18 data/RBAC stack including the new evaluator-decision verifier, and the canonical worker/Valkey regression. The verifier proved high-confidence verified acceptance, durable EvalResult persistence and replay, fail-closed evidence-scope rejection, low-confidence/unverified acceptance normalization to review, non-owner denial, owner-attributed resume/approval lifecycle, and contradiction-backed rejection.
+
+Current evidence-based estimate: M01A approximately **92%** complete with approximately **1–2 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+
+Current remaining M01A gap is bounded to runtime lifecycle read/trace hardening plus provider-neutral route-resolution enforcement around the integrated deterministic lifecycle. Actual provider/model invocation remains separately gated and is not implied by completing that hardening slice.
 
 ## Integration verification layers
 
@@ -212,5 +226,5 @@ Dependency advisory evidence is time-sensitive and must be rerun on future integ
 
 1. Verify and merge this M01A progress/checkpoint-only PR through normal hosted FULL GATE and expected-head integration.
 2. Start a fresh implementation branch from the resulting `main` head.
-3. Complete deterministic evaluator decision application and explicit review/resume semantics: execute an already-approved deterministic evaluator boundary, persist an independent `EvalResult`, validate evaluator separation/evidence state, and transition the subject orchestrator from evaluation pending to `succeeded`, `failed` or `review_required`.
-4. Keep production provider/model routing and invocation in a separate later slice after evaluator finalization/review semantics are independently FULL-GATE verified.
+3. Implement the bounded M01A hardening slice: tenant-scoped lifecycle read/trace state across orchestrator/specialist/evaluator/review projections plus provider-neutral route-resolution enforcement from approved AgentDefinition model policy.
+4. Keep actual provider/model invocation and production provider credentials/configuration separately gated after route-resolution hardening is independently FULL-GATE verified.
