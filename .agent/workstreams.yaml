@@ -59,17 +59,12 @@ standing_branches:
     module: verification_security
     branch: agent/verification-security
 
-active_workstreams:
-  - task_id: GOVERNANCE-SUPERVISOR-WORKFLOW
-    agent_id: SUPERVISOR
-    owner_role: integration_architecture
-    module: integration_control
-    branch: supervisor/integration-control
-    status: WORKING
-    base_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
-    synced_main_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
-    sync_epoch: 1
-    depends_on: []
+live_state:
+  active_workstreams_source: pull-requests-and-handoffs
+  synchronization_source: github-issue-50-latest-supervisor-broadcast
+  versioned_manifest_is_live_task_registry: false
+
+active_workstreams: []
 
 handoff_required_fields:
   - task_id
