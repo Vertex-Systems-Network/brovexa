@@ -1,6 +1,6 @@
 # M01A — Deterministic Specialist Execution Bridge
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -73,9 +73,19 @@ No provider billing truth is claimed. The existing dispatcher reservation/usage 
 
 The canonical `verify:queue` command now runs the original worker/recovery verification and then the dedicated specialist execution bridge verification. No production specialist handler is registered in the worker entrypoint by this slice.
 
-## Verification target
+## Verification evidence
 
-The dedicated specialist queue integration verifier covers an end-to-end deterministic retry sequence:
+Final exact source head: `18340eed0d1be87e27cbe60b2b4777ba6113fc30`.
+
+Hosted FULL GATE run `33452361663`: **PASS**.
+
+- quality/security job `99684875670`: **PASS**;
+- PostgreSQL 18 migration + RBAC job `99685310855`: **PASS**;
+- canonical worker + Valkey job `99685494095`: **PASS**.
+
+PR #31 merged with the exact expected source head and produced `main` merge SHA `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`.
+
+The dedicated specialist queue integration verifier proves an end-to-end deterministic retry sequence:
 
 1. immutable plan dispatch creates one runnable specialist WorkUnit;
 2. attempt 1 creates a child ContextReceipt/AgentRun, checkpoints, then fails retryably;
@@ -87,7 +97,9 @@ The dedicated specialist queue integration verifier covers an end-to-end determi
 8. the final WorkUnit effect references the successful child AgentRun/result;
 9. no provider/model route is claimed anywhere in the specialist run.
 
-Existing quality, migration, RBAC and canonical worker/Valkey regressions remain required.
+The first hosted run `33452024750` reached the new specialist verifier after the existing canonical worker verification had already passed. It failed only because the verifier's broad `ctx-specialist-%` selector also counted the intentionally named parent ContextReceipt. The selector was tightened to the specialist `agent_key`; no runtime semantics, authorization rule or lifecycle invariant was weakened.
+
+Existing quality, migration, RBAC and canonical worker/Valkey regressions also remained green on the final exact head.
 
 ## Explicit non-scope
 
@@ -104,6 +116,6 @@ This slice does not implement or activate:
 
 A successful specialist child AgentRun proves only deterministic registered handler execution inside the governed runtime boundary.
 
-## Next safe slice after verification
+## Next safe slice
 
 Add deterministic execution aggregation and validator/evaluator handoff for a completed specialist DAG, including orchestrator lifecycle progression and explicit review/failure semantics. Provider/model routing should remain a separate later gate until that deterministic aggregation boundary is FULL-GATE verified.
