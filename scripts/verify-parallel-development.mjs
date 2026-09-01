@@ -204,6 +204,15 @@ if (slotMatches.length !== requiredStandingBranches.length) {
   throw new Error(`.agent/slots.yaml must define exactly ${requiredStandingBranches.length} standing slots; found ${slotMatches.length}.`);
 }
 
+const slotBoardMarker = 'Current slot board:';
+const slotBoardStart = aiNativePlan.indexOf(slotBoardMarker);
+if (slotBoardStart < 0) {
+  throw new Error('docs/AI_NATIVE_PLAN.md is missing the current slot board section.');
+}
+const slotBoardTail = aiNativePlan.slice(slotBoardStart + slotBoardMarker.length);
+const nextHeadingIndex = slotBoardTail.indexOf('\n## ');
+const slotBoardSection = nextHeadingIndex >= 0 ? slotBoardTail.slice(0, nextHeadingIndex) : slotBoardTail;
+
 const seenSlotIds = new Set();
 const seenSlotBranches = new Set();
 const allowedStatuses = new Set(['OPEN', 'OCCUPIED']);
@@ -252,7 +261,7 @@ for (const match of slotMatches) {
   requireText(workstreams, `module: ${module}`, '.agent/workstreams.yaml');
   requireText(workstreams, `branch: ${branch}`, '.agent/workstreams.yaml');
 
-  const row = aiNativePlan
+  const row = slotBoardSection
     .split('\n')
     .find((line) => line.startsWith(`| \`${slotId}\` |`));
   if (!row) throw new Error(`docs/AI_NATIVE_PLAN.md slot board missing row for ${slotId}.`);
