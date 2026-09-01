@@ -8,6 +8,22 @@ supervisor:
   role: integration_architecture
   state_model: interrupt-review-merge-broadcast-resume
 
+new_agent_onboarding:
+  required_start_branch: main
+  require_exact_current_main_sha: true
+  slot_registry: .agent/slots.yaml
+  plan: docs/AI_NATIVE_PLAN.md
+  assignment_authority: SUPERVISOR
+  decisions_serialized: true
+  assign_only_status: OPEN
+  branch_must_match_current_main_before_agent_switch: true
+  mark_plan_occupied_before_feature_work: true
+  record_agent_name: true
+  record_start_status: true
+  no_open_slot_response: "Go Home Come Back Next Time"
+  no_open_slot_action: STOP_WITHOUT_ASSIGNMENT_OR_WORK
+  arrival_must_not_expand_capacity: true
+
 completion_signal:
   exact_phrase: "Work Done and Submitted"
   canonical_event: top-level-pr-comment-exact-body

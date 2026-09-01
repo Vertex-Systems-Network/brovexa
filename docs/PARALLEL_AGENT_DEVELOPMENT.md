@@ -6,25 +6,29 @@ Updated: 2026-09-02
 
 ## Purpose
 
-Brovexa uses bounded parallel AI-assisted development to reduce calendar time without allowing agents to overwrite one another, duplicate architecture, collide on migrations, silently widen contracts, drift from current `main`, or weaken integration gates.
+Brovexa uses bounded parallel AI-assisted development to reduce calendar time without allowing agents to overwrite one another, duplicate architecture, collide on migrations, silently widen contracts, drift from current `main`, double-claim module slots, or weaken integration gates.
 
-The goal is not to make agents resolve more conflicts. The goal is to structure work so conflicts are uncommon by design and stale branches are detected before integration.
+The goal is not to make agents resolve more conflicts. The goal is to structure work so conflicts are uncommon by design and stale/invalid assignments are detected before implementation or integration.
 
 Canonical companion documents:
 
 - `AGENTS.md` — mandatory operating instructions;
-- `docs/AI_NATIVE_PLAN.md` — current branch/module/agent/merge plan;
+- `docs/AI_NATIVE_PLAN.md` — branch/module/agent/merge plan plus durable slot occupancy;
+- `docs/NEW_AGENT_ONBOARDING.md` — main-first new-agent onboarding protocol;
 - `docs/PROJECT_PLAN.md` — program architecture and permanent cross-cutting governance;
 - `docs/CHECKPOINT.md` — latest integrated project state;
+- `.agent/slots.yaml` — machine-readable onboarding slot registry;
 - `.agent/*.yaml` — machine-readable coordination policy/baseline state.
 
 ## Main-repository Supervisor
 
 The agent operating the Main repository is the **Supervisor**.
 
-The Supervisor is the sole integration authority for incoming agent workstreams under this workflow. It owns:
+The Supervisor is the sole integration and onboarding authority for this workflow. It owns:
 
 - creation of parallel module branches before documenting/assigning a new parallel wave;
+- new-agent onboarding from exact current `main`;
+- slot assignment/release and slot-plan synchronization;
 - branch/module/agent mapping in `docs/AI_NATIVE_PLAN.md`;
 - dependency DAG and interface freeze points;
 - shared-file integration;
@@ -43,16 +47,51 @@ The Supervisor may not bypass tests, policy, security, tenant, migration, budget
 
 For a newly planned parallel wave, the Supervisor's first repository mutation is to create the branch for every module/agent workstream that will run in parallel, including its own Supervisor work branch when required.
 
-Only after those branches exist may the Supervisor publish/update:
-
-- module assignments;
-- agent assignments;
-- work packets;
-- merge ordering;
-- interface freeze points;
-- dependency edges.
+Only after those branches exist may the Supervisor publish/update module assignments, work packets, merge ordering, interface freeze points and dependency edges.
 
 The current standing branches are recorded in `docs/AI_NATIVE_PLAN.md` and `.agent/workstreams.yaml`.
+
+A newly arriving agent does **not** create a new branch/capacity slot on demand. It can only consume a pre-planned `OPEN` slot.
+
+## New Agent Onboarding
+
+Every newly arriving agent always begins from the exact current `main` branch/head.
+
+Before assignment, it may read the repository/instructions and record current `main` SHA/latest Supervisor sync epoch, but it must not start from a standing module branch, claim a work packet, edit module code or open an implementation PR.
+
+The Supervisor immediately checks `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml`.
+
+Only a slot that is both assignable and exactly `OPEN` may be used.
+
+Onboarding decisions are serialized so concurrent arrivals cannot claim the same slot.
+
+### Open-slot path
+
+If an `OPEN` slot exists:
+
+1. choose a slot appropriate to the ready bounded work packet/agent capability;
+2. verify the slot's standing branch is synchronized to exact current `main` and latest Supervisor sync epoch;
+3. record the arriving agent name, slot status `OCCUPIED` and start status in `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml`;
+4. publish that occupancy through the normal Supervisor integration path;
+5. only once repository-visible assignment is authoritative may the agent switch from `main` to the assigned branch and begin its bounded work packet.
+
+A feature agent cannot self-assign or release a slot.
+
+### No-slot path
+
+If no assignable `OPEN` slot exists, the Supervisor stops onboarding immediately and responds exactly:
+
+**Go Home Come Back Next Time**
+
+The rejected arrival receives no module assignment, no module-branch checkout, no work packet, no feature edit and no agent implementation PR.
+
+### Slot release
+
+The Supervisor may return a slot to `OPEN` only after confirming the assigned agent has no active work packet and no unmerged work requiring that slot. The Supervisor clears the assigned agent, sets start status to `WAITING`, updates both durable slot sources and integrates that change.
+
+The AI-Native Plan and `.agent/slots.yaml` must agree. Mismatch is governance failure.
+
+See `docs/NEW_AGENT_ONBOARDING.md` for the canonical detailed flow.
 
 ## Default operating capacity
 
@@ -67,6 +106,8 @@ Default target: **6 concurrent agents** when enough independent work exists.
 
 Scale to **8 concurrent agents** only when workstreams are truly independent and repository metrics show acceptable conflict, rework, CI queue and merge latency. More than 8 requires an explicit metrics-backed governance change.
 
+A newly arriving agent never triggers concurrency expansion by itself.
+
 ## Core isolation rule
 
 Default mapping:
@@ -80,14 +121,13 @@ Two coding agents do not actively develop on the same branch. A standing module 
 Every parallel task defines before implementation:
 
 - task/workstream ID;
+- assigned slot ID;
 - agent ID and role;
 - module;
 - branch and base SHA;
 - current `synced_main_sha` and `sync_epoch` from the latest Supervisor broadcast;
 - goal and explicit non-goals;
-- write scope;
-- read-only/dependency scope;
-- forbidden/shared paths;
+- write/read-only/forbidden/shared scopes;
 - public contracts/interfaces consumed or produced;
 - dependency IDs/SHAs;
 - migration reservation if applicable;
@@ -118,8 +158,8 @@ Machine-readable defaults live in `.agent/ownership.yaml`.
 High-conflict files are Supervisor/integration-owned when concurrent work exists, including:
 
 - `AGENTS.md`, `README.md`;
-- `docs/PROJECT_PLAN.md`, `docs/CHECKPOINT.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`;
-- `.agent/**`;
+- `docs/PROJECT_PLAN.md`, `docs/CHECKPOINT.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md`;
+- `.agent/**` including `.agent/slots.yaml`;
 - `.github/workflows/**`, `.github/PULL_REQUEST_TEMPLATE.md`;
 - root/package manifests and lockfiles;
 - central exports touched by multiple workstreams;
@@ -150,7 +190,7 @@ Default layer order when all layers are required:
 5. verification/security repository changes;
 6. Supervisor shared-file/integration reconciliation.
 
-This is a default priority, not an excuse to serialize independent nodes. Independent workstreams may merge earlier if the Supervisor verifies no dependency, ownership, migration, interface or shared-file collision.
+Independent workstreams may merge earlier if the Supervisor verifies no dependency, ownership, migration, interface or shared-file collision.
 
 A completion signal never overrides dependency order.
 
@@ -168,22 +208,9 @@ When any agent, including the Supervisor, finishes its assigned task, it must an
 
 For non-Supervisor agents, the canonical repository event is a **top-level PR comment whose complete body is exactly `Work Done and Submitted`**.
 
-The signal means only:
+The signal means only `READY_FOR_SUPERVISOR_REVIEW`; it does **not** mean approved, verified or mergeable.
 
-`READY_FOR_SUPERVISOR_REVIEW`
-
-It does **not** mean approved, verified or mergeable.
-
-A valid completion submission also requires:
-
-- open PR;
-- exact head SHA;
-- complete handoff;
-- current dependency state;
-- applicable test/CI evidence;
-- security/compliance impact;
-- Agent Instruction Drift Check result;
-- `synced_main_sha` and `sync_epoch` matching the latest Supervisor broadcast.
+A valid completion submission also requires open PR, exact head SHA, assigned slot, complete handoff, current dependency state, applicable test/CI evidence, security/compliance impact, Agent Instruction Drift Check result, and `synced_main_sha`/`sync_epoch` matching the latest Supervisor broadcast.
 
 A stale branch may not issue a valid completion signal.
 
@@ -199,24 +226,17 @@ State machine:
 
 Required behavior:
 
-1. checkpoint/preserve the Supervisor's own current work;
-2. enter `PAUSED_FOR_REVIEW`;
-3. review the submitted exact head, diff, changed paths, dependencies, migration reservations, interface freeze assumptions, shared-file requests, review threads, security impact and verification evidence;
-4. if changes are required, do not merge; return actionable review feedback and place the workstream back into work/review state;
-5. if approved, require applicable exact-head FAST/FULL gates;
-6. merge with expected-head SHA protection where supported;
-7. re-read resulting `main` and record the resulting SHA;
-8. increment the synchronization epoch relative to the latest Supervisor broadcast;
-9. broadcast the synchronization alert to all active agents;
-10. resume the Supervisor's own paused work after the alert is issued, unless a direct dependency requires immediate follow-up.
+1. checkpoint/preserve the Supervisor's current work;
+2. review submitted exact head/diff/paths/dependencies/migrations/interface assumptions/shared-file requests/review threads/security/verification;
+3. request changes without merge when defects exist;
+4. if approved, require applicable exact-head FAST/FULL gates;
+5. merge with expected-head SHA protection where supported;
+6. re-read resulting `main` and record resulting SHA;
+7. increment synchronization epoch relative to latest Supervisor broadcast;
+8. broadcast the synchronization alert to all active agents;
+9. resume Supervisor work unless direct dependency requires immediate follow-up.
 
-### Multiple submissions
-
-If multiple agents finish while the Supervisor is reviewing another submission, they enter a review queue.
-
-Queue policy: **FIFO with dependency priority**.
-
-A dependency-provider PR may be reviewed/merged before an earlier dependent submission. Overlapping merges are serialized so each successful merge establishes a single new `main` SHA and synchronization epoch before the next integration decision.
+Multiple submissions use **FIFO with dependency priority**. Overlapping merges are serialized.
 
 ## Post-merge synchronization broadcast
 
@@ -226,64 +246,38 @@ After every approved merge, the Supervisor sends the exact alert:
 
 Canonical durable broadcast channel: GitHub issue **#50**.
 
-Each Supervisor broadcast includes:
+Each Supervisor broadcast includes merged PR/branch, resulting `main` SHA, monotonically increasing synchronization epoch and relevant cross-workstream impact.
 
-- merged PR/branch;
-- resulting `main` SHA;
-- monotonically increasing synchronization epoch;
-- relevant contract/migration/shared-file impact.
+The **latest valid Supervisor broadcast comment on issue #50 is the canonical live synchronization state**. `.agent/supervisor.yaml` stores protocol/baseline seed, not an always-current post-merge SHA.
 
-The **latest valid Supervisor broadcast comment on issue #50 is the canonical live synchronization state**. This avoids a recursive state-update PR after every merge. `.agent/supervisor.yaml` stores the protocol and baseline seed, not an always-current post-merge SHA.
-
-When active agent PRs exist, the Supervisor should also place the alert on each active PR so it appears in that agent's immediate work context.
+When active agent PRs exist, the Supervisor should also place the alert on each active PR.
 
 ## Agent response to synchronization alerts
 
 Every active agent that observes a newer synchronization epoch must:
 
 1. enter `PAUSED_FOR_SYNC` and stop new feature edits;
-2. fetch/read the new `main` SHA from the latest Supervisor broadcast;
-3. merge current `main` into its branch or use another explicitly approved **non-destructive** synchronization method;
-4. resolve conflicts inside its owned scope;
-5. escalate shared/integration-owned conflicts to the Supervisor instead of independently rewriting those files;
-6. rerun the minimum verification needed to prove the sync did not break the work packet;
-7. record the new `synced_main_sha` and `sync_epoch` in its handoff/current work state;
+2. fetch/read the new `main` SHA;
+3. merge current `main` into its branch or use another explicitly approved **non-destructive** method;
+4. resolve owned-scope conflicts;
+5. escalate Supervisor/shared conflicts;
+6. rerun minimum verification needed after sync;
+7. record new `synced_main_sha` and `sync_epoch`;
 8. only then resume work.
 
-Force-push/history rewrite is not the default sync method and cannot be used to bypass integration safeguards.
+Force-push/history rewrite is not the default sync method and cannot be used to bypass safeguards.
 
 ## Synchronization epoch / stale-branch protection
 
-`.agent/supervisor.yaml` defines the synchronization protocol and baseline seed. The latest Supervisor broadcast on GitHub issue #50 supplies the live `sync_epoch` and integrated `main` SHA.
+`.agent/supervisor.yaml` defines protocol/baseline seed. The latest Supervisor broadcast on issue #50 supplies live `sync_epoch` and integrated `main` SHA.
 
-Every agent handoff records:
-
-- `synced_main_sha`;
-- `sync_epoch`.
-
-A completion submission is stale and invalid when its epoch is behind the latest Supervisor broadcast epoch. The agent must sync, rerun appropriate verification and then resubmit/confirm completion.
-
-This prevents “passed yesterday against old main” work from silently entering today's merge queue.
+Every handoff records `synced_main_sha` and `sync_epoch`. A stale epoch invalidates completion until the branch is synchronized and appropriate verification is rerun.
 
 ## Verification independence
 
 The implementation agent proves expected behavior. The verification/security agent separately tries to break it.
 
-Relevant adversarial checks include:
-
-- invalid transitions;
-- replay/idempotency conflicts;
-- race/concurrency behavior;
-- stale state/time-bound policy;
-- tenant leakage;
-- authorization/policy/budget bypass;
-- append-only mutation attempts;
-- migration rollback/reapply;
-- malformed/hostile input;
-- contract/dependency drift;
-- network/credential boundary bypass;
-- retry/cancel/dead-letter behavior;
-- provenance/evidence integrity.
+Relevant adversarial checks include invalid transitions, replay/idempotency, race/concurrency, stale state, tenant leakage, authorization/policy/budget bypass, append-only mutation, migration rollback/reapply, malformed input, contract/dependency drift, network/credential bypass, retry/cancel/dead-letter and provenance integrity.
 
 Tests/invariants are fixed at implementation level and are not weakened merely to get green CI.
 
@@ -295,25 +289,15 @@ The repository provides:
 
 which runs `scripts/verify-parallel-development.mjs` and is also invoked by hosted CI.
 
-The verifier fails closed for material governance drift, including missing canonical files/manifests, missing instruction-drift rules, default concurrency drift, migration manifest drift, missing Supervisor workflow contracts, missing branch plan, missing completion/sync signals, or inconsistent machine-readable coordination policy/baseline state.
+The verifier fails closed for material governance drift, including missing canonical files/manifests, onboarding main-first drift, slot-plan disagreement, duplicate/invalid slot occupancy, missing exact rejection phrase, missing instruction-drift rules, concurrency/migration drift, missing Supervisor workflow contracts, missing branch plan, missing completion/sync signals or inconsistent machine-readable coordination policy.
 
-When governance intentionally changes, update the verifier and documentation together. Do not weaken assertions only to make CI pass.
+When governance intentionally changes, update verifier and docs together. Do not weaken assertions only to make CI pass.
 
 ## Integration queue
 
-A workstream may enter `READY_FOR_INTEGRATION` only when:
+A workstream may enter `READY_FOR_INTEGRATION` only when declared implementation is complete, valid completion signal exists, slot assignment is valid, branch is synchronized to latest epoch, `verify:parallel` passes, required verification passes, dependency assumptions remain valid, migration/ownership/shared-file conflicts are clear, docs are current and limitations are recorded.
 
-- declared implementation is complete;
-- valid `Work Done and Submitted` signal exists;
-- it is synchronized to the latest Supervisor broadcast epoch;
-- `pnpm run verify:parallel` passes where applicable;
-- required work-packet verification has passed;
-- dependency assumptions remain valid;
-- migration/ownership/shared-file conflicts are clear;
-- required docs/instruction updates are complete;
-- known limitations/non-scope are recorded.
-
-The Supervisor determines final merge order from the DAG and current integration state.
+The Supervisor determines final merge order from DAG/current integration state.
 
 ## Canonical workstream states
 
@@ -339,17 +323,7 @@ Mandatory on **every task**.
 
 ### At task start
 
-Read/check:
-
-1. `README.md`;
-2. `AGENTS.md`;
-3. `docs/PROJECT_PLAN.md`;
-4. `docs/CHECKPOINT.md`;
-5. `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
-6. `docs/AI_NATIVE_PLAN.md`;
-7. relevant module docs/ADRs;
-8. `.agent/` manifests plus the latest Supervisor broadcast epoch on issue #50;
-9. current `main`, own branch/head and required verification commands.
+Read/check `README.md`, `AGENTS.md`, `docs/PROJECT_PLAN.md`, `docs/CHECKPOINT.md`, this document, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md` when relevant, module docs/ADRs, `.agent/` manifests, latest issue #50 sync epoch, current `main`, own branch/head and required verification commands.
 
 Repository/runtime/test evidence wins over stale prompts/checkpoints/memory.
 
@@ -357,77 +331,36 @@ Repository/runtime/test evidence wins over stale prompts/checkpoints/memory.
 
 Ask: **Did this task change how a future agent should work?**
 
-Examples include new/renamed modules, branch rules, Supervisor behavior, completion signal, sync behavior, migration rules, shared files, verification commands, CI gates, security boundaries, ownership, dependencies or mandatory context docs.
+Examples include onboarding/slot states, new/renamed modules, branch rules, Supervisor behavior, completion signal, sync behavior, migration rules, shared files, verification commands, CI gates, security boundaries, ownership, dependencies or mandatory context docs.
 
-If yes, update the relevant instructions in the same change set. At minimum check `AGENTS.md`, `README.md`, this document, `docs/AI_NATIVE_PLAN.md`, relevant module/checkpoint/ADR, `.agent/` manifests and the governance verifier.
+If yes, update relevant instructions in the same change set. At minimum check `AGENTS.md`, `README.md`, this document, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md`, relevant module/checkpoint/ADR, `.agent/` manifests and governance verifier.
 
-**No stale-instruction completion:** a work packet cannot be ready for integration while documented instructions are materially wrong or incomplete.
+**No stale-instruction completion:** a work packet cannot be ready for integration while documented instructions are materially wrong/incomplete.
 
 ## Handoff contract
 
-Every handoff includes:
-
-- task/workstream ID;
-- agent ID/role/status;
-- base/head SHA;
-- branch/PR;
-- `synced_main_sha` and `sync_epoch`;
-- changed paths;
-- contract/interface impact;
-- migration impact/reservation;
-- dependency assumptions;
-- verification evidence;
-- security/compliance impact;
-- shared-file integration requests;
-- known limitations/non-scope;
-- instruction-drift result;
-- completion-signal state.
+Every handoff includes task/workstream ID, agent ID/role/status, assigned slot ID, base/head SHA, branch/PR, `synced_main_sha`/`sync_epoch`, changed paths, contract/interface impact, migration impact/reservation, dependency assumptions, verification evidence, security/compliance impact, shared-file requests, limitations/non-scope, instruction-drift result and completion-signal state.
 
 ## Context minimization for speed
 
-Agents receive task-specific context packs pointing to authoritative repository documents rather than repeatedly reconstructing full history. Repository-wide audits are reserved for architecture/integration checkpoints or when cross-cutting drift is suspected.
+Agents receive task-specific context packs pointing to authoritative repository docs rather than reconstructing full history. Repository-wide audits are reserved for architecture/integration checkpoints or suspected cross-cutting drift.
 
 ## Merge discipline
 
-Before each merge, the Supervisor:
-
-1. freezes/checks exact head SHA;
-2. verifies latest Supervisor broadcast epoch;
-3. verifies dependency graph satisfaction;
-4. resolves ownership/shared-file/migration collisions;
-5. inspects review threads/comments;
-6. runs/requires `pnpm run verify:parallel`;
-7. runs/requires exact-head FAST/FULL gates;
-8. runs instruction drift check;
-9. revalidates mergeability/current base;
-10. merges with expected-head protection where supported;
-11. re-reads resulting `main`;
-12. increments epoch and broadcasts to all active agents.
+Before each merge, the Supervisor checks exact head, latest sync epoch, slot assignment, dependency DAG, ownership/shared-file/migration collisions, reviews/comments, `verify:parallel`, exact-head FAST/FULL gates, instruction drift, mergeability/current base and expected-head protection. After merge it re-reads `main`, increments epoch and broadcasts.
 
 Default branch history is not rewritten to bypass safeguards.
 
 ## Throughput metrics
 
-Supervisor periodically reviews:
-
-- median task lead time;
-- dependency wait time;
-- merge-conflict frequency;
-- PR rework after integration;
-- CI queue/run time;
-- failed integration rate;
-- shared-file collisions;
-- stale-epoch submissions;
-- synchronization conflict rate;
-- stale-instruction corrections;
-- defect escapes after merge.
+Supervisor periodically reviews task lead time, dependency wait, merge conflicts, PR rework, CI queue/run time, failed integration rate, shared-file collisions, rejected/double onboarding attempts, stale-epoch submissions, sync conflict rate, stale-instruction corrections and defect escapes.
 
 Increase concurrency only while these stay healthy.
 
 ## Safety boundaries
 
-Parallelism never authorizes broader product behavior. Tenant isolation, source policy, credentials, network/SSRF controls, provider activation, destructive actions, production deployment and human-approval gates remain independently authoritative.
+Parallelism/onboarding never authorizes broader product behavior. Tenant isolation, source policy, credentials, network/SSRF controls, provider activation, destructive actions, production deployment and human-approval gates remain independently authoritative.
 
 ## Adoption
 
-This protocol applies to M02 and all future milestones. The current standing branch/module/agent mapping lives in `docs/AI_NATIVE_PLAN.md`; `AGENTS.md` is the canonical startup instruction entrypoint; `.agent/supervisor.yaml` defines Supervisor coordination policy/baseline; GitHub issue #50 carries live synchronization broadcasts; and `pnpm run verify:parallel` enforces the machine-readable governance contract.
+This protocol applies to M02 and all future milestones. `docs/AI_NATIVE_PLAN.md` carries standing branch/module/slot occupancy; `docs/NEW_AGENT_ONBOARDING.md` defines arrival behavior; `AGENTS.md` is startup entrypoint; `.agent/slots.yaml` is machine-readable slot truth; `.agent/supervisor.yaml` defines Supervisor protocol/baseline; issue #50 carries live sync broadcasts; and `pnpm run verify:parallel` enforces governance.

@@ -11,6 +11,7 @@ roles:
       - docs/CHECKPOINT.md
       - docs/PARALLEL_AGENT_DEVELOPMENT.md
       - docs/AI_NATIVE_PLAN.md
+      - docs/NEW_AGENT_ONBOARDING.md
       - .agent/**
       - .github/workflows/**
       - .github/PULL_REQUEST_TEMPLATE.md
@@ -18,6 +19,11 @@ roles:
       - pnpm-lock.yaml
     responsibilities:
       - create_parallel_module_branches_before_assignment_documentation
+      - onboard_new_agents_from_current_main_only
+      - inspect_open_module_slots
+      - serialize_slot_assignments
+      - update_ai_native_plan_slot_occupancy
+      - reject_new_agent_when_no_open_slot
       - dependency_graph
       - interface_freeze
       - shared_file_integration
@@ -79,5 +85,6 @@ rules:
   - An explicit work packet may narrow or extend a role's paths.
   - Cross-module edits require an explicit dependency/interface request or integration-owner action.
   - Shared files remain integration-owned when parallel collision risk exists.
+  - Only the Supervisor may mutate onboarding slot occupancy or assign a newly arriving agent to a standing module branch.
   - The Supervisor reviews and merges incoming agent branches; completion signals are review requests, not merge authorization.
   - Ownership never overrides security, compliance, tenant, source-policy or activation gates.

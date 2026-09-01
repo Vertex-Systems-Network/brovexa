@@ -1,0 +1,90 @@
+version: 1
+policy: supervisor-assigned-main-first
+
+start_rule:
+  required_start_branch: main
+  require_exact_current_main_sha: true
+  new_agent_must_not_start_on_module_branch: true
+
+assignment_authority:
+  role: SUPERVISOR
+  serialized_onboarding_decisions: true
+  plan_path: docs/AI_NATIVE_PLAN.md
+  slot_registry_path: .agent/slots.yaml
+
+rejection:
+  exact_phrase: "Go Home Come Back Next Time"
+  when: no-open-slot
+  effects:
+    - no-module-assignment
+    - no-module-branch-checkout
+    - no-work-packet
+    - no-feature-edits
+    - no-agent-pr
+
+slot_states:
+  - OPEN
+  - OCCUPIED
+
+start_statuses:
+  - WAITING
+  - ASSIGNED
+  - WORKING
+  - PAUSED_FOR_SYNC
+
+rules:
+  - A new agent always initializes from the exact current main SHA before the Supervisor checks capacity.
+  - The Supervisor reads docs/AI_NATIVE_PLAN.md and this registry before assigning a new agent.
+  - Only a slot whose status is OPEN may be assigned.
+  - The selected standing branch must be synchronized to the same current main SHA and latest Supervisor sync epoch before the agent switches to it.
+  - The Supervisor records the agent name, OCCUPIED status and start status in the AI-Native Plan and this registry before feature work begins.
+  - One slot may have only one assigned agent.
+  - Onboarding decisions are serialized so two arrivals cannot claim the same OPEN slot.
+  - If all assignable slots are OCCUPIED the Supervisor responds exactly with the rejection phrase and stops onboarding without creating work.
+  - New agent arrival does not create extra capacity or a new module branch. Extra slots must be planned and branches created before an arrival can use them.
+  - Releasing a slot is an explicit Supervisor action after the assigned agent has no active work packet or unmerged branch work for that slot.
+  - A released slot returns to OPEN with assigned_agent null and start_status WAITING.
+
+slots:
+  - slot_id: SUPERVISOR
+    module: integration_control
+    branch: supervisor/integration-control
+    assignable_to_new_agent: false
+    status: OCCUPIED
+    assigned_agent: SUPERVISOR
+    start_status: WORKING
+  - slot_id: CONTRACTS
+    module: contracts_policy
+    branch: agent/contracts-policy
+    assignable_to_new_agent: true
+    status: OPEN
+    assigned_agent: null
+    start_status: WAITING
+  - slot_id: DATABASE
+    module: database_persistence
+    branch: agent/database-persistence
+    assignable_to_new_agent: true
+    status: OPEN
+    assigned_agent: null
+    start_status: WAITING
+  - slot_id: RUNTIME
+    module: worker_runtime
+    branch: agent/worker-runtime
+    assignable_to_new_agent: true
+    status: OPEN
+    assigned_agent: null
+    start_status: WAITING
+  - slot_id: MODULE
+    module: module_infrastructure
+    branch: agent/module-infrastructure
+    assignable_to_new_agent: true
+    status: OPEN
+    assigned_agent: null
+    start_status: WAITING
+  - slot_id: VERIFY
+    module: verification_security
+    branch: agent/verification-security
+    assignable_to_new_agent: true
+    status: OPEN
+    assigned_agent: null
+    start_status: WAITING

@@ -67,9 +67,9 @@ Discovery → Entity Resolution → Contact Enrichment → Website Intelligence 
 
 ## For AI agents / parallel development
 
-**Every coding, review or integration agent must start with `AGENTS.md`.** The permanent multi-agent protocol is `docs/PARALLEL_AGENT_DEVELOPMENT.md`; the current branch/module/agent/merge plan is `docs/AI_NATIVE_PLAN.md`; machine-readable state lives under `.agent/`.
+**Every coding, review or integration agent must start with `AGENTS.md`.** The permanent multi-agent protocol is `docs/PARALLEL_AGENT_DEVELOPMENT.md`; the current branch/module/agent/merge and slot-occupancy plan is `docs/AI_NATIVE_PLAN.md`; new-agent onboarding is `docs/NEW_AGENT_ONBOARDING.md`; machine-readable coordination lives under `.agent/`.
 
-The Main-repository agent is the **Supervisor**. It reviews and merges incoming agent PRs, manages dependency-safe merge order, publishes post-merge synchronization epochs, alerts all active agents, and works on its own bounded `supervisor/integration-control` branch between integration interrupts.
+The Main-repository agent is the **Supervisor**. It onboards new agents, owns slot assignment/release, reviews and merges incoming agent PRs, manages dependency-safe merge order, publishes post-merge synchronization epochs, alerts all active agents, and works on its own bounded `supervisor/integration-control` branch between integration interrupts.
 
 Default parallel operating target is **6 agents** and soft maximum is **8** unless metrics justify more.
 
@@ -85,6 +85,24 @@ Standing branches:
 Default isolation rule:
 
 `1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
+
+### New Agent Onboarding
+
+Every newly arriving agent **starts from exact current `main`**. It does not begin on a standing module branch.
+
+The Supervisor immediately checks `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml` for an assignable slot whose status is exactly `OPEN`.
+
+If a free slot exists, the Supervisor verifies that slot branch is synchronized to current `main`/latest sync epoch, records the agent name, marks the slot `OCCUPIED`, records the start status in the AI-Native Plan and slot registry, and only then allows the agent to switch from `main` to the assigned branch and start its bounded work packet.
+
+Onboarding decisions are serialized so two arrivals cannot claim the same slot. A newly arriving agent does not create extra capacity on demand.
+
+If no assignable slot is `OPEN`, the Supervisor stops onboarding immediately and responds exactly:
+
+**Go Home Come Back Next Time**
+
+That rejected arrival receives no module assignment, branch checkout, work packet, feature work or implementation PR.
+
+Canonical onboarding details: `docs/NEW_AGENT_ONBOARDING.md`.
 
 ### Completion signal
 
@@ -116,7 +134,7 @@ The governance contract is executable:
 
 `pnpm run verify:parallel`
 
-Hosted CI runs the same verifier. Coordination files, Supervisor rules, branch plan, completion/sync signals, migration numbering and future-agent instructions must keep this gate green.
+Hosted CI runs the same verifier. Coordination files, onboarding slots, Supervisor rules, branch plan, completion/sync signals, migration numbering and future-agent instructions must keep this gate green.
 
 ### Mandatory Agent Instruction Drift Check
 
@@ -128,11 +146,12 @@ At the start of every task and again before completion, read/check at minimum:
 4. `docs/CHECKPOINT.md`;
 5. `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
 6. `docs/AI_NATIVE_PLAN.md`;
-7. relevant module/ADR documents;
-8. `.agent/` manifests including Supervisor sync epoch;
-9. current `main`, own branch/head and required verification commands.
+7. `docs/NEW_AGENT_ONBOARDING.md` when onboarding/slot behavior is relevant;
+8. relevant module/ADR documents;
+9. `.agent/` manifests including `.agent/slots.yaml` and Supervisor sync state;
+10. current `main`, own branch/head and required verification commands.
 
-If a task changes architecture, module boundaries, Supervisor behavior, branch workflow, submission signal, sync rules, ownership, shared files, migration rules, dependencies, CI/verification, security/policy boundaries or tooling, the same change set must update the relevant agent instructions and machine-readable governance.
+If a task changes architecture, module boundaries, new-agent onboarding, slot occupancy, Supervisor behavior, branch workflow, submission signal, sync rules, ownership, shared files, migration rules, dependencies, CI/verification, security/policy boundaries or tooling, the same change set must update the relevant agent instructions and machine-readable governance.
 
 A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
@@ -147,7 +166,7 @@ Parallelism never authorizes production provider/network credentials, unrestrict
 - Long-running AI/research work uses durable job/checkpoint state.
 - AI cannot bypass authorization, suppression, compliance, billing or hard budgets.
 - Significant work is delivered in small reversible batches with FAST/FULL verification gates.
-- Parallel work follows explicit ownership, dependency, migration-reservation, synchronization and integration rules.
+- Parallel work follows explicit onboarding/slot, ownership, dependency, migration-reservation, synchronization and integration rules.
 - Agent-working documentation must stay synchronized with actual repository behavior.
 - `pnpm run verify:parallel` must remain green for intentional governance changes.
 
@@ -159,9 +178,11 @@ M01A completion and the integrated M02 foundation do not activate production mod
 
 - Linear project: https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
 - Canonical agent instructions: `AGENTS.md`
-- AI-Native branch/agent plan: `docs/AI_NATIVE_PLAN.md`
+- AI-Native branch/agent/slot plan: `docs/AI_NATIVE_PLAN.md`
+- New-agent onboarding: `docs/NEW_AGENT_ONBOARDING.md`
 - Parallel-agent protocol: `docs/PARALLEL_AGENT_DEVELOPMENT.md`
 - Machine-readable agent coordination: `.agent/`
+- Slot registry: `.agent/slots.yaml`
 - Supervisor state: `.agent/supervisor.yaml`
 - Supervisor broadcast channel: GitHub issue `#50`
 - Parallel governance verifier: `pnpm run verify:parallel`

@@ -32,32 +32,45 @@ claim_rules:
   - One workstream uses one isolated branch/worktree and one PR by default.
   - An agent must not claim work whose required dependency contract is undefined.
   - A workstream behind the latest Supervisor synchronization epoch must enter PAUSED_FOR_SYNC before new feature work or completion submission.
+  - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN slot through .agent/slots.yaml and docs/AI_NATIVE_PLAN.md.
 
 standing_branches:
-  - agent_id: SUPERVISOR
+  - slot_id: SUPERVISOR
+    agent_id: SUPERVISOR
     role: integration_architecture
     module: integration_control
     branch: supervisor/integration-control
-  - agent_id: AGENT-CONTRACTS
+  - slot_id: CONTRACTS
+    agent_id: AGENT-CONTRACTS
     role: contracts_policy
     module: contracts_policy
     branch: agent/contracts-policy
-  - agent_id: AGENT-DB
+  - slot_id: DATABASE
+    agent_id: AGENT-DB
     role: database_persistence
     module: database_persistence
     branch: agent/database-persistence
-  - agent_id: AGENT-RUNTIME
+  - slot_id: RUNTIME
+    agent_id: AGENT-RUNTIME
     role: worker_runtime
     module: worker_runtime
     branch: agent/worker-runtime
-  - agent_id: AGENT-MODULE
+  - slot_id: MODULE
+    agent_id: AGENT-MODULE
     role: module_specialist
     module: module_infrastructure
     branch: agent/module-infrastructure
-  - agent_id: AGENT-VERIFY
+  - slot_id: VERIFY
+    agent_id: AGENT-VERIFY
     role: verification_security
     module: verification_security
     branch: agent/verification-security
+
+slot_registry:
+  path: .agent/slots.yaml
+  assignment_authority: SUPERVISOR
+  new_agent_start_branch: main
+  no_open_slot_response: "Go Home Come Back Next Time"
 
 live_state:
   active_workstreams_source: pull-requests-and-handoffs
@@ -70,6 +83,7 @@ handoff_required_fields:
   - task_id
   - agent_id
   - owner_role
+  - assigned_slot_id
   - status
   - base_sha
   - head_sha
