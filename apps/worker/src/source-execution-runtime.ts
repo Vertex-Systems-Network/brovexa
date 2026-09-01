@@ -1,19 +1,4 @@
 import {
-  ConnectorAdmissionDecisionSchema,
-  ConnectorDefinitionSchema,
-  ConnectorPolicySchema,
-  SourceCapabilitySchema,
-  SourceRequestEnvelopeSchema,
-  SourceResultEnvelopeSchema,
-  validateSourceResultAgainstAdmission,
-  type ConnectorAdmissionDecision,
-  type ConnectorDefinition,
-  type ConnectorPolicy,
-  type SourceCapability,
-  type SourceRequestEnvelope,
-  type SourceResultEnvelope,
-} from '@brovexa/contracts';
-import {
   SOURCE_EXECUTION_RESULT_EFFECT,
   SOURCE_EXECUTION_WORK_TYPE,
   SourceRegistryPersistenceError,
@@ -31,8 +16,87 @@ import type { WorkHandler, WorkHandlerContext } from './runtime';
 const connectorKeyPattern = /^connector\.[a-z0-9_.-]+$/;
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/;
 
+export interface ParsedSourceRequest extends Record<string, unknown> {
+  executionIntent: 'execute';
+  workspaceId: string;
+  sourceTaskId: string;
+  requestId: string;
+  sourceKey: string;
+  connectorKey: string;
+  connectorVersion: string;
+  policySnapshot: {
+    policyId: string;
+    policyVersion: string;
+  };
+}
+
+export interface ParsedSourceAdmission extends Record<string, unknown> {
+  decision: 'allow' | 'review_required' | 'blocked';
+}
+
+export interface ParsedSourceCapability extends Record<string, unknown> {
+  sourceKey: string;
+  version: string;
+}
+
+export interface ParsedConnectorPolicy extends Record<string, unknown> {
+  policyId: string;
+  version: string;
+  sourceKey: string;
+  connectorKey: string;
+}
+
+export interface ParsedConnectorDefinition extends Record<string, unknown> {
+  connectorKey: string;
+  version: string;
+  sourceKey: string;
+  capabilityVersion: string;
+  policyId: string;
+  policyVersion: string;
+  implementationVersion: string;
+}
+
+export interface ParsedSourceResult extends Record<string, unknown> {
+  status: 'complete' | 'partial' | 'empty' | 'blocked' | 'failed';
+  sourceReferences: readonly { referenceId: string }[];
+  usage: {
+    requests: number;
+    pages: number;
+    bytes: number;
+    currencyMicros: number;
+    runtimeMs: number;
+  };
+  errors: readonly {
+    code: string;
+    classification: 'retryable' | 'permanent' | 'policy' | 'quota' | 'partial';
+    message: string;
+  }[];
+  completedAt: string;
+}
+
+export interface SourceExecutionContractValidation {
+  valid: boolean;
+  issues: readonly string[];
+}
+
+export interface SourceExecutionContractAdapter {
+  parseRequest(value: unknown): ParsedSourceRequest;
+  parseAdmission(value: unknown): ParsedSourceAdmission;
+  parseCapability(value: unknown): ParsedSourceCapability;
+  parsePolicy(value: unknown): ParsedConnectorPolicy;
+  parseDefinition(value: unknown): ParsedConnectorDefinition;
+  parseResult(value: unknown): ParsedSourceResult;
+  validateResult(input: {
+    result: ParsedSourceResult;
+    request: ParsedSourceRequest;
+    capability: ParsedSourceCapability;
+    policy: ParsedConnectorPolicy;
+    admission: ParsedSourceAdmission;
+  }): SourceExecutionContractValidation;
+}
+
 export interface SourceExecutorOutcome {
-  result: SourceResultEnvelope;
+  result: unknown;
   resultRef: string;
   provenanceRefs: readonly string[];
 }
@@ -45,11 +109,11 @@ export interface SourceExecutorContext {
   jobRunId: string;
   correlationId: string;
   attempt: number;
-  request: SourceRequestEnvelope;
-  admission: ConnectorAdmissionDecision;
-  capability: SourceCapability;
-  policy: ConnectorPolicy;
-  definition: ConnectorDefinition;
+  request: ParsedSourceRequest;
+  admission: ParsedSourceAdmission;
+  capability: ParsedSourceCapability;
+  policy: ParsedConnectorPolicy;
+  definition: ParsedConnectorDefinition;
   isCancellationRequested: () => Promise<boolean>;
 }
 
@@ -70,6 +134,7 @@ export interface SourceExecutorRegistration {
 export interface SourceExecutionRegistryOptions {
   pool: ReturnType<typeof createPgPool>;
   registryVersion: string;
+  contracts: SourceExecutionContractAdapter;
   executors: Readonly<Record<string, SourceExecutorRegistration>>;
 }
 
@@ -146,32 +211,44 @@ function assertTaskBinding(context: WorkHandlerContext, payload: SourceTaskExecu
   }
 }
 
-function assertNonEmptyIdentifiers(values: readonly string[], field: string): string[] {
+function assertIdentifiers(
+  values: readonly string[],
+  field: string,
+  options: { allowEmpty: boolean; maxItems: number },
+): string[] {
   if (
-    values.length === 0 ||
-    values.length > 256 ||
+    (!options.allowEmpty && values.length === 0) ||
+    values.length > options.maxItems ||
     values.some((value) => typeof value !== 'string' || !identifierPattern.test(value)) ||
     new Set(values).size !== values.length
   ) {
-    throw new PermanentWorkError('SOURCE_EXECUTION_PROVENANCE_REQUIRED', `${field} must contain unique canonical identifiers.`);
+    const cardinality = options.allowEmpty ? `at most ${options.maxItems}` : `between 1 and ${options.maxItems}`;
+    throw new PermanentWorkError(
+      'SOURCE_EXECUTION_PROVENANCE_REQUIRED',
+      `${field} must contain ${cardinality} unique canonical identifiers.`,
+    );
   }
   return [...values];
 }
 
 function buildCompletionEffect(input: {
   task: SourceTaskState;
-  result: SourceResultEnvelope;
+  result: ParsedSourceResult;
   resultRef: string;
   provenanceRefs: readonly string[];
 }): { effectKey: string; effectData: Record<string, unknown> } {
   if (!identifierPattern.test(input.resultRef)) {
     throw new PermanentWorkError('SOURCE_EXECUTION_RESULT_REF_INVALID');
   }
-  const sourceReferenceIds = assertNonEmptyIdentifiers(
+  const sourceReferenceIds = assertIdentifiers(
     input.result.sourceReferences.map((reference) => reference.referenceId),
     'result.sourceReferences',
+    { allowEmpty: true, maxItems: 2048 },
   );
-  const provenanceRefs = assertNonEmptyIdentifiers(input.provenanceRefs, 'provenanceRefs');
+  const provenanceRefs = assertIdentifiers(input.provenanceRefs, 'provenanceRefs', {
+    allowEmpty: false,
+    maxItems: 512,
+  });
   return {
     effectKey: SOURCE_EXECUTION_RESULT_EFFECT,
     effectData: {
@@ -190,12 +267,15 @@ function buildCompletionEffect(input: {
   };
 }
 
-function resultFailure(result: SourceResultEnvelope): RetryableWorkError | PermanentWorkError | null {
+function resultFailure(result: ParsedSourceResult): RetryableWorkError | PermanentWorkError | null {
   if (result.status === 'blocked') return new PermanentWorkError('SOURCE_EXECUTION_RESULT_BLOCKED');
   if (result.status !== 'failed') return null;
 
-  const permanent = result.errors.find((error) =>
-    error.classification === 'permanent' || error.classification === 'policy' || error.classification === 'quota'
+  const permanent = result.errors.find(
+    (error) =>
+      error.classification === 'permanent' ||
+      error.classification === 'policy' ||
+      error.classification === 'quota',
   );
   if (permanent) return new PermanentWorkError(permanent.code, permanent.message);
   const retryable = result.errors.find((error) => error.classification === 'retryable');
@@ -205,6 +285,34 @@ function resultFailure(result: SourceResultEnvelope): RetryableWorkError | Perma
 
 function asPermanent(error: SourceTaskPersistenceError | SourceRegistryPersistenceError): PermanentWorkError {
   return new PermanentWorkError(error.code, error.message);
+}
+
+function parseFrozenContracts(
+  options: SourceExecutionRegistryOptions,
+  snapshot: { request: Record<string, unknown>; admission: Record<string, unknown> },
+  registry: {
+    capability: Record<string, unknown>;
+    policy: Record<string, unknown>;
+    definition: Record<string, unknown>;
+  },
+): {
+  request: ParsedSourceRequest;
+  admission: ParsedSourceAdmission;
+  capability: ParsedSourceCapability;
+  policy: ParsedConnectorPolicy;
+  definition: ParsedConnectorDefinition;
+} {
+  try {
+    return {
+      request: options.contracts.parseRequest(snapshot.request),
+      admission: options.contracts.parseAdmission(snapshot.admission),
+      capability: options.contracts.parseCapability(registry.capability),
+      policy: options.contracts.parsePolicy(registry.policy),
+      definition: options.contracts.parseDefinition(registry.definition),
+    };
+  } catch {
+    throw new PermanentWorkError('SOURCE_EXECUTION_CONTRACT_INVALID');
+  }
 }
 
 function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): WorkHandler {
@@ -250,20 +358,7 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         throw new PermanentWorkError('SOURCE_EXECUTION_CREDENTIAL_MODE_UNSUPPORTED');
       }
 
-      let request: SourceRequestEnvelope;
-      let admission: ConnectorAdmissionDecision;
-      let capability: SourceCapability;
-      let policy: ConnectorPolicy;
-      let definition: ConnectorDefinition;
-      try {
-        request = SourceRequestEnvelopeSchema.parse(snapshot.request);
-        admission = ConnectorAdmissionDecisionSchema.parse(snapshot.admission);
-        capability = SourceCapabilitySchema.parse(registry.capability);
-        policy = ConnectorPolicySchema.parse(registry.policy);
-        definition = ConnectorDefinitionSchema.parse(registry.definition);
-      } catch {
-        throw new PermanentWorkError('SOURCE_EXECUTION_CONTRACT_INVALID');
-      }
+      const { request, admission, capability, policy, definition } = parseFrozenContracts(options, snapshot, registry);
 
       if (
         request.executionIntent !== 'execute' ||
@@ -275,6 +370,18 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         request.connectorVersion !== task.connectorVersion ||
         request.policySnapshot.policyId !== task.policyId ||
         request.policySnapshot.policyVersion !== task.policyVersion ||
+        capability.sourceKey !== task.sourceKey ||
+        capability.version !== task.capabilityVersion ||
+        policy.policyId !== task.policyId ||
+        policy.version !== task.policyVersion ||
+        policy.sourceKey !== task.sourceKey ||
+        policy.connectorKey !== task.connectorKey ||
+        definition.connectorKey !== task.connectorKey ||
+        definition.version !== task.connectorVersion ||
+        definition.sourceKey !== task.sourceKey ||
+        definition.capabilityVersion !== task.capabilityVersion ||
+        definition.policyId !== task.policyId ||
+        definition.policyVersion !== task.policyVersion ||
         admission.decision !== 'allow'
       ) {
         throw new PermanentWorkError('SOURCE_EXECUTION_FROZEN_ADMISSION_MISMATCH');
@@ -308,13 +415,13 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         isCancellationRequested: workContext.isCancellationRequested,
       });
 
-      let result: SourceResultEnvelope;
+      let result: ParsedSourceResult;
       try {
-        result = SourceResultEnvelopeSchema.parse(outcome.result);
+        result = options.contracts.parseResult(outcome.result);
       } catch {
         throw new PermanentWorkError('SOURCE_EXECUTION_RESULT_SCHEMA_INVALID');
       }
-      const validation = validateSourceResultAgainstAdmission({ result, request, capability, policy, admission });
+      const validation = options.contracts.validateResult({ result, request, capability, policy, admission });
       if (!validation.valid) {
         throw new PermanentWorkError(
           'SOURCE_EXECUTION_RESULT_CONTRACT_INVALID',
