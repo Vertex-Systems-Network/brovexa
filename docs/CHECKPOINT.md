@@ -59,20 +59,49 @@ Parallelism does not widen any authorization boundary.
 
 `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the canonical compensating-control document.
 
-## M01 state
+## M01 verification state
 
-**VERIFIED / DONE / INTEGRATED.**
+### ABD-259 — monorepo foundation / executable CI
 
-Delivered foundation includes:
+State: **VERIFIED / DONE**.
 
-- monorepo/runtime/developer foundation;
-- PostgreSQL migration/data layer;
-- durable queue/worker foundation;
-- identity/RBAC/tenant isolation primitives;
-- API observability/health/readiness;
-- CI/security/supply-chain gates.
+Final hosted evidence remains recorded in the M01 integration history.
 
-Canonical M01 FULL GATE evidence remains documented in the M01 checkpoint/ADR history.
+### ABD-260 — PostgreSQL migration / data layer
+
+State: **VERIFIED / DONE**.
+
+The canonical migration/data-layer path remains part of every FULL GATE.
+
+### ABD-261 — durable worker / queue foundation
+
+State: **VERIFIED / DONE**.
+
+Canonical worker recovery/idempotency/correlation verification remains active.
+
+### ABD-262 — identity / RBAC / tenant primitives
+
+State: **VERIFIED / INTEGRATED**.
+
+Deny-by-default tenant authorization, cross-tenant integrity and owner/RBAC safeguards remain regression-gated.
+
+### ABD-263 — API / observability / health
+
+State: **VERIFIED / INTEGRATED / DONE**.
+
+API observability, correlated safe errors and health/readiness semantics remain part of the hosted quality/runtime path.
+
+### ABD-264 — M01 FULL GATE
+
+State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
+
+The current hosted FULL GATE continues to require quality/security, PostgreSQL 18 + RBAC, and canonical worker + Valkey lanes.
+
+### ABD-266 — default-branch protection / compensating controls
+
+State: **DONE VIA COMPENSATING CONTROL / NATIVE PROTECTION REQUIRES CURRENT RE-READ BEFORE CLAIMING OTHERWISE**.
+
+PR-only integration, explicit exact-head verification, no history rewrite and expected-head merge checks remain the compensating operating path.
 
 ## M01A state
 
