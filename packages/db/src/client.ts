@@ -3,8 +3,9 @@ import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import * as agentSchema from './agent-schema';
 import * as coreSchema from './schema';
 import * as sourceSchema from './source-schema';
+import * as sourceTaskSchema from './source-task-schema';
 
-const schema = { ...coreSchema, ...agentSchema, ...sourceSchema };
+const schema = { ...coreSchema, ...agentSchema, ...sourceSchema, ...sourceTaskSchema };
 
 export type BrovexaDatabase = NodePgDatabase<typeof schema>;
 
@@ -78,6 +79,9 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
         AND to_regclass('public.connector_policies') IS NOT NULL
         AND to_regclass('public.connector_definitions') IS NOT NULL
         AND to_regclass('public.source_admission_snapshots') IS NOT NULL
+        AND to_regclass('public.research_job_preflights') IS NOT NULL
+        AND to_regclass('public.source_tasks') IS NOT NULL
+        AND to_regclass('public.source_task_usage_events') IS NOT NULL
         AS schema_ready
   `);
 
