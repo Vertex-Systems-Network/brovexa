@@ -45,6 +45,7 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
   await pool.query('DROP TABLE IF EXISTS research_job_preflights CASCADE');
@@ -93,6 +94,7 @@ try {
     '0006_agent_execution_plan',
     '0007_source_registry_foundation',
     '0008_source_task_preflight',
+    '0009_connector_execution_safety',
   ]);
 
   const workspace = await pool.query(
