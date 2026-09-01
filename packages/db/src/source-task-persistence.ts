@@ -176,6 +176,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function canonicalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => canonicalizeJson(item));
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalizeJson(value[key])]),
+  );
+}
+
+function jsonSemanticallyEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(canonicalizeJson(left)) === JSON.stringify(canonicalizeJson(right));
+}
+
 function assertIdentifier(value: string, field: string, code: SourceTaskPersistenceErrorCode): void {
   if (typeof value !== 'string' || !identifierPattern.test(value)) {
     throw new SourceTaskPersistenceError(code, `${field} must use the canonical identifier format.`);
@@ -348,7 +362,7 @@ export async function persistResearchJobPreflight(
     [input.id],
   );
   if (byId.rows[0]) {
-    if (JSON.stringify(byId.rows[0].envelope) !== JSON.stringify(envelope)) {
+    if (!jsonSemanticallyEqual(byId.rows[0].envelope, envelope)) {
       throw new SourceTaskPersistenceError('SOURCE_PREFLIGHT_ID_CONFLICT', `Preflight ${input.id} already exists with different content.`);
     }
     return { id: input.id, created: false, envelope: byId.rows[0].envelope };
@@ -436,7 +450,7 @@ async function createCanonicalSourceWork(
     );
     const row = existingWork.rows[0];
     if (!row) throw new Error('Canonical source work identity could not be resolved.');
-    if (row.max_attempts !== input.maxAttempts || JSON.stringify(row.payload) !== JSON.stringify(input.payload)) {
+    if (row.max_attempts !== input.maxAttempts || !jsonSemanticallyEqual(row.payload, input.payload)) {
       throw new SourceTaskPersistenceError('SOURCE_TASK_ID_CONFLICT', `Source task ${input.sourceTaskId} canonical work binding conflicts with existing content.`);
     }
     workUnitId = row.id;
@@ -677,7 +691,7 @@ export async function createSourceTask(pool: Pool, input: CreateSourceTaskInput)
       row.job_run_id !== work.jobRunId ||
       row.work_unit_id !== work.workUnitId ||
       row.max_attempts !== maxAttempts ||
-      JSON.stringify(row.effective_budget) !== JSON.stringify(effectiveBudget)
+      !jsonSemanticallyEqual(row.effective_budget, effectiveBudget)
     ) {
       throw new SourceTaskPersistenceError('SOURCE_TASK_ID_CONFLICT', `Source task ${input.sourceTaskId} already exists with different content.`);
     }
@@ -748,7 +762,7 @@ export async function recordSourceTaskUsage(pool: Pool, input: RecordSourceTaskU
         Number(existingRow.bytes) === usage.bytes &&
         Number(existingRow.currency_micros) === usage.currencyMicros &&
         Number(existingRow.runtime_ms) === usage.runtimeMs &&
-        JSON.stringify(existingRow.metadata) === JSON.stringify(metadata) &&
+        jsonSemanticallyEqual(existingRow.metadata, metadata) &&
         existingRow.occurred_at.getTime() === input.occurredAt.getTime();
       if (!same) {
         throw new SourceTaskPersistenceError('SOURCE_TASK_USAGE_ID_CONFLICT', `Usage event ${input.eventId} already exists with different content.`);
@@ -883,7 +897,7 @@ export async function completeSourceTask(pool: Pool, input: CompleteSourceTaskIn
         'SELECT data FROM job_effects WHERE work_unit_id = $1 AND effect_key = $2',
         [row.work_unit_id, SOURCE_EXECUTION_RESULT_EFFECT],
       );
-      if (JSON.stringify(existingEffect.rows[0]?.data) !== JSON.stringify(effectData)) {
+      if (!jsonSemanticallyEqual(existingEffect.rows[0]?.data, effectData)) {
         throw new SourceTaskPersistenceError('SOURCE_TASK_ID_CONFLICT', `Completed source task ${input.sourceTaskId} has different result provenance.`);
       }
       return { effectCreated: false };
