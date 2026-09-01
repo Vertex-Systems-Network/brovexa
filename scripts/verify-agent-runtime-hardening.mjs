@@ -41,6 +41,9 @@ function expectHardeningCode(expectedCode) {
 
 async function resetDatabase() {
   for (const table of [
+    'source_task_usage_events',
+    'source_tasks',
+    'research_job_preflights',
     'source_admission_snapshots',
     'connector_definitions',
     'connector_policies',
@@ -161,6 +164,7 @@ try {
     '0005_agent_memory_lifecycle',
     '0006_agent_execution_plan',
     '0007_source_registry_foundation',
+    '0008_source_task_preflight',
   ]);
 
   const deterministic = definition('agent.control.route-deterministic', '1.0.0');
