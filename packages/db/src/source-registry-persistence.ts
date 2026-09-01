@@ -592,6 +592,10 @@ export async function persistSourceAdmissionSnapshot(
   const parsedAdmission = parseAdmissionDecision(input.admission);
   const evaluatedAtIso = input.evaluatedAt.toISOString();
   if (
+    typeof input.request.operation !== 'string' ||
+    input.request.operation.trim().length === 0 ||
+    typeof input.request.storageClass !== 'string' ||
+    input.request.storageClass.trim().length === 0 ||
     input.request.requestId !== input.requestId ||
     input.request.workspaceId !== input.workspaceId ||
     input.request.sourceTaskId !== input.sourceTaskId ||
@@ -605,6 +609,8 @@ export async function persistSourceAdmissionSnapshot(
     input.admission.connectorVersion !== registry.connectorVersion ||
     admissionPolicySnapshot?.policyId !== registry.policyId ||
     admissionPolicySnapshot?.policyVersion !== registry.policyVersion ||
+    input.admission.operation !== input.request.operation ||
+    input.admission.storageClass !== input.request.storageClass ||
     input.admission.evaluatedAt !== evaluatedAtIso
   ) {
     throw new SourceRegistryPersistenceError(
