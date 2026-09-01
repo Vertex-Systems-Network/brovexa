@@ -13,6 +13,7 @@ new_agent_onboarding:
   require_exact_current_main_sha: true
   slot_definitions: .agent/slots.yaml
   live_slot_registry_issue: 53
+  live_slot_registry_label: "GitHub issue #53"
   live_slot_registry_authority: github-issue-53-body
   plan: docs/AI_NATIVE_PLAN.md
   assignment_authority: SUPERVISOR
