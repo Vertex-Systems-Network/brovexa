@@ -1,0 +1,51 @@
+version: 1
+
+default_concurrency:
+  target_agents: 6
+  soft_max_agents: 8
+  scale_beyond_soft_max_requires_metrics_review: true
+
+recommended_roles:
+  - integration_architecture
+  - contracts_policy
+  - database_persistence
+  - worker_runtime
+  - module_specialist
+  - verification_security
+
+states:
+  - PLANNED
+  - CLAIMED
+  - WORKING
+  - BLOCKED
+  - READY_FOR_REVIEW
+  - READY_FOR_INTEGRATION
+  - INTEGRATING
+  - VERIFIED
+  - MERGED
+  - SUPERSEDED
+
+claim_rules:
+  - One active owner per work packet unless explicitly decomposed into child work packets.
+  - One active coding workstream per agent by default.
+  - One workstream uses one isolated branch/worktree and one PR by default.
+  - An agent must not claim work whose required dependency contract is undefined.
+
+active_workstreams: []
+
+handoff_required_fields:
+  - task_id
+  - owner_role
+  - status
+  - base_sha
+  - head_sha
+  - branch
+  - changed_paths
+  - contract_impact
+  - migration_impact
+  - dependency_assumptions
+  - verification_evidence
+  - security_compliance_impact
+  - shared_file_requests
+  - known_limitations
+  - instruction_drift_result
