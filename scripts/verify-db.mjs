@@ -22,6 +22,17 @@ const migrationsDir = resolve('packages/db/migrations');
 const pool = createPgPool({ connectionString, max: 4 });
 const db = createDatabase(pool);
 
+const expectedMigrations = [
+  '0000_workspace_foundation',
+  '0001_job_execution_foundation',
+  '0002_identity_authorization_foundation',
+  '0003_agent_runtime_core',
+  '0004_memory_evaluation_core',
+  '0005_agent_memory_lifecycle',
+  '0006_agent_execution_plan',
+  '0007_source_registry_foundation',
+];
+
 function findPostgresError(error) {
   let current = error;
   for (let depth = 0; depth < 8; depth += 1) {
@@ -43,6 +54,10 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_admission_snapshots CASCADE');
+  await pool.query('DROP TABLE IF EXISTS connector_definitions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS connector_policies CASCADE');
+  await pool.query('DROP TABLE IF EXISTS source_capabilities CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_execution_plans CASCADE');
   await pool.query('DROP TABLE IF EXISTS memory_record_lifecycle_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_run_transitions CASCADE');
@@ -75,15 +90,7 @@ try {
   await resetTestDatabase();
 
   const applied = await applyPendingMigrations(pool, migrationsDir);
-  assert.deepEqual(applied, [
-    '0000_workspace_foundation',
-    '0001_job_execution_foundation',
-    '0002_identity_authorization_foundation',
-    '0003_agent_runtime_core',
-    '0004_memory_evaluation_core',
-    '0005_agent_memory_lifecycle',
-    '0006_agent_execution_plan',
-  ]);
+  assert.deepEqual(applied, expectedMigrations);
 
   const probe = await probeDatabase(pool);
   assert.equal(probe.serverMajor, 18, `Expected PostgreSQL 18.x, received ${probe.serverVersion}`);
@@ -137,11 +144,12 @@ try {
   );
   assert.equal(preferenceCount.rows[0]?.count, 0);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0006_agent_execution_plan']);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0007_source_registry_foundation']);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0005_agent_memory_lifecycle');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0004_memory_evaluation_core');
@@ -164,7 +172,11 @@ try {
       to_regclass('public.memory_records')::text AS memory_records,
       to_regclass('public.memory_record_lifecycle_events')::text AS memory_record_lifecycle_events,
       to_regclass('public.agent_eval_results')::text AS agent_eval_results,
-      to_regclass('public.agent_execution_plans')::text AS agent_execution_plans
+      to_regclass('public.agent_execution_plans')::text AS agent_execution_plans,
+      to_regclass('public.source_capabilities')::text AS source_capabilities,
+      to_regclass('public.connector_policies')::text AS connector_policies,
+      to_regclass('public.connector_definitions')::text AS connector_definitions,
+      to_regclass('public.source_admission_snapshots')::text AS source_admission_snapshots
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
   assert.equal(afterRollback.rows[0]?.users, null);
@@ -178,17 +190,13 @@ try {
   assert.equal(afterRollback.rows[0]?.memory_record_lifecycle_events, null);
   assert.equal(afterRollback.rows[0]?.agent_eval_results, null);
   assert.equal(afterRollback.rows[0]?.agent_execution_plans, null);
+  assert.equal(afterRollback.rows[0]?.source_capabilities, null);
+  assert.equal(afterRollback.rows[0]?.connector_policies, null);
+  assert.equal(afterRollback.rows[0]?.connector_definitions, null);
+  assert.equal(afterRollback.rows[0]?.source_admission_snapshots, null);
 
   const reapplied = await applyPendingMigrations(pool, migrationsDir);
-  assert.deepEqual(reapplied, [
-    '0000_workspace_foundation',
-    '0001_job_execution_foundation',
-    '0002_identity_authorization_foundation',
-    '0003_agent_runtime_core',
-    '0004_memory_evaluation_core',
-    '0005_agent_memory_lifecycle',
-    '0006_agent_execution_plan',
-  ]);
+  assert.deepEqual(reapplied, expectedMigrations);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
   console.log('Brovexa PostgreSQL 18 migration/data-layer integration verification passed.');
@@ -206,3 +214,4 @@ await import('./verify-agent-plan-dispatcher.mjs');
 await import('./verify-agent-execution-aggregation.mjs');
 await import('./verify-agent-evaluator-decision.mjs');
 await import('./verify-agent-runtime-hardening.mjs');
+await import('./verify-source-registry.mjs');
