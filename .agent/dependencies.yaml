@@ -8,6 +8,17 @@ rules:
   - A frozen interface change requires impact review for all dependent workstreams.
   - Random merge ordering is prohibited when dependencies exist.
   - Final integration must revalidate dependent work against current main after required dependencies merge.
+  - A completion signal does not override dependency order.
+  - The Supervisor may review submissions FIFO but must merge dependency providers before dependent submissions.
+  - Every successful merge creates a new synchronization epoch; active dependent branches must sync before resuming.
+
+default_layer_order:
+  - contracts_policy
+  - database_persistence
+  - module_infrastructure
+  - worker_runtime
+  - verification_security
+  - integration_control
 
 interface_freeze_required_fields:
   - contract_path
