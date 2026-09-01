@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 default_concurrency:
   target_agents: 6
@@ -32,7 +32,7 @@ claim_rules:
   - One workstream uses one isolated branch/worktree and one PR by default.
   - An agent must not claim work whose required dependency contract is undefined.
   - A workstream behind the latest Supervisor synchronization epoch must enter PAUSED_FOR_SYNC before new feature work or completion submission.
-  - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN slot through .agent/slots.yaml and docs/AI_NATIVE_PLAN.md.
+  - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN live slot through GitHub issue #53.
 
 standing_branches:
   - slot_id: SUPERVISOR
@@ -67,15 +67,20 @@ standing_branches:
     branch: agent/verification-security
 
 slot_registry:
-  path: .agent/slots.yaml
+  static_definition_path: .agent/slots.yaml
+  live_occupancy_issue: 53
+  live_occupancy_authority: github-issue-53-body
   assignment_authority: SUPERVISOR
   new_agent_start_branch: main
+  assignment_decisions_serialized: true
   no_open_slot_response: "Go Home Come Back Next Time"
 
 live_state:
   active_workstreams_source: pull-requests-and-handoffs
   synchronization_source: github-issue-50-latest-supervisor-broadcast
+  slot_occupancy_source: github-issue-53-body
   versioned_manifest_is_live_task_registry: false
+  versioned_manifest_is_live_slot_registry: false
 
 active_workstreams: []
 

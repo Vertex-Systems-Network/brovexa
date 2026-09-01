@@ -2,10 +2,14 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,6 +31,12 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.20.0
+
+      - name: Verify main integration provenance
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node scripts/verify-main-integration-provenance.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Verify foundation contract
         run: node scripts/verify-foundation.mjs
