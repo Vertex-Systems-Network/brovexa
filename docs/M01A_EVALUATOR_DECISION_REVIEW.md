@@ -1,6 +1,6 @@
 # M01A — Evaluator Decision Application + Review Resolution
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -62,7 +62,17 @@ Same-ID/same-request replay is idempotent. A changed replay conflicts instead of
 
 This does not create a generic bypass around validator/evaluator rules. It is a narrow owner-authorized resolution of a run already placed into the explicit review state.
 
-## Verification target
+## Verification evidence
+
+Exact integrated implementation evidence:
+
+- source head: `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`
+- PR #35: `feat(m01a): apply evaluator decisions and resolve reviews`
+- exact-head FULL GATE run `33489635395`: PASS
+- quality/security job `99797806016`: PASS
+- PostgreSQL 18 migration + RBAC job `99798572515`: PASS
+- canonical worker + Valkey job `99798867860`: PASS
+- merge SHA: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
 
 `scripts/verify-agent-evaluator-decision.mjs` is chained through canonical `scripts/verify-db.mjs` and exercises the real aggregation, specialist, AgentRun lifecycle and evaluation persistence stack. It verifies:
 
@@ -77,7 +87,7 @@ This does not create a generic bypass around validator/evaluator rules. It is a 
 9. owner resolution replay is idempotent;
 10. contradiction-backed evaluator rejection fails the subject orchestrator.
 
-Existing migration, Agent/Memory lifecycle, Context Builder, execution-plan, dispatcher, specialist execution and aggregation regressions remain in the same canonical PostgreSQL 18 FULL GATE.
+Existing migration, Agent/Memory lifecycle, Context Builder, execution-plan, dispatcher, specialist execution and aggregation regressions passed in the same PostgreSQL 18 FULL GATE.
 
 ## Explicit non-scope
 
@@ -92,6 +102,6 @@ This slice does not implement or activate:
 - external source/API/tool execution;
 - acquisition, outreach, CRM, billing or production deployment.
 
-## Next safe slice after verification
+## Next safe slice
 
-After this slice is independently FULL-GATE verified and integrated, re-audit the remaining M01A gap. The likely final M01A hardening boundary is broader pause/review/resume observability and runtime-read APIs around the now-complete deterministic orchestrator → specialist → aggregation → evaluator → review lifecycle, while production provider/model execution remains a separately gated capability.
+The remaining M01A hardening boundary is broader runtime lifecycle observability/read APIs plus provider-neutral route-resolution enforcement around the now-integrated deterministic orchestrator → specialist → aggregation → evaluator → review lifecycle. Actual model/provider invocation remains separately gated and must not be activated implicitly.
