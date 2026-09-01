@@ -6,7 +6,7 @@ supervisor:
   main_branch: main
   work_branch: supervisor/integration-control
   role: integration_architecture
-  state: WORKING
+  state_model: interrupt-review-merge-broadcast-resume
 
 completion_signal:
   exact_phrase: "Work Done and Submitted"
@@ -19,7 +19,7 @@ completion_signal:
     - instruction_drift_check
     - dependency_state
     - verification_evidence
-    - synced_to_latest_epoch
+    - synced_to_latest_broadcast_epoch
 
 interrupt_flow:
   - PAUSE_SUPERVISOR_WORK
@@ -38,14 +38,18 @@ review_queue:
 
 broadcast:
   issue_number: 50
+  live_state_authority: latest-supervisor-broadcast-comment
   exact_alert: "New changes have been merged — please merge these changes into your branch first, then resume your own work."
   also_comment_on_active_agent_prs: true
   require_main_sha: true
   require_sync_epoch: true
+  epoch_monotonic: true
 
 synchronization:
-  current_epoch: 1
-  current_main_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
+  baseline_epoch: 1
+  baseline_main_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
+  live_epoch_source: github-issue-50-latest-supervisor-broadcast
+  live_main_sha_source: github-issue-50-latest-supervisor-broadcast
   strategy: merge-current-main-non-destructively
   force_history_rewrite_default: false
   shared_file_conflicts_escalate_to_supervisor: true
