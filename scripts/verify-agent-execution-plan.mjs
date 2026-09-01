@@ -27,6 +27,10 @@ const migrationsDir = resolve('packages/db/migrations');
 const pool = createPgPool({ connectionString, max: 6 });
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_admission_snapshots CASCADE');
+  await pool.query('DROP TABLE IF EXISTS connector_definitions CASCADE');
+  await pool.query('DROP TABLE IF EXISTS connector_policies CASCADE');
+  await pool.query('DROP TABLE IF EXISTS source_capabilities CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_execution_plans CASCADE');
   await pool.query('DROP TABLE IF EXISTS memory_record_lifecycle_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS agent_run_transitions CASCADE');
@@ -269,6 +273,7 @@ try {
     '0004_memory_evaluation_core',
     '0005_agent_memory_lifecycle',
     '0006_agent_execution_plan',
+    '0007_source_registry_foundation',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
