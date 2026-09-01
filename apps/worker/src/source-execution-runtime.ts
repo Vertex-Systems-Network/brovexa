@@ -1,12 +1,15 @@
 import {
   SOURCE_EXECUTION_RESULT_EFFECT,
   SOURCE_EXECUTION_WORK_TYPE,
+  ConnectorHealthPersistenceError,
   SourceRegistryPersistenceError,
   SourceTaskPersistenceError,
+  getLatestConnectorHealthSnapshot,
   getSourceAdmissionSnapshot,
   getSourceTaskState,
   recordSourceTaskUsage,
   resolveConnectorRegistryEntry,
+  type PersistedConnectorHealthSnapshot,
   type SourceTaskState,
   type createPgPool,
 } from '@brovexa/db';
@@ -15,6 +18,7 @@ import type { WorkHandler, WorkHandlerContext } from './runtime';
 
 const connectorKeyPattern = /^connector\.[a-z0-9_.-]+$/;
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/;
+const executablePolicyStates = new Set(['APPROVED', 'APPROVED_WITH_LIMITS', 'TRANSIENT_ONLY']);
 
 export interface ParsedSourceRequest extends Record<string, unknown> {
   executionIntent: 'execute';
@@ -44,6 +48,9 @@ export interface ParsedConnectorPolicy extends Record<string, unknown> {
   version: string;
   sourceKey: string;
   connectorKey: string;
+  state: 'APPROVED' | 'APPROVED_WITH_LIMITS' | 'TRANSIENT_ONLY' | 'REVIEW_REQUIRED' | 'BLOCKED' | 'EXPIRED';
+  reviewedAt: string;
+  nextReviewAt: string;
 }
 
 export interface ParsedConnectorDefinition extends Record<string, unknown> {
@@ -114,6 +121,7 @@ export interface SourceExecutorContext {
   capability: ParsedSourceCapability;
   policy: ParsedConnectorPolicy;
   definition: ParsedConnectorDefinition;
+  health: PersistedConnectorHealthSnapshot;
   isCancellationRequested: () => Promise<boolean>;
 }
 
@@ -134,6 +142,8 @@ export interface SourceExecutorRegistration {
 export interface SourceExecutionRegistryOptions {
   pool: ReturnType<typeof createPgPool>;
   registryVersion: string;
+  maxHealthAgeSeconds: number;
+  now?: () => Date;
   contracts: SourceExecutionContractAdapter;
   executors: Readonly<Record<string, SourceExecutorRegistration>>;
 }
@@ -154,6 +164,13 @@ function assertVersion(value: string, field: string): void {
 
 function assertRegistry(options: SourceExecutionRegistryOptions): void {
   assertVersion(options.registryVersion, 'Source executor registryVersion');
+  if (
+    !Number.isSafeInteger(options.maxHealthAgeSeconds) ||
+    options.maxHealthAgeSeconds < 1 ||
+    options.maxHealthAgeSeconds > 86_400
+  ) {
+    throw new RangeError('Source executor maxHealthAgeSeconds must be an integer between 1 and 86400.');
+  }
   const entries = Object.entries(options.executors);
   if (entries.length > 128) throw new RangeError('Source executor registry supports at most 128 executors.');
   for (const [connectorKey, registration] of entries) {
@@ -166,6 +183,19 @@ function assertRegistry(options: SourceExecutionRegistryOptions): void {
       throw new RangeError(`${connectorKey} must not request network access in this bounded slice.`);
     }
   }
+}
+
+function executionNow(options: SourceExecutionRegistryOptions): Date {
+  const now = options.now?.() ?? new Date();
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_CLOCK_INVALID');
+  }
+  return now;
+}
+
+function sameInstant(value: string, expected: Date): boolean {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp === expected.getTime();
 }
 
 function readExecutionPayload(context: WorkHandlerContext): SourceTaskExecutionPayload {
@@ -233,12 +263,16 @@ function assertIdentifiers(
 
 function buildCompletionEffect(input: {
   task: SourceTaskState;
+  healthSnapshotId: string;
   result: ParsedSourceResult;
   resultRef: string;
   provenanceRefs: readonly string[];
 }): { effectKey: string; effectData: Record<string, unknown> } {
   if (!identifierPattern.test(input.resultRef)) {
     throw new PermanentWorkError('SOURCE_EXECUTION_RESULT_REF_INVALID');
+  }
+  if (!identifierPattern.test(input.healthSnapshotId)) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_IDENTITY_INVALID');
   }
   const sourceReferenceIds = assertIdentifiers(
     input.result.sourceReferences.map((reference) => reference.referenceId),
@@ -255,6 +289,7 @@ function buildCompletionEffect(input: {
       kind: 'source_task_result_reference',
       sourceTaskId: input.task.sourceTaskId,
       admissionSnapshotId: input.task.admissionSnapshotId,
+      healthSnapshotId: input.healthSnapshotId,
       sourceKey: input.task.sourceKey,
       connectorKey: input.task.connectorKey,
       connectorVersion: input.task.connectorVersion,
@@ -283,7 +318,9 @@ function resultFailure(result: ParsedSourceResult): RetryableWorkError | Permane
   return new PermanentWorkError('SOURCE_EXECUTION_RESULT_FAILED');
 }
 
-function asPermanent(error: SourceTaskPersistenceError | SourceRegistryPersistenceError): PermanentWorkError {
+function asPermanent(
+  error: SourceTaskPersistenceError | SourceRegistryPersistenceError | ConnectorHealthPersistenceError,
+): PermanentWorkError {
   return new PermanentWorkError(error.code, error.message);
 }
 
@@ -312,6 +349,68 @@ function parseFrozenContracts(
     };
   } catch {
     throw new PermanentWorkError('SOURCE_EXECUTION_CONTRACT_INVALID');
+  }
+}
+
+function assertExecutionPolicy(
+  registry: { policyState: string; reviewedAt: Date; nextReviewAt: Date },
+  policy: ParsedConnectorPolicy,
+  now: Date,
+): void {
+  if (
+    policy.state !== registry.policyState ||
+    !sameInstant(policy.reviewedAt, registry.reviewedAt) ||
+    !sameInstant(policy.nextReviewAt, registry.nextReviewAt)
+  ) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_POLICY_IDENTITY_MISMATCH');
+  }
+  if (!executablePolicyStates.has(registry.policyState)) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_POLICY_NOT_EXECUTABLE');
+  }
+  if (registry.reviewedAt.getTime() > now.getTime()) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_POLICY_CLOCK_INVALID');
+  }
+  if (registry.nextReviewAt.getTime() <= now.getTime()) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_POLICY_REVIEW_EXPIRED');
+  }
+}
+
+function assertExecutionHealth(input: {
+  task: SourceTaskState;
+  registryDefinitionId: string;
+  health: PersistedConnectorHealthSnapshot;
+  now: Date;
+  maxHealthAgeSeconds: number;
+}): void {
+  const { task, registryDefinitionId, health, now, maxHealthAgeSeconds } = input;
+  if (
+    health.connectorDefinitionId !== registryDefinitionId ||
+    health.connectorKey !== task.connectorKey ||
+    health.connectorVersion !== task.connectorVersion
+  ) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_IDENTITY_MISMATCH');
+  }
+  const ageMs = now.getTime() - health.observedAt.getTime();
+  if (ageMs < 0) throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_FROM_FUTURE');
+  if (ageMs > maxHealthAgeSeconds * 1000) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_STALE');
+  }
+  if (health.status === 'rate_limited') {
+    throw new RetryableWorkError('SOURCE_EXECUTION_HEALTH_RATE_LIMITED');
+  }
+  if (health.status === 'circuit_open') {
+    throw new RetryableWorkError('SOURCE_EXECUTION_HEALTH_CIRCUIT_OPEN');
+  }
+  if (health.status === 'disabled' || health.status === 'unknown') {
+    throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_NOT_EXECUTABLE');
+  }
+
+  const remainingRequests = task.effectiveBudget.maxRequests - task.consumed.requests;
+  if (!Number.isSafeInteger(remainingRequests) || remainingRequests <= 0) {
+    throw new PermanentWorkError('SOURCE_EXECUTION_REQUEST_BUDGET_EXHAUSTED');
+  }
+  if (health.quotaRemaining !== null && health.quotaRemaining < remainingRequests) {
+    throw new RetryableWorkError('SOURCE_EXECUTION_HEALTH_QUOTA_INSUFFICIENT');
   }
 }
 
@@ -387,6 +486,21 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         throw new PermanentWorkError('SOURCE_EXECUTION_FROZEN_ADMISSION_MISMATCH');
       }
 
+      const now = executionNow(options);
+      assertExecutionPolicy(registry, policy, now);
+      const health = await getLatestConnectorHealthSnapshot(options.pool, {
+        connectorKey: task.connectorKey,
+        connectorVersion: task.connectorVersion,
+      });
+      if (!health) throw new PermanentWorkError('SOURCE_EXECUTION_HEALTH_MISSING');
+      assertExecutionHealth({
+        task,
+        registryDefinitionId: registry.connectorDefinitionId,
+        health,
+        now,
+        maxHealthAgeSeconds: options.maxHealthAgeSeconds,
+      });
+
       const registration = options.executors[task.connectorKey];
       if (!registration) throw new PermanentWorkError('SOURCE_EXECUTION_EXECUTOR_UNAVAILABLE');
       if (
@@ -412,6 +526,7 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         capability,
         policy,
         definition,
+        health,
         isCancellationRequested: workContext.isCancellationRequested,
       });
 
@@ -438,6 +553,7 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
           registryVersion: options.registryVersion,
           connectorKey: task.connectorKey,
           connectorVersion: task.connectorVersion,
+          healthSnapshotId: health.id,
           resultStatus: result.status,
         },
         occurredAt: new Date(result.completedAt),
@@ -449,6 +565,7 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
 
       return buildCompletionEffect({
         task,
+        healthSnapshotId: health.id,
         result,
         resultRef: outcome.resultRef,
         provenanceRefs: outcome.provenanceRefs,
@@ -457,7 +574,11 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
       if (error instanceof RetryableWorkError || error instanceof PermanentWorkError || error instanceof CancelledWorkError) {
         throw error;
       }
-      if (error instanceof SourceTaskPersistenceError || error instanceof SourceRegistryPersistenceError) {
+      if (
+        error instanceof SourceTaskPersistenceError ||
+        error instanceof SourceRegistryPersistenceError ||
+        error instanceof ConnectorHealthPersistenceError
+      ) {
         throw asPermanent(error);
       }
       throw new PermanentWorkError('UNCLASSIFIED_SOURCE_EXECUTION_ERROR');

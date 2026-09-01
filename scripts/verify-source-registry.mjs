@@ -32,6 +32,7 @@ const expectedMigrations = [
   '0006_agent_execution_plan',
   '0007_source_registry_foundation',
   '0008_source_task_preflight',
+  '0009_connector_execution_safety',
 ];
 
 function findPostgresError(error) {
@@ -64,6 +65,7 @@ function expectSourceCode(expectedCode) {
 
 async function resetDatabase() {
   for (const table of [
+    'connector_health_snapshots',
     'source_task_usage_events',
     'source_tasks',
     'research_job_preflights',

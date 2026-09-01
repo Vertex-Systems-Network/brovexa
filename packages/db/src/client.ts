@@ -1,11 +1,12 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import * as agentSchema from './agent-schema';
+import * as connectorHealthSchema from './connector-health-schema';
 import * as coreSchema from './schema';
 import * as sourceSchema from './source-schema';
 import * as sourceTaskSchema from './source-task-schema';
 
-const schema = { ...coreSchema, ...agentSchema, ...sourceSchema, ...sourceTaskSchema };
+const schema = { ...coreSchema, ...agentSchema, ...sourceSchema, ...sourceTaskSchema, ...connectorHealthSchema };
 
 export type BrovexaDatabase = NodePgDatabase<typeof schema>;
 
@@ -82,6 +83,7 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
         AND to_regclass('public.research_job_preflights') IS NOT NULL
         AND to_regclass('public.source_tasks') IS NOT NULL
         AND to_regclass('public.source_task_usage_events') IS NOT NULL
+        AND to_regclass('public.connector_health_snapshots') IS NOT NULL
         AS schema_ready
   `);
 

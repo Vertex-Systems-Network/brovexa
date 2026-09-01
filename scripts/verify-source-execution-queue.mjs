@@ -15,6 +15,7 @@ import {
   createSourceTask,
   getSourceTaskState,
   persistConnectorDefinition,
+  persistConnectorHealthSnapshot,
   persistConnectorPolicy,
   persistResearchJobPreflight,
   persistSourceAdmissionSnapshot,
@@ -46,6 +47,7 @@ const expectedMigrations = [
   '0006_agent_execution_plan',
   '0007_source_registry_foundation',
   '0008_source_task_preflight',
+  '0009_connector_execution_safety',
 ];
 
 const budget = {
@@ -165,6 +167,7 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 
 async function resetDatabase() {
   for (const table of [
+    'connector_health_snapshots',
     'source_task_usage_events',
     'source_tasks',
     'research_job_preflights',
@@ -230,6 +233,20 @@ async function persistRegistryDefinition(version, activation) {
     definition,
   });
   return definition;
+}
+
+async function persistHealth({ id, connectorVersion = '1.0.0', status = 'ready', observedAt, quotaRemaining = 10 }) {
+  return persistConnectorHealthSnapshot(pool, {
+    id,
+    connectorKey: policy.connectorKey,
+    connectorVersion,
+    status,
+    observedAt: new Date(observedAt),
+    quotaRemaining,
+    rollingErrorRate: status === 'degraded' ? 0.2 : 0,
+    p95LatencyMs: 25,
+    reasonCodes: status === 'ready' ? ['health_probe_ok'] : [`health_${status}`],
+  });
 }
 
 async function createTask({ workspaceId, suffix, connectorVersion = '1.0.0', maxAttempts = 2 }) {
@@ -375,6 +392,14 @@ function completeResult(context) {
   return result;
 }
 
+async function assertTerminalError({ task, expectedStatus, expectedCode, label }) {
+  await waitFor(label, async () =>
+    (await getSourceTaskState(pool, task.state.workspaceId, task.state.sourceTaskId))?.status === expectedStatus,
+  );
+  const work = await pool.query('SELECT last_error_code FROM job_work_units WHERE id = $1', [task.state.workUnitId]);
+  assert.equal(work.rows[0]?.last_error_code, expectedCode);
+}
+
 let runtime;
 try {
   const databaseName = (await pool.query('SELECT current_database() AS name')).rows[0]?.name;
@@ -408,11 +433,14 @@ try {
   });
   await persistRegistryDefinition('1.0.0', 'enabled');
   await persistRegistryDefinition('1.0.1', 'dry_run');
+  await persistRegistryDefinition('1.0.2', 'enabled');
+  await persistHealth({ id: 'health-ready-1', observedAt: '2026-09-01T14:00:20.000Z', quotaRemaining: 10 });
 
   assert.throws(
     () => createSourceExecutionHandlers({
       pool,
       registryVersion: 'source-executors.v1',
+      maxHealthAgeSeconds: 60,
       contracts: contractAdapter,
       executors: {
         [policy.connectorKey]: {
@@ -432,9 +460,12 @@ try {
   await setupQueue.close();
 
   const invocations = [];
+  let runtimeNow = new Date('2026-09-01T14:00:30.000Z');
   const handlers = createSourceExecutionHandlers({
     pool,
     registryVersion: 'source-executors.v1',
+    maxHealthAgeSeconds: 60,
+    now: () => runtimeNow,
     contracts: contractAdapter,
     executors: {
       [policy.connectorKey]: {
@@ -442,11 +473,12 @@ try {
         implementationVersion: '1.0.0',
         networkAccess: 'none',
         execute: async (context) => {
-          invocations.push({ sourceTaskId: context.sourceTaskId, attempt: context.attempt });
+          invocations.push({ sourceTaskId: context.sourceTaskId, attempt: context.attempt, healthSnapshotId: context.health.id });
           assert.equal(context.request.executionIntent, 'execute');
           assert.equal(context.request.workspaceId, workspaceId);
           assert.equal(context.admission.decision, 'allow');
           assert.equal(context.definition.implementationVersion, '1.0.0');
+          assert.equal(context.health.connectorVersion, '1.0.0');
 
           if (context.sourceTaskId === 'source-task-retry' && context.attempt === 1) {
             const result = baseResult(context, 'failed', '2026-09-01T14:01:00.000Z');
@@ -532,9 +564,16 @@ try {
   assert.equal(retryEffect.rows.length, 1);
   assert.equal(retryEffect.rows[0]?.data?.kind, 'source_task_result_reference');
   assert.equal(retryEffect.rows[0]?.data?.resultRef, 'source-result-source-task-retry');
+  assert.equal(retryEffect.rows[0]?.data?.healthSnapshotId, 'health-ready-1');
   assert.deepEqual(retryEffect.rows[0]?.data?.sourceReferenceIds, ['source-ref-source-task-retry']);
   assert.equal('candidates' in retryEffect.rows[0].data, false);
   assert.equal('fields' in retryEffect.rows[0].data, false);
+
+  const retryUsage = await pool.query(
+    'SELECT metadata FROM source_task_usage_events WHERE source_task_id = $1 ORDER BY occurred_at, id',
+    [retryTask.state.sourceTaskId],
+  );
+  assert.deepEqual(retryUsage.rows.map((row) => row.metadata.healthSnapshotId), ['health-ready-1', 'health-ready-1']);
 
   const emptyTask = await createTask({ workspaceId, suffix: 'empty', maxAttempts: 1 });
   assert.equal(await runtime.reconcile(), 1);
@@ -547,6 +586,7 @@ try {
   );
   assert.deepEqual(emptyEffect.rows[0]?.data?.sourceReferenceIds, []);
   assert.equal(emptyEffect.rows[0]?.data?.resultRef, 'source-result-empty');
+  assert.equal(emptyEffect.rows[0]?.data?.healthSnapshotId, 'health-ready-1');
 
   const invalidTask = await createTask({ workspaceId, suffix: 'invalid', maxAttempts: 1 });
   assert.equal(await runtime.reconcile(), 1);
@@ -568,17 +608,108 @@ try {
   });
   const invocationsBeforeDryRun = invocations.length;
   assert.equal(await runtime.reconcile(), 1);
-  await waitFor('dry-run connector review', async () =>
-    (await getSourceTaskState(pool, workspaceId, dryTask.state.sourceTaskId))?.status === 'review',
-  );
+  await assertTerminalError({
+    task: dryTask,
+    expectedStatus: 'review',
+    expectedCode: 'SOURCE_EXECUTION_REGISTRY_IDENTITY_MISMATCH',
+    label: 'dry-run connector review',
+  });
   assert.equal(invocations.length, invocationsBeforeDryRun);
-  const dryWork = await pool.query(
-    'SELECT last_error_code FROM job_work_units WHERE id = $1',
-    [dryTask.state.workUnitId],
-  );
-  assert.equal(dryWork.rows[0]?.last_error_code, 'SOURCE_EXECUTION_REGISTRY_IDENTITY_MISMATCH');
 
-  console.log('Brovexa M02 provider-neutral SourceTask execution bridge + canonical worker/Valkey verification passed.');
+  const missingHealthTask = await createTask({
+    workspaceId,
+    suffix: 'missing-health',
+    connectorVersion: '1.0.2',
+    maxAttempts: 1,
+  });
+  const invocationsBeforeMissingHealth = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: missingHealthTask,
+    expectedStatus: 'review',
+    expectedCode: 'SOURCE_EXECUTION_HEALTH_MISSING',
+    label: 'missing health review',
+  });
+  assert.equal(invocations.length, invocationsBeforeMissingHealth);
+
+  await persistHealth({
+    id: 'health-unknown-2',
+    status: 'unknown',
+    observedAt: '2026-09-01T14:00:26.000Z',
+    quotaRemaining: 10,
+  });
+  const unknownTask = await createTask({ workspaceId, suffix: 'health-unknown', maxAttempts: 1 });
+  const invocationsBeforeUnknown = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: unknownTask,
+    expectedStatus: 'review',
+    expectedCode: 'SOURCE_EXECUTION_HEALTH_NOT_EXECUTABLE',
+    label: 'unknown health review',
+  });
+  assert.equal(invocations.length, invocationsBeforeUnknown);
+
+  await persistHealth({
+    id: 'health-circuit-3',
+    status: 'circuit_open',
+    observedAt: '2026-09-01T14:00:31.000Z',
+    quotaRemaining: 10,
+  });
+  runtimeNow = new Date('2026-09-01T14:00:32.000Z');
+  const circuitTask = await createTask({ workspaceId, suffix: 'health-circuit', maxAttempts: 1 });
+  const invocationsBeforeCircuit = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: circuitTask,
+    expectedStatus: 'dead_letter',
+    expectedCode: 'SOURCE_EXECUTION_HEALTH_CIRCUIT_OPEN',
+    label: 'circuit-open retry exhaustion',
+  });
+  assert.equal(invocations.length, invocationsBeforeCircuit);
+
+  await persistHealth({
+    id: 'health-low-quota-4',
+    status: 'ready',
+    observedAt: '2026-09-01T14:00:33.000Z',
+    quotaRemaining: 4,
+  });
+  runtimeNow = new Date('2026-09-01T14:00:34.000Z');
+  const quotaTask = await createTask({ workspaceId, suffix: 'health-quota', maxAttempts: 1 });
+  const invocationsBeforeQuota = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: quotaTask,
+    expectedStatus: 'dead_letter',
+    expectedCode: 'SOURCE_EXECUTION_HEALTH_QUOTA_INSUFFICIENT',
+    label: 'live quota retry exhaustion',
+  });
+  assert.equal(invocations.length, invocationsBeforeQuota);
+
+  runtimeNow = new Date('2026-09-01T14:10:34.000Z');
+  const staleTask = await createTask({ workspaceId, suffix: 'health-stale', maxAttempts: 1 });
+  const invocationsBeforeStale = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: staleTask,
+    expectedStatus: 'review',
+    expectedCode: 'SOURCE_EXECUTION_HEALTH_STALE',
+    label: 'stale health review',
+  });
+  assert.equal(invocations.length, invocationsBeforeStale);
+
+  runtimeNow = new Date(policy.nextReviewAt);
+  const expiredPolicyTask = await createTask({ workspaceId, suffix: 'policy-expired', maxAttempts: 1 });
+  const invocationsBeforePolicyExpiry = invocations.length;
+  assert.equal(await runtime.reconcile(), 1);
+  await assertTerminalError({
+    task: expiredPolicyTask,
+    expectedStatus: 'review',
+    expectedCode: 'SOURCE_EXECUTION_POLICY_REVIEW_EXPIRED',
+    label: 'expired policy review',
+  });
+  assert.equal(invocations.length, invocationsBeforePolicyExpiry);
+
+  console.log('Brovexa M02 source execution policy/health gate + canonical worker/Valkey verification passed.');
 } finally {
   await runtime?.close();
   await resetDatabase();
