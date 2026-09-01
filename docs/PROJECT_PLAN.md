@@ -1,6 +1,6 @@
 # Brovexa Project Plan
 
-Status: **Planning Only — feature development is not authorized until M00/ABD-215 and explicit owner consent.**
+Status: **ACTIVE IMPLEMENTATION — M00/ABD-215 readiness and explicit owner development consent are satisfied. Production/provider activation gates remain separate.**
 
 ## Product mission
 
@@ -30,7 +30,7 @@ Each asynchronous stage must be independently retryable, idempotent, versioned, 
 
 ## M00 — Product, Compliance & Architecture Baseline
 
-Development is blocked until this milestone and explicit owner consent are approved.
+M00/ABD-215 readiness and explicit owner development consent are satisfied for the active project. Later production/provider/legal/commercial gates remain separately authoritative.
 
 Current required Linear gates include:
 - ABD-209 product scope/personas/workflows/service taxonomy
@@ -280,4 +280,4 @@ For agent-executed work, DONE also requires the Agent Instruction Drift Check. A
 
 ## Development authorization
 
-Planning, research, audits, documentation and ADR preparation may proceed. Feature code, connectors, payment activation, scheduled research workflow and product implementation begin only after M00 is internally consistent, ABD-215 is explicitly approved, and the owner explicitly consents to development.
+M00/ABD-215 readiness and explicit owner consent are satisfied for this active development project. Feature implementation may continue through the approved bounded milestone/PR/FULL-GATE process. Production credentials/provider activation, scheduled/unrestricted acquisition, payment activation, autonomous outreach, destructive production actions and deployment/release gates remain separately controlled and must not be inferred from general development authorization.
