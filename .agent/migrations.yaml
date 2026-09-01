@@ -1,0 +1,22 @@
+version: 1
+policy: serialized-reservation
+
+latest_integrated_migration: "0009_connector_execution_safety"
+next_unreserved_number: "0010"
+
+rules:
+  - Reserve a migration number before creating migration files.
+  - One migration number may have only one active reservation.
+  - Reservation records task ID, branch, owner and status.
+  - Parallel agents must not independently choose the same next number.
+  - Integrated migrations are immutable; use a new forward migration unless an explicit migration policy says otherwise.
+  - Down/rollback behavior and destructive verifier reset order must be considered by the owning workstream.
+
+reservation_statuses:
+  - RESERVED
+  - IMPLEMENTED
+  - INTEGRATED
+  - RELEASED
+  - CANCELLED
+
+reservations: []
