@@ -1,0 +1,61 @@
+version: 1
+policy: supervisor-reviewed-integration
+
+supervisor:
+  agent_id: SUPERVISOR
+  main_branch: main
+  work_branch: supervisor/integration-control
+  role: integration_architecture
+  state: WORKING
+
+completion_signal:
+  exact_phrase: "Work Done and Submitted"
+  canonical_event: top-level-pr-comment-exact-body
+  meaning: READY_FOR_SUPERVISOR_REVIEW
+  requires:
+    - open_pull_request
+    - exact_head_sha
+    - complete_handoff
+    - instruction_drift_check
+    - dependency_state
+    - verification_evidence
+    - synced_to_latest_epoch
+
+interrupt_flow:
+  - PAUSE_SUPERVISOR_WORK
+  - REVIEW_EXACT_HEAD
+  - REQUEST_CHANGES_OR_APPROVE
+  - REQUIRE_EXACT_HEAD_GATES
+  - MERGE_WITH_EXPECTED_HEAD
+  - READ_RESULTING_MAIN
+  - INCREMENT_SYNC_EPOCH
+  - BROADCAST_ALL_ACTIVE_AGENTS
+  - RESUME_SUPERVISOR_WORK
+
+review_queue:
+  policy: fifo-with-dependency-priority
+  concurrent_overlapping_merges: false
+
+broadcast:
+  issue_number: 50
+  exact_alert: "New changes have been merged — please merge these changes into your branch first, then resume your own work."
+  also_comment_on_active_agent_prs: true
+  require_main_sha: true
+  require_sync_epoch: true
+
+synchronization:
+  current_epoch: 1
+  current_main_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
+  strategy: merge-current-main-non-destructively
+  force_history_rewrite_default: false
+  shared_file_conflicts_escalate_to_supervisor: true
+  must_sync_before_resume: true
+  must_sync_before_completion_signal: true
+
+states:
+  - WORKING
+  - PAUSED_FOR_REVIEW
+  - REVIEWING
+  - CHANGES_REQUESTED
+  - MERGING
+  - BROADCASTING
