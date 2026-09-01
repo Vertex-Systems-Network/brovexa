@@ -83,6 +83,7 @@ handoff_required_fields:
   - task_id
   - agent_id
   - owner_role
+  - assigned_slot_id
   - status
   - base_sha
   - head_sha
