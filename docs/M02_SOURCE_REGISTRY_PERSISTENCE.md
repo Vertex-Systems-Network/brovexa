@@ -1,6 +1,6 @@
 # M02 — Durable Source Registry & Admission Persistence
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -72,7 +72,7 @@ These rules prevent a caller from persisting a forged admission envelope that ap
 
 ## Schema readiness
 
-`packages/db/src/client.ts` now includes the source registry schema in the Drizzle database surface and requires all four 0007 tables for `probeDatabase().schemaReady === true`.
+`packages/db/src/client.ts` includes the source registry schema in the Drizzle database surface and requires all four 0007 tables for `probeDatabase().schemaReady === true`.
 
 Therefore rolling back 0007 makes the canonical readiness probe fail closed until the migration is reapplied.
 
@@ -109,6 +109,18 @@ The canonical DB harness also proves 0007 apply → rollback → reapply and ful
 
 All destructive M01A database/RBAC/queue verification harnesses were mechanically reconciled to reset the new source tables and expect migration 0007. Their original runtime assertions were not broadened or weakened.
 
+### Exact integration evidence
+
+- final source head: `898ae65940fa635d156adb5ed450039c1eb23b53`
+- PR #41: `feat(m02): add durable source registry persistence`
+- exact-head FULL GATE run `33516572468`: PASS
+- quality/security job `99884982402`: PASS
+- PostgreSQL 18 migration + RBAC job `99885740321`: PASS
+- canonical worker + Valkey job `99886020576`: PASS
+- merge SHA: `e8198d259a4ffccbebd723154e1eafd5dac5365a`
+
+The exact-head run passed source/security checks, dependency audit, full runtime build/typecheck/unit tests, API observability/reload smoke, PostgreSQL 18 migration/data-layer verification including the new source registry and admission snapshot checks, tenant/RBAC regressions, and canonical worker/Valkey recovery/correlation checks.
+
 ## Explicit non-scope
 
 This slice does **not** implement or activate:
@@ -126,24 +138,6 @@ This slice does **not** implement or activate:
 
 No real external source can be called merely because a registry definition exists. `dry_run` remains non-production execution intent and this slice contains no provider transport implementation.
 
-## Branch verification status
-
-Feature branch base: `6dbd8c3491f5beec699a90e953bb4d2f789e65b8`
-
-The implementation must not be marked verified or integrated until the exact final branch head passes the repository FULL GATE and the PR is merged with that exact expected head SHA.
-
-### Exact integration evidence
-
-To be filled only after successful hosted FULL GATE and merge:
-
-- final source head: pending
-- PR: pending
-- exact-head FULL GATE run: pending
-- quality/security job: pending
-- PostgreSQL 18 migration + RBAC job: pending
-- canonical worker + Valkey job: pending
-- merge SHA: pending
-
 ## Next safe slice
 
-After this registry/persistence boundary is independently FULL-GATE verified, implement the bounded durable `SourceTask` / ResearchJob preflight lifecycle that consumes an exact immutable admission snapshot. Keep provider transport execution disabled until task state, retry/idempotency, budget, cancellation and provenance boundaries are separately verified.
+Implement the bounded durable `SourceTask` / ResearchJob preflight lifecycle that consumes an exact immutable admission snapshot. Keep provider transport execution disabled until task state, retry/idempotency, budget, cancellation and provenance boundaries are separately verified.
