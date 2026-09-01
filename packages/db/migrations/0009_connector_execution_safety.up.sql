@@ -34,9 +34,9 @@ CREATE TABLE connector_health_snapshots (
     AND envelope->>'connectorVersion' IS NOT DISTINCT FROM connector_version
     AND envelope->>'status' IS NOT DISTINCT FROM status
     AND (envelope->>'observedAt')::timestamptz IS NOT DISTINCT FROM observed_at
-    AND envelope->'quotaRemaining' IS NOT DISTINCT FROM to_jsonb(quota_remaining)
+    AND envelope->'quotaRemaining' IS NOT DISTINCT FROM COALESCE(to_jsonb(quota_remaining), 'null'::jsonb)
     AND (envelope->>'rollingErrorRate')::double precision IS NOT DISTINCT FROM rolling_error_rate
-    AND envelope->'p95LatencyMs' IS NOT DISTINCT FROM to_jsonb(p95_latency_ms)
+    AND envelope->'p95LatencyMs' IS NOT DISTINCT FROM COALESCE(to_jsonb(p95_latency_ms), 'null'::jsonb)
     AND envelope->'reasonCodes' IS NOT DISTINCT FROM reason_codes
   ),
   CONSTRAINT connector_health_snapshots_definition_fk
