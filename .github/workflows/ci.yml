@@ -56,6 +56,9 @@ jobs:
       - name: Verify parallel-agent governance contract
         run: node scripts/verify-parallel-development.mjs
 
+      - name: Verify atomic branch lease governance
+        run: node scripts/verify-agent-lease-governance.mjs
+
       - name: Verify tracked source formatting
         run: node scripts/verify-source-hygiene.mjs
 
