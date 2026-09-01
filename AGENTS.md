@@ -14,9 +14,32 @@ Before planning or changing code, every agent must:
 6. Read `docs/AI_NATIVE_PLAN.md` for branch/module/agent/merge assignments.
 7. Read the relevant milestone/module documents for the assigned workstream.
 8. Inspect the latest `main`, its own branch/head, the latest Supervisor synchronization epoch and declared dependencies before editing.
-9. Check `.agent/` coordination manifests, especially `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml` and `.agent/supervisor.yaml`.
+9. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml` and `.agent/supervisor.yaml`.
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
+
+## New Agent Onboarding — mandatory
+
+A newly arriving agent **always starts from the exact current `main` branch/head**. It does not begin from a standing module branch and it does not start feature work before Supervisor assignment.
+
+Required flow:
+
+1. initialize/read the repository from current `main` and record the exact `main` SHA plus latest Supervisor synchronization epoch;
+2. stop there while the Supervisor reads `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml`;
+3. the Supervisor checks for an assignable slot whose status is exactly `OPEN`;
+4. if an `OPEN` slot exists, the Supervisor selects one, verifies that standing branch is synchronized to the same current `main` SHA/latest epoch, and records the new agent name plus slot status `OCCUPIED` and start status in the AI-Native Plan/slot registry before feature work begins;
+5. only after assignment may the agent switch from `main` to the assigned standing module branch and receive/execute a bounded work packet;
+6. onboarding decisions are serialized by the Supervisor so two arrivals cannot claim the same slot.
+
+New-agent arrival never creates extra capacity on demand. A new module/branch must have been planned and bootstrapped before it can appear as an `OPEN` slot.
+
+If **no assignable `OPEN` slot exists**, the Supervisor must stop the new agent immediately and respond exactly:
+
+**Go Home Come Back Next Time**
+
+In that case there is **no module assignment, no module-branch checkout, no work packet, no feature edit and no agent PR**. The rejected agent does not start work.
+
+Slot assignment/release is Supervisor-owned. A slot returns to `OPEN` only after the Supervisor confirms that its assigned agent has no active work packet or unmerged work for that slot and updates the plan/slot registry accordingly.
 
 ## Supervisor / Main-repository role
 
@@ -26,6 +49,10 @@ The Supervisor:
 
 - creates the required parallel module branches before documenting/assigning a new parallel wave;
 - owns `supervisor/integration-control` for its own bounded work;
+- onboards new agents from current `main` only;
+- checks and serializes `OPEN` module-slot assignments;
+- updates `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml` with assigned agent name/occupancy/start state;
+- rejects arrivals with the exact no-capacity phrase when no slot is open;
 - maintains `docs/AI_NATIVE_PLAN.md` and `.agent/` coordination state;
 - reviews incoming agent pull requests and exact head SHAs;
 - determines dependency-safe merge order;
@@ -118,6 +145,7 @@ At task start and again before declaring the task complete, explicitly check whe
 Instruction drift includes changes to:
 
 - architecture/module boundaries;
+- new-agent onboarding/start branch/slot rules;
 - branch/worktree/PR workflow;
 - Supervisor behavior;
 - completion/submission signaling;
@@ -135,7 +163,7 @@ If anything changed, became incomplete or misleading, the same change set must u
 - `AGENTS.md`;
 - `README.md`;
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
-- `docs/AI_NATIVE_PLAN.md` when branch/role/merge behavior changed;
+- `docs/AI_NATIVE_PLAN.md` when branch/role/slot/merge behavior changed;
 - the relevant module/ADR/checkpoint document;
 - `.agent/` manifests and `scripts/verify-parallel-development.mjs` when the machine-readable contract changed.
 
@@ -151,10 +179,11 @@ It is also run by hosted CI. Do not bypass or weaken it merely to obtain green C
 
 - One active work packet per agent.
 - One workstream = one isolated branch/worktree = one PR by default.
+- New agents start on current `main` and must receive an `OPEN` slot assignment before switching to a module branch.
 - Stay inside assigned write scope.
 - Public contracts/interfaces are the coordination boundary; do not silently redesign another module.
 - Shared files and migration numbers are coordinated before editing.
-- Two agents never independently claim the same task or migration reservation.
+- Two agents never independently claim the same task, slot or migration reservation.
 - Dependency stacking requires explicit SHAs/contracts.
 - Completion signal never overrides dependency order.
 - No agent may weaken tests, security invariants, tenant boundaries, policy gates, budgets or append-only/idempotency guarantees.
@@ -172,7 +201,7 @@ Use six concurrent agents when enough independent work exists:
 5. Module / Connector Infrastructure Agent
 6. Verification / Security Agent
 
-Scale to eight only when ownership/dependencies are clear and metrics remain healthy.
+Scale to eight only when ownership/dependencies are clear and metrics remain healthy. A newly arriving agent does not itself trigger capacity expansion.
 
 ## Integration discipline
 
@@ -195,6 +224,7 @@ Every agent handoff includes at least:
 
 - task/workstream ID;
 - agent ID/role/status;
+- assigned slot ID;
 - branch, PR, base SHA and exact head SHA;
 - `synced_main_sha` and `sync_epoch`;
 - changed paths;
