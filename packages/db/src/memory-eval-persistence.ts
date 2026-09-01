@@ -206,7 +206,7 @@ export async function getMemoryRecordEnvelope(
 }
 
 export async function persistEvalResult(
-  pool: Pool,
+  pool: Pool | PoolClient,
   input: PersistEvalResultInput,
 ): Promise<string> {
   assertConfidence(input.confidence);
