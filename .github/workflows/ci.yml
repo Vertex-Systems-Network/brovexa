@@ -37,6 +37,9 @@ jobs:
       - name: Verify queue foundation contract
         run: node scripts/verify-queue-foundation.mjs
 
+      - name: Verify parallel-agent governance contract
+        run: node scripts/verify-parallel-development.mjs
+
       - name: Verify tracked source formatting
         run: node scripts/verify-source-hygiene.mjs
 

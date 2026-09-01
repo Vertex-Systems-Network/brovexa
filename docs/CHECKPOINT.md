@@ -1,51 +1,63 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 ## Project state
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. The planned provider-neutral M01A — AI Agent Runtime & Memory OS foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE with eleven FULL-GATE verified slices on `main`. M02 — Business Discovery & Source Connectors is the next active implementation phase.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. The planned provider-neutral M01A — AI Agent Runtime & Memory OS foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with five bounded implementation slices FULL-GATE verified and integrated on `main`.**
 
-This means the governed platform foundation and provider-neutral AI runtime/memory foundation are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production model providers, source connectors, payments or outreach.
+Current integrated `main` head at this checkpoint branch base:
+
+`bec3c6bb9fd89dd496b155b0f6087e5a8f77b223`
+
+This is a governed development checkpoint, not a production-release claim. Production model/provider invocation, source-provider network execution/credentials, payments, unrestricted acquisition, autonomous outreach and production deployment remain separately gated.
+
+## Canonical agent working instructions
+
+Parallel AI-assisted development now has a permanent repository-level operating model:
+
+- `AGENTS.md` — canonical startup/working instructions;
+- `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full multi-agent protocol;
+- `.agent/ownership.yaml` — path/module ownership defaults;
+- `.agent/shared-files.yaml` — high-conflict integration-owned paths;
+- `.agent/workstreams.yaml` — role/capacity/state model;
+- `.agent/dependencies.yaml` — dependency DAG/interface-freeze rules;
+- `.agent/migrations.yaml` — serialized migration reservation state;
+- `pnpm run verify:parallel` — executable governance verifier used locally and by hosted CI.
+
+Every agent must perform the **Agent Instruction Drift Check** at task start and before completion. If architecture, workflow, ownership, migration, dependency, verification, CI, security/policy or integration instructions changed, the same change set must update `AGENTS.md`, `README.md` and relevant coordination/module/checkpoint documentation. A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
+
+Default parallel target is **6 agents**; scale to **8** only with explicit independent workstreams and healthy integration metrics.
 
 ## Authorization boundary
 
-The approved M01 and provider-neutral M01A foundation scopes are complete.
+The approved M01 and provider-neutral M01A foundations are complete. M02 implementation may continue in small reversible provider-neutral slices.
 
-Still separately gated: production model/provider invocation and credentials, production source connector credentials/activation, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and unresolved legal/provider/commercial decisions.
+Still separately gated:
 
-M02 implementation may proceed in small reversible provider-neutral slices that do not activate external production credentials or connectors until their own policy/provider gates are satisfied.
+- production model/provider invocation and credentials;
+- production source connector credentials/activation;
+- real provider HTTP/API transport until network/SSRF/policy/credential controls are independently verified;
+- payment-provider activation;
+- unrestricted acquisition;
+- autonomous/bulk outreach;
+- Daily Market Intelligence Scout activation;
+- production deployment;
+- destructive production data actions;
+- unresolved legal/provider/commercial decisions.
 
-## VCS / integration state
+Parallelism does not widen any authorization boundary.
+
+## Default-branch integration posture
 
 - default branch: `main`
-- current integrated `main` head at this checkpoint branch base: `a3c55faef0d350dca70f576ab6ab89972dd10020`
-- original planning PR #1: closed unmerged; superseded by same-head replacement PR #12
-- planning integration PR #12: merged as `0c9ce138fe0b4dc80ce60c33f291cb00b0a59859`
-- consolidated M01 stack PR #11: merged into `m01/platform-foundation` as `825bddeb00a2d571e5e8132b077fb9707b2021e0`
-- final M01 default-branch integration PR #13: merged to `main` as `c82c46649033988c5f90d0e4407a47d02aab4d8a`
-- M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged as `2a455d561472417a8b353b0303bb848b94e0cdf2`
-- M01A deterministic specialist execution bridge PR #31: exact source head `18340eed0d1be87e27cbe60b2b4777ba6113fc30`, merged as `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
-- M01A execution aggregation + evaluator handoff PR #33: exact source head `65fa365ef22c481d721bd93ce630f631b67fde46`, merged as `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
-- M01A evaluator decision + review resolution PR #35: exact source head `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`, merged as `206e9f00b14674f6ec182751d0b56f85821b6e4b`
-- M01A runtime trace + route hardening PR #37: exact source head `80259f7ebb2e40d30512862d0333e315207700f2`, merged as `a3c55faef0d350dca70f576ab6ab89972dd10020`
-- legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may remain closed/unmerged
+- current integrated main at this checkpoint base: `bec3c6bb9fd89dd496b155b0f6087e5a8f77b223`
+- native branch protection previously observed as off; repository compensating controls remain authoritative unless re-verified otherwise
+- PR-based integration, exact-head CI evidence, no force-push/history rewrite and expected-head merge checks remain the operating discipline
 
-Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes were performed through remote GitHub tooling.
-
-## Default-branch security
-
-GitHub was re-read after M01 integration on 2026-08-31:
-
-- `main` protected: **false**
-- required status checks: **off**
-- repository rulesets observed: **none**
-
-Native protection is not claimed. `docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the compensating control: PR-only integration, no force push/history rewrite, no auto-merge, executable evidence for runtime/product integration, and expected-head SHA verification immediately before explicit merges.
-
-Linear `ABD-266` exit is satisfied through the documented/exercised compensating path; native protection remains a future hardening opportunity when the repository/tooling supports it.
+`docs/DEFAULT_BRANCH_INTEGRATION_POLICY.md` remains the canonical compensating-control document.
 
 ## M01 verification state
 
@@ -53,181 +65,224 @@ Linear `ABD-266` exit is satisfied through the documented/exercised compensating
 
 State: **VERIFIED / DONE**.
 
-Final hosted evidence: run `33312134186`, job `99258997531`.
+Final hosted evidence remains recorded in the M01 integration history.
 
 ### ABD-260 — PostgreSQL migration / data layer
 
 State: **VERIFIED / DONE**.
 
-Final evidence: run `33333195961`.
+The canonical migration/data-layer path remains part of every FULL GATE.
 
 ### ABD-261 — durable worker / queue foundation
 
 State: **VERIFIED / DONE**.
 
-Final evidence: run `33334936386`.
+Canonical worker recovery/idempotency/correlation verification remains active.
 
 ### ABD-262 — identity / RBAC / tenant primitives
 
 State: **VERIFIED / INTEGRATED**.
 
-Frozen implementation head: `c13a0e12b40aa364fa54465408cdabb88f58f55c`.
-Final evidence: run `33369721378`.
-
-Verified deny-by-default tenant authorization, composite cross-tenant integrity, stale-grant mutation revalidation, one-shot owner bootstrap, immutable canonical owner role, last-active-owner safeguards, authorization audit events, provider-neutral identity/session boundary, and API tenant-context tests.
+Deny-by-default tenant authorization, cross-tenant integrity and owner/RBAC safeguards remain regression-gated.
 
 ### ABD-263 — API / observability / health
 
 State: **VERIFIED / INTEGRATED / DONE**.
 
-Frozen implementation head: `421720a57ece7a932eedd4ebb794c393b62475fd`.
-Final evidence: run `33371785178`.
-
-- quality/build/typecheck/unit + live API smoke `99424328348`: PASS
-- PostgreSQL 18 + tenant/RBAC regression `99424892965`: PASS
-- worker + Valkey regression `99425085741`: PASS
-
-Verified bounded request IDs, strict W3C trace correlation, stable correlated safe errors, internal-error redaction, structured matched/unmatched request logs, query redaction, and health/readiness semantics.
-
-### ABD-266 — default-branch protection / compensating controls
-
-State: **DONE VIA COMPENSATING CONTROL / NATIVE PROTECTION OFF**.
-
-The compensating path continues to be exercised with reviewed PRs, explicit integration decisions, expected-head merges, no auto-merge, and no history rewrite.
+API observability, correlated safe errors and health/readiness semantics remain part of the hosted quality/runtime path.
 
 ### ABD-264 — M01 FULL GATE
 
-State: **VERIFIED / DONE / INTEGRATED**.
+State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
 
-Frozen exact FULL GATE head: `083b99400597a5e14827cf4ca52d270d9278defa`.
-Exact-head run `33377314942`: PASS.
+The current hosted FULL GATE continues to require quality/security, PostgreSQL 18 + RBAC, and canonical worker + Valkey lanes.
 
-- M01 FULL GATE quality/security `99441599943`: PASS
-- PostgreSQL 18 migration + RBAC `99442228132`: PASS
-- canonical worker + Valkey recovery/idempotency/correlation `99442428894`: PASS
+### ABD-266 — default-branch protection / compensating controls
 
-## M01A verification state
+State: **DONE VIA COMPENSATING CONTROL / NATIVE PROTECTION REQUIRES CURRENT RE-READ BEFORE CLAIMING OTHERWISE**.
 
-State: **VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE — eleven provider-neutral foundation slices**.
+PR-only integration, explicit exact-head verification, no history rewrite and expected-head merge checks remain the compensating operating path.
 
-Integrated slices:
+## M01A state
 
-1. executable governed Agent/Memory/Eval contracts and safety invariants;
-2. canonical `AgentDefinition → ContextReceipt → AgentRun` PostgreSQL persistence;
-3. durable governed `MemoryRecord` and independent `EvalResult` persistence;
-4. append-only AgentRun transitions and explicit memory supersession/deletion lifecycle;
-5. deterministic approved Agent Registry and minimum-necessary Context Builder runtime;
-6. bounded immutable provider-neutral Orchestrator/Planner `AgentExecutionPlan` persistence;
-7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation;
-8. deterministic specialist execution bridge with per-attempt child ContextReceipt/AgentRun trace, retry lifecycle, canonical checkpoints/budgets and structured governed result persistence;
-9. deterministic completed-DAG aggregation with exact specialist-result/run/budget validation, explicit orchestrator outcome handling and exact deterministic independent-evaluator handoff;
-10. deterministic evaluator decision application with current authorization/definition/context/evidence-policy revalidation, durable independent EvalResult finalization, fail-closed review normalization, and active-owner-only explicit review/resume resolution;
-11. provider-neutral exact route-policy resolution and privileged bounded execution tracing across canonical Job/Plan/Work/Agent/Eval lifecycle state.
+**VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE — eleven provider-neutral foundation slices.**
 
-### Seventh-slice exact evidence — deterministic plan dispatcher
+Integrated capabilities include:
 
-- source head: `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`
-- PR #29: `feat(m01a): add deterministic agent plan dispatcher`
-- exact-head FULL GATE run `33449897197`: PASS
-- quality/security job `99677185961`: PASS
-- PostgreSQL 18 migration + RBAC job `99677793352`: PASS
-- canonical worker + Valkey job `99678018183`: PASS
-- merge SHA: `2a455d561472417a8b353b0303bb848b94e0cdf2`
+1. governed Agent/Memory/Eval contracts;
+2. AgentDefinition/ContextReceipt/AgentRun persistence;
+3. MemoryRecord/EvalResult persistence;
+4. append-only AgentRun and memory lifecycle;
+5. deterministic Agent Registry + Context Builder;
+6. bounded immutable AgentExecutionPlan persistence;
+7. deterministic plan dispatch to canonical JobRun/WorkUnit;
+8. specialist execution bridge with durable trace/retry/budgets;
+9. completed-DAG aggregation + independent evaluator handoff;
+10. evaluator decision/review resolution lifecycle;
+11. exact route-policy resolution and privileged bounded execution trace.
 
-The first dispatcher CI attempt `33448973098` exposed a test-fixture problem rather than a runtime defect: the verifier tried to suspend the only active owner and the existing `workspace_requires_active_owner` invariant correctly rejected it. The fixture was corrected to revoke a normal member while retaining the active owner. No RBAC or lifecycle invariant was weakened.
+Production model/provider execution remains separately gated and is not implied by M01A completion.
 
-### Eighth-slice exact evidence — deterministic specialist execution bridge
+## M02 state
 
-- source head: `18340eed0d1be87e27cbe60b2b4777ba6113fc30`
-- PR #31: `feat(m01a): add deterministic specialist execution bridge`
-- exact-head FULL GATE run `33452361663`: PASS
-- quality/security job `99684875670`: PASS
-- PostgreSQL 18 migration + RBAC job `99685310855`: PASS
-- canonical worker + Valkey job `99685494095`: PASS
-- merge SHA: `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
+**ACTIVE — five bounded slices VERIFIED / INTEGRATED.**
 
-The first specialist-bridge run `33452024750` passed quality, PostgreSQL/RBAC and the pre-existing canonical worker integration verifier. The new specialist verifier then failed because its broad child-context selector also counted the parent ContextReceipt (`3` rows instead of the expected `2`). The selector was tightened by exact specialist agent identity; runtime behavior was unchanged, and the final exact-head run passed all lanes.
+### Slice 1 — provider-neutral source adapter foundation
 
-### Ninth-slice exact evidence — execution aggregation + evaluator handoff
+Integrated behavior:
 
-- source head: `65fa365ef22c481d721bd93ce630f631b67fde46`
-- PR #33: `feat(m01a): aggregate specialist DAGs and create evaluator handoff`
-- exact-head FULL GATE run `33484348956`: PASS
-- quality/security job `99780868770`: PASS
-- PostgreSQL 18 migration + RBAC job `99781570196`: PASS
-- canonical worker + Valkey job `99781739052`: PASS
-- merge SHA: `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
+- executable SourceCapability/ConnectorPolicy/ConnectorDefinition/request/result/health contracts;
+- deterministic fail-closed admission;
+- provenance-bearing normalized candidate/result contracts;
+- export/attribution/pagination/budget hardening;
+- no provider HTTP/network/credentials.
 
-The initial aggregation run `33483976613` passed quality/security but the PostgreSQL lane stopped before reaching the new aggregation verifier because the older lifecycle verifier used a fixed `2026-09-01T01:00:00Z` transition time while persisted AgentRun state used current database time. The existing `AGENT_RUN_TRANSITION_TIME_REGRESSION` guard correctly rejected the stale fixture. The verifier was changed to derive transition timestamps from the persisted run `updated_at`; no lifecycle invariant was weakened.
+Integration evidence:
 
-### Tenth-slice exact evidence — evaluator decision + owner review resolution
+- source head `efbf0f3f2ad8cfd24ccd7c597e1624cd7dd8dbcd`
+- PR #39
+- exact-head FULL GATE run `33501506534`: PASS
+- merge `f2852d9055d55e332e0617e455901ca673f46503`
 
-- source head: `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`
-- PR #35: `feat(m01a): apply evaluator decisions and resolve reviews`
-- exact-head FULL GATE run `33489635395`: PASS
-- quality/security job `99797806016`: PASS
-- PostgreSQL 18 migration + RBAC job `99798572515`: PASS
-- canonical worker + Valkey job `99798867860`: PASS
-- merge SHA: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
+### Slice 2 — durable source registry + admission persistence
 
-The verifier proved high-confidence verified acceptance, durable EvalResult persistence and replay, fail-closed evidence-scope rejection, low-confidence/unverified acceptance normalization to review, non-owner denial, owner-attributed resume/approval lifecycle, and contradiction-backed rejection.
+Integrated behavior:
 
-### Eleventh-slice exact evidence — runtime trace + route hardening
+- migration `0007_source_registry_foundation`;
+- immutable/versioned SourceCapability, ConnectorPolicy and ConnectorDefinition persistence;
+- tenant-scoped immutable SourceAdmissionSnapshot persistence;
+- append-only DB invariants and exact identity bindings;
+- no provider transport/credentials.
 
-- source head: `80259f7ebb2e40d30512862d0333e315207700f2`
-- PR #37: `feat(m01a): harden runtime trace and route policy`
-- exact-head FULL GATE run `33492278414`: PASS
-- quality/security job `99806288562`: PASS
-- PostgreSQL 18 migration + RBAC job `99807024306`: PASS
-- canonical worker + Valkey job `99807298693`: PASS
-- merge SHA: `a3c55faef0d350dca70f576ab6ab89972dd10020`
+Integration evidence:
 
-The verifier proved deterministic-only provider/model rejection, approved provider/model allowlists, explicit fallback opt-in, real persisted Job/Work/effect/checkpoint/transition trace composition, `workspace.audit.read` enforcement, normal-member denial and cross-tenant isolation. No provider/model invocation, credential access or network execution was activated.
+- source head `898ae65940fa635d156adb5ed450039c1eb23b53`
+- PR #41
+- exact-head FULL GATE run `33516572468`: PASS
+- merge `e8198d259a4ffccbebd723154e1eafd5dac5365a`
 
-Current evidence-based estimate: planned provider-neutral M01A foundation **100% complete**, with **0 focused engineering days** remaining in that bounded phase. Production provider/model execution remains a later gated capability and is not implied by M01A completion.
+### Slice 3 — durable ResearchJob preflight + SourceTask lifecycle
 
-## Integration verification layers
+Integrated behavior:
 
-M01 was not merged to `main` from source evidence alone. It passed three verification layers:
+- migration `0008_source_task_preflight`;
+- immutable ResearchJob preflights bound to exact execute-admission snapshots;
+- SourceTasks bound to exact workspace/request/source/connector/policy identity;
+- canonical retry/cancel/dead-letter lifecycle;
+- append-only usage with admitted-budget enforcement;
+- idempotent completion provenance;
+- semantic PostgreSQL JSONB replay equality.
 
-1. **Frozen FULL GATE source:** `083b9940...`, run `33377314942` PASS.
-2. **Post-stack integrated M01 branch:** `825bddeb...`, run `33405687098` (#132) SUCCESS.
-3. **Current-main merge context:** PR #13, run `33406039572` (#133) PASS:
-   - quality/security + dependency audit + runtime/live API `99533753418`: PASS
-   - PostgreSQL 18 migration + tenant/RBAC `99534688415`: PASS
-   - canonical worker + Valkey recovery/idempotency/correlation `99535283167`: PASS
+Integration evidence:
 
-PR #13 then merged with expected head `825bddeb00a2d571e5e8132b077fb9707b2021e0` and produced `main` commit `c82c46649033988c5f90d0e4407a47d02aab4d8a`.
+- source head `3c5a6df1ede81d80c30287ca6d8fe884d1f66a64`
+- PR #44
+- replacement-PR FULL GATE run `33541205516` (#200): PASS
+- merge `ce4f43648f764aeef8e153d21cbc769ddf2bdf60`
 
-The same compensating integration discipline was applied through M01A: each implementation slice was isolated, verified on its exact current PR head through the hosted FULL GATE, and merged only with an expected-head SHA guard.
+### Slice 4 — provider-neutral SourceTask execution bridge
+
+Integrated behavior:
+
+- canonical `source.execute` handler bridge for injected/test-only executors;
+- exact SourceTask/WorkUnit/frozen admission/registry identity revalidation;
+- mandatory injected contract parsing/result validation;
+- per-attempt usage before retry/completion;
+- reference-only durable completion effects;
+- legitimate empty results supported;
+- executor registration restricted to `networkAccess: 'none'`;
+- production worker bootstrap remains without `source.execute` registration.
+
+Integration evidence:
+
+- source head `da14088d9cb48a1b68a14a394f82d9100498dbec`
+- PR #46
+- fresh PR-specific FULL GATE run `33544593764` (#202): PASS
+- merge `08b33930bb6678a23ffcc5299ae56ed4b029f1ba`
+
+### Slice 5 — connector execution safety / durable health
+
+Integrated behavior:
+
+- migration `0009_connector_execution_safety`;
+- append-only exact connector-version health snapshots;
+- execution-time policy-state/review-expiry revalidation;
+- health identity/freshness/status gate before executor invocation;
+- live quota revalidation before executor invocation;
+- rate-limited/circuit-open paths retry without invoking executor;
+- missing/stale/future/unknown/disabled health fails closed;
+- successful usage/effects bind exact `healthSnapshotId`;
+- no production network/provider transport or credential mode enabled.
+
+Integration evidence:
+
+- source head `cdd4fc7fdfb8796c7954255cc2edbc4253e705a4`
+- PR #48 (replacement for draft #47 due connector GraphQL ready-for-review bug)
+- fresh PR-specific FULL GATE run `33550775612` (#219): PASS
+- quality/security: PASS
+- PostgreSQL 18 migration + RBAC: PASS
+- canonical worker + Valkey including source execution safety verifier: PASS
+- merge `bec3c6bb9fd89dd496b155b0f6087e5a8f77b223`
+
+## Current M02 safety boundary
+
+The source pipeline has durable policy, task, execution and health safety foundations, but **real provider transport is still intentionally absent**.
+
+Current production `apps/worker/src/main.ts` registers only the foundation handler and does not register `source.execute`. Therefore merged M02 execution infrastructure alone cannot perform real provider network traffic.
+
+Before any real provider transport is enabled, the relevant bounded slice must independently define and verify the required network/SSRF/egress, robots/provider policy, credential/secret, quota/circuit, observability and provider-specific constraints.
+
+Provider responses remain untrusted candidates and must not become canonical Business/Location/Contact facts merely because transport exists.
+
+## Parallel engineering operating model
+
+Default active layout when sufficient independent work exists:
+
+1. Integration / Architecture Controller
+2. Contracts / Policy Agent
+3. Database / Persistence Agent
+4. Worker / Runtime Agent
+5. Module / Connector Infrastructure Agent
+6. Verification / Security Agent
+
+Default invariant:
+
+`1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
+
+Dependent work is coordinated through explicit contract/interface freeze points and a dependency DAG. Migration identifiers are reserved before use. Shared files are integration-owned when collision risk exists.
+
+The implementation agent does not self-certify security by itself: a separate verification role attempts replay, concurrency, tenant, authorization, budget, stale-state, migration and network-boundary failures.
+
+The executable coordination guard is `pnpm run verify:parallel`; hosted CI runs the same check before the broader quality/security gates.
 
 ## Supply-chain posture
 
-- exact direct dependency pins
-- committed/frozen lockfile
-- pnpm 11 supply-chain policy checks
-- exact reviewed lifecycle-script allowlist
-- immutable GitHub Action SHAs
-- hosted CI `contents: read`
-- tracked-secret gate
-- high/critical dependency advisory audit
+- exact direct dependency pins;
+- committed/frozen lockfile;
+- pinned pnpm and Node policy;
+- exact reviewed lifecycle-script allowlist;
+- immutable GitHub Action SHAs;
+- hosted CI `contents: read`;
+- tracked-secret gate;
+- high/critical dependency advisory audit.
 
-Dependency advisory evidence is time-sensitive and must be rerun on future integration/release gates.
+Dependency advisory evidence remains time-sensitive and must be rerun on future integration/release gates.
 
 ## Known limitations / not production verification
 
-- native GitHub branch protection/rulesets remain unconfigured;
 - no production deployment has occurred;
 - no hosted DB/queue/identity/telemetry provider is activated;
 - no production model/provider or source connector is activated;
-- OpenTelemetry SDK/exporter/collector is not part of M01;
-- local developer working-copy state is unknown;
-- the manual self-hosted M01 dispatcher remains fixed to the historical `m01/platform-foundation` branch and is a fallback/diagnostic path, not the authoritative ongoing `main` CI gate;
-- M01/M01A integration does not authorize production connectors, payments, unrestricted acquisition, autonomous outreach, or later release gates.
+- no production source-provider network transport or credentials are enabled;
+- native default-branch protection must be re-read before making any current claim about it;
+- local developer working-copy/runtime/database state remains unknown when changes are performed through remote GitHub tooling;
+- OpenTelemetry exporter/collector rollout remains outside the existing foundation;
+- M01/M01A/M02 integration does not authorize payments, unrestricted acquisition, autonomous outreach or release gates.
 
-## Next safe action
+## Next safe actions
 
-1. Verify and merge this M01A completion/progress-only PR through the normal hosted FULL GATE and expected-head integration path.
-2. Start a fresh implementation branch from the resulting `main` head for **M02 — Business Discovery & Source Connectors**.
-3. Implement the first bounded M02 slice: executable provider-neutral `SourceCapability`, `SourcePolicy`, `ConnectorPolicy` and normalized source-result/provenance/quota contracts plus deterministic connector admission/health primitives.
-4. Keep external production source credentials/network activation separately gated until source/legal/provider policy allows specific connectors.
+1. Integrate the permanent parallel-agent development protocol, machine-readable coordination manifests and executable `verify:parallel` gate through the normal PR/FULL-GATE/expected-head path.
+2. Use the protocol for subsequent work with a default six-agent concurrency target when the dependency DAG permits it.
+3. Continue M02 through the next bounded provider/network prerequisite slice only after defining exact SSRF/egress, source-policy, credential and provider-activation boundaries.
+4. Keep production network/provider execution disabled until that boundary is independently verified and explicitly integrated.
+5. Refresh `README.md`, `AGENTS.md`, this checkpoint and relevant module docs whenever an implementation changes future agent working instructions.

@@ -1,0 +1,28 @@
+version: 1
+policy: integration-owned-when-parallel
+
+paths:
+  - AGENTS.md
+  - README.md
+  - docs/PROJECT_PLAN.md
+  - docs/CHECKPOINT.md
+  - docs/PARALLEL_AGENT_DEVELOPMENT.md
+  - .agent/**
+  - .github/workflows/**
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - packages/*/package.json
+  - apps/*/package.json
+  - packages/db/src/index.ts
+  - packages/db/src/client.ts
+  - scripts/verify-db.mjs
+  - scripts/verify-identity.mjs
+  - scripts/verify-queue.mjs
+
+rules:
+  - Feature agents should submit requested shared-file changes in their handoff when another active workstream may touch the same path.
+  - The integration owner composes concurrent shared-file changes.
+  - A path may be explicitly delegated to one agent when no competing writer exists.
+  - Lockfile and CI changes require dependency/supply-chain impact review.
+  - Documentation and agent instructions must be synchronized when workflow behavior changes.

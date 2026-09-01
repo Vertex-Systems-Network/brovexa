@@ -1,6 +1,6 @@
 # Brovexa Project Plan
 
-Status: **Planning Only — feature development is not authorized until M00/ABD-215 and explicit owner consent.**
+Status: **ACTIVE IMPLEMENTATION — M00/ABD-215 readiness and explicit owner development consent are satisfied. Production/provider activation gates remain separate.**
 
 ## Product mission
 
@@ -30,7 +30,7 @@ Each asynchronous stage must be independently retryable, idempotent, versioned, 
 
 ## M00 — Product, Compliance & Architecture Baseline
 
-Development is blocked until this milestone and explicit owner consent are approved.
+M00/ABD-215 readiness and explicit owner development consent are satisfied for the active project. Later production/provider/legal/commercial gates remain separately authoritative.
 
 Current required Linear gates include:
 - ABD-209 product scope/personas/workflows/service taxonomy
@@ -166,6 +166,85 @@ Linear: ABD-231/232
 
 Governed 24-hour research scout monitors competitors/APIs/AI techniques/client platforms/security/privacy/UX/commercial patterns and creates evidence-backed Add/Experiment/Watch/Reject proposals without auto-coding/merging. See `docs/CONTINUOUS_MARKET_INTELLIGENCE.md`.
 
+## Cross-cutting — Parallel Multi-Agent Engineering System
+
+This execution layer applies to **M02 and every current/future milestone**. Its purpose is to reduce calendar development time through bounded parallelism without allowing agents to overwrite each other, duplicate architecture, collide on migrations, silently widen contracts or weaken integration gates.
+
+Canonical operating documents:
+
+- `AGENTS.md` — mandatory startup/working instructions for every AI coding/review/integration agent;
+- `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full parallel-development and integration protocol;
+- `.agent/ownership.yaml` — default path/module ownership;
+- `.agent/shared-files.yaml` — integration-owned/high-conflict paths;
+- `.agent/workstreams.yaml` — concurrency/role/workstream state contract;
+- `.agent/dependencies.yaml` — dependency DAG and interface-freeze rules;
+- `.agent/migrations.yaml` — serialized migration-number reservations.
+
+### Default concurrency model
+
+Use **6 concurrent agents** when enough independent work exists:
+
+1. Integration / Architecture Controller;
+2. Contracts / Policy Agent;
+3. Database / Persistence Agent;
+4. Worker / Runtime Agent;
+5. Module / Connector Infrastructure Agent;
+6. Verification / Security Agent.
+
+Scale to **8** only when ownership and dependency boundaries are explicit. More than 8 requires evidence that merge-conflict rate, CI queueing, rework and integration latency remain acceptable.
+
+### Isolation and ownership
+
+Default invariant:
+
+`1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
+
+Agents stay inside declared write scopes. Public contracts/interfaces are the coordination boundary. A dependent agent may consume a frozen interface but must not silently redesign another module's internals. Shared/global files are composed by the integration owner when concurrent writers could collide.
+
+### Dependency and migration coordination
+
+Parallel tasks form an explicit DAG. Each work packet declares dependencies and interface-freeze SHAs/versions where applicable. Merge ordering follows the DAG, not PR creation time.
+
+Migration identifiers are serialized resources. A migration number must be reserved in `.agent/migrations.yaml` before the migration is created. Two agents must never independently claim the same number.
+
+### Independent verification
+
+Implementation and adversarial verification are separate responsibilities. Verification agents test failure paths such as replay/idempotency, stale state, concurrency, tenant isolation, authorization/policy/budget bypass, migration rollback, malformed input and network/credential boundary violations. Tests/invariants are not weakened to obtain green CI.
+
+### Agent Instruction Drift Check — mandatory every task
+
+Every agent must check working-instruction freshness **before starting work and again before declaring completion**.
+
+At minimum it reads/checks:
+
+- `README.md`;
+- `AGENTS.md`;
+- `docs/PROJECT_PLAN.md`;
+- `docs/CHECKPOINT.md`;
+- `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
+- relevant module/ADR docs;
+- `.agent/` manifests;
+- current branch/head and required verification commands.
+
+If architecture, module boundaries, workflow, ownership, shared files, migration rules, dependency order, verification commands, CI gates, security/policy boundaries, tooling or integration behavior changed, the **same change set must update the relevant agent instructions**. At minimum the agent must check/update `AGENTS.md` and `README.md`, plus the relevant policy/module/checkpoint document.
+
+A task cannot become `READY_FOR_INTEGRATION` while its implementation makes the working instructions materially stale or misleading. If no instruction update is required, the agent handoff must explicitly record that instruction drift was checked and none was found.
+
+### Integration gate
+
+Before merge, require:
+
+- exact verified head SHA;
+- satisfied dependency graph or explicit stacked dependency;
+- no ownership/shared-file/migration collision;
+- required review resolution;
+- required exact-head FAST/FULL verification;
+- completed instruction/documentation drift check;
+- current-base/mergeability revalidation;
+- expected-head merge guard where supported.
+
+Parallel development never authorizes production credentials, network/provider activation, unrestricted acquisition, autonomous outreach, destructive production actions or any other separately gated capability.
+
 ## Technology recommendation for ADR validation
 
 Current hypothesis, not implementation authorization: Next.js/React/TypeScript; Tailwind/shadcn UI; NestJS modular monolith; PostgreSQL + pgvector initially; Redis/BullMQ initially with Temporal reevaluation if durable multi-day workflow complexity justifies it; Tauri 2; WXT; S3-compatible storage; OpenTelemetry; pnpm monorepo; Python only for AI/data workloads with concrete advantage.
@@ -191,10 +270,14 @@ Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely becaus
 
 A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and UI failure/partial states are defined. Acquisition work additionally needs geography/taxonomy/source capability/preflight. Lead work additionally needs lifecycle/scoring/routing/compliance semantics.
 
+For parallel work, READY additionally requires a bounded work packet with write scope, dependency declarations, shared-file impact, migration reservation when applicable, interface-freeze information and required verification/handoff criteria.
+
 ## Definition of Done
 
 Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
 
+For agent-executed work, DONE also requires the Agent Instruction Drift Check. Any change that alters future agent working behavior must update `AGENTS.md`, `README.md` and relevant coordination/module documentation in the same change set; otherwise the task remains incomplete.
+
 ## Development authorization
 
-Planning, research, audits, documentation and ADR preparation may proceed. Feature code, connectors, payment activation, scheduled research workflow and product implementation begin only after M00 is internally consistent, ABD-215 is explicitly approved, and the owner explicitly consents to development.
+M00/ABD-215 readiness and explicit owner consent are satisfied for this active development project. Feature implementation may continue through the approved bounded milestone/PR/FULL-GATE process. Production credentials/provider activation, scheduled/unrestricted acquisition, payment activation, autonomous outreach, destructive production actions and deployment/release gates remain separately controlled and must not be inferred from general development authorization.

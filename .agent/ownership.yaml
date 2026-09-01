@@ -1,0 +1,72 @@
+version: 1
+policy: default-deny-outside-assigned-write-scope
+
+roles:
+  integration_architecture:
+    default_write:
+      - AGENTS.md
+      - README.md
+      - docs/PROJECT_PLAN.md
+      - docs/CHECKPOINT.md
+      - docs/PARALLEL_AGENT_DEVELOPMENT.md
+      - .agent/**
+      - .github/workflows/**
+      - package.json
+      - pnpm-lock.yaml
+    responsibilities:
+      - dependency_graph
+      - interface_freeze
+      - shared_file_integration
+      - merge_order
+      - exact_head_verification
+
+  contracts_policy:
+    default_write:
+      - packages/contracts/**
+    responsibilities:
+      - public_contracts
+      - schemas
+      - policy_interfaces
+      - compatibility_review
+
+  database_persistence:
+    default_write:
+      - packages/db/**
+    responsibilities:
+      - migrations
+      - persistence
+      - data_integrity
+      - rollback
+
+  worker_runtime:
+    default_write:
+      - apps/worker/**
+      - packages/queue/**
+    responsibilities:
+      - durable_execution
+      - retry_cancel_idempotency
+      - queue_runtime
+
+  module_specialist:
+    default_write: []
+    responsibilities:
+      - task_specific_bounded_module
+    note: Write scope must be declared in the task work packet.
+
+  verification_security:
+    default_write:
+      - scripts/verify-*.mjs
+      - packages/**/src/**/*.test.ts
+      - apps/**/src/**/*.test.ts
+    responsibilities:
+      - adversarial_verification
+      - security_regression
+      - failure_paths
+    constraints:
+      - must_not_weaken_existing_invariants
+
+rules:
+  - An explicit work packet may narrow or extend a role's paths.
+  - Cross-module edits require an explicit dependency/interface request or integration-owner action.
+  - Shared files remain integration-owned when parallel collision risk exists.
+  - Ownership never overrides security, compliance, tenant, source-policy or activation gates.
