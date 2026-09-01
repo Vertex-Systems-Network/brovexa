@@ -31,6 +31,7 @@ const expectedMigrations = [
   '0005_agent_memory_lifecycle',
   '0006_agent_execution_plan',
   '0007_source_registry_foundation',
+  '0008_source_task_preflight',
 ];
 
 function findPostgresError(error) {
@@ -54,6 +55,9 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
+  await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
+  await pool.query('DROP TABLE IF EXISTS research_job_preflights CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_admission_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_definitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_policies CASCADE');
@@ -144,11 +148,12 @@ try {
   );
   assert.equal(preferenceCount.rows[0]?.count, 0);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0008_source_task_preflight');
   assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0007_source_registry_foundation']);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0008_source_task_preflight']);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0008_source_task_preflight');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0005_agent_memory_lifecycle');
@@ -176,7 +181,10 @@ try {
       to_regclass('public.source_capabilities')::text AS source_capabilities,
       to_regclass('public.connector_policies')::text AS connector_policies,
       to_regclass('public.connector_definitions')::text AS connector_definitions,
-      to_regclass('public.source_admission_snapshots')::text AS source_admission_snapshots
+      to_regclass('public.source_admission_snapshots')::text AS source_admission_snapshots,
+      to_regclass('public.research_job_preflights')::text AS research_job_preflights,
+      to_regclass('public.source_tasks')::text AS source_tasks,
+      to_regclass('public.source_task_usage_events')::text AS source_task_usage_events
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
   assert.equal(afterRollback.rows[0]?.users, null);
@@ -194,6 +202,9 @@ try {
   assert.equal(afterRollback.rows[0]?.connector_policies, null);
   assert.equal(afterRollback.rows[0]?.connector_definitions, null);
   assert.equal(afterRollback.rows[0]?.source_admission_snapshots, null);
+  assert.equal(afterRollback.rows[0]?.research_job_preflights, null);
+  assert.equal(afterRollback.rows[0]?.source_tasks, null);
+  assert.equal(afterRollback.rows[0]?.source_task_usage_events, null);
 
   const reapplied = await applyPendingMigrations(pool, migrationsDir);
   assert.deepEqual(reapplied, expectedMigrations);
@@ -215,3 +226,4 @@ await import('./verify-agent-execution-aggregation.mjs');
 await import('./verify-agent-evaluator-decision.mjs');
 await import('./verify-agent-runtime-hardening.mjs');
 await import('./verify-source-registry.mjs');
+await import('./verify-source-task-preflight.mjs');
