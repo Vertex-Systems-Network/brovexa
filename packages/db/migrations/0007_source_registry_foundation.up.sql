@@ -31,9 +31,9 @@ CREATE TABLE source_capabilities (
   ),
   CONSTRAINT source_capabilities_envelope_object_check CHECK (jsonb_typeof(envelope) = 'object'),
   CONSTRAINT source_capabilities_envelope_identity_check CHECK (
-    envelope->>'sourceKey' = source_key
-    AND envelope->>'version' = version
-    AND envelope->>'sourceClass' = source_class
+    envelope->>'sourceKey' IS NOT DISTINCT FROM source_key
+    AND envelope->>'version' IS NOT DISTINCT FROM version
+    AND envelope->>'sourceClass' IS NOT DISTINCT FROM source_class
   )
 );
 --> statement-breakpoint
@@ -80,12 +80,12 @@ CREATE TABLE connector_policies (
   CONSTRAINT connector_policies_review_window_check CHECK (next_review_at > reviewed_at),
   CONSTRAINT connector_policies_envelope_object_check CHECK (jsonb_typeof(envelope) = 'object'),
   CONSTRAINT connector_policies_envelope_identity_check CHECK (
-    envelope->>'policyId' = policy_id
-    AND envelope->>'version' = version
-    AND envelope->>'sourceKey' = source_key
-    AND envelope->>'connectorKey' = connector_key
-    AND envelope->>'state' = state
-    AND envelope->>'accessMethod' = access_method
+    envelope->>'policyId' IS NOT DISTINCT FROM policy_id
+    AND envelope->>'version' IS NOT DISTINCT FROM version
+    AND envelope->>'sourceKey' IS NOT DISTINCT FROM source_key
+    AND envelope->>'connectorKey' IS NOT DISTINCT FROM connector_key
+    AND envelope->>'state' IS NOT DISTINCT FROM state
+    AND envelope->>'accessMethod' IS NOT DISTINCT FROM access_method
   )
 );
 --> statement-breakpoint
@@ -150,17 +150,17 @@ CREATE TABLE connector_definitions (
   CONSTRAINT connector_definitions_implementation_version_check CHECK (length(btrim(implementation_version)) > 0),
   CONSTRAINT connector_definitions_envelope_object_check CHECK (jsonb_typeof(envelope) = 'object'),
   CONSTRAINT connector_definitions_envelope_identity_check CHECK (
-    envelope->>'connectorKey' = connector_key
-    AND envelope->>'version' = version
-    AND envelope->>'sourceKey' = source_key
-    AND envelope->>'capabilityVersion' = capability_version
-    AND envelope->>'policyId' = policy_id
-    AND envelope->>'policyVersion' = policy_version
-    AND envelope->>'accessMethod' = access_method
-    AND envelope->>'credentialMode' = credential_mode
-    AND envelope->>'status' = status
-    AND envelope->>'activation' = activation
-    AND envelope->>'implementationVersion' = implementation_version
+    envelope->>'connectorKey' IS NOT DISTINCT FROM connector_key
+    AND envelope->>'version' IS NOT DISTINCT FROM version
+    AND envelope->>'sourceKey' IS NOT DISTINCT FROM source_key
+    AND envelope->>'capabilityVersion' IS NOT DISTINCT FROM capability_version
+    AND envelope->>'policyId' IS NOT DISTINCT FROM policy_id
+    AND envelope->>'policyVersion' IS NOT DISTINCT FROM policy_version
+    AND envelope->>'accessMethod' IS NOT DISTINCT FROM access_method
+    AND envelope->>'credentialMode' IS NOT DISTINCT FROM credential_mode
+    AND envelope->>'status' IS NOT DISTINCT FROM status
+    AND envelope->>'activation' IS NOT DISTINCT FROM activation
+    AND envelope->>'implementationVersion' IS NOT DISTINCT FROM implementation_version
   ),
   CONSTRAINT connector_definitions_capability_fk
     FOREIGN KEY (source_key, capability_version)
@@ -211,24 +211,30 @@ CREATE TABLE source_admission_snapshots (
   CONSTRAINT source_admission_snapshots_request_object_check CHECK (jsonb_typeof(request) = 'object'),
   CONSTRAINT source_admission_snapshots_admission_object_check CHECK (jsonb_typeof(admission) = 'object'),
   CONSTRAINT source_admission_snapshots_request_identity_check CHECK (
-    request->>'requestId' = request_id
-    AND request->>'workspaceId' = workspace_id::text
-    AND request->>'sourceTaskId' = source_task_id
-    AND request->>'sourceKey' = source_key
-    AND request->>'connectorKey' = connector_key
-    AND request->>'connectorVersion' = connector_version
-    AND request->'policySnapshot'->>'policyId' = policy_id
-    AND request->'policySnapshot'->>'policyVersion' = policy_version
+    request->>'requestId' IS NOT DISTINCT FROM request_id
+    AND request->>'workspaceId' IS NOT DISTINCT FROM workspace_id::text
+    AND request->>'sourceTaskId' IS NOT DISTINCT FROM source_task_id
+    AND request->>'sourceKey' IS NOT DISTINCT FROM source_key
+    AND request->>'connectorKey' IS NOT DISTINCT FROM connector_key
+    AND request->>'connectorVersion' IS NOT DISTINCT FROM connector_version
+    AND request->'policySnapshot'->>'policyId' IS NOT DISTINCT FROM policy_id
+    AND request->'policySnapshot'->>'policyVersion' IS NOT DISTINCT FROM policy_version
+    AND length(btrim(request->>'operation')) > 0
+    AND length(btrim(request->>'storageClass')) > 0
   ),
   CONSTRAINT source_admission_snapshots_admission_identity_check CHECK (
-    admission->>'decision' = decision
-    AND admission->>'sourceKey' = source_key
-    AND admission->>'connectorKey' = connector_key
-    AND admission->>'connectorVersion' = connector_version
-    AND admission->'policySnapshot'->>'policyId' = policy_id
-    AND admission->'policySnapshot'->>'policyVersion' = policy_version
-    AND admission->'reasonCodes' = reason_codes
-    AND admission->'warnings' = warnings
+    admission->>'decision' IS NOT DISTINCT FROM decision
+    AND admission->>'sourceKey' IS NOT DISTINCT FROM source_key
+    AND admission->>'connectorKey' IS NOT DISTINCT FROM connector_key
+    AND admission->>'connectorVersion' IS NOT DISTINCT FROM connector_version
+    AND admission->'policySnapshot'->>'policyId' IS NOT DISTINCT FROM policy_id
+    AND admission->'policySnapshot'->>'policyVersion' IS NOT DISTINCT FROM policy_version
+    AND admission->'reasonCodes' IS NOT DISTINCT FROM reason_codes
+    AND admission->'warnings' IS NOT DISTINCT FROM warnings
+    AND admission->>'operation' IS NOT DISTINCT FROM request->>'operation'
+    AND admission->>'storageClass' IS NOT DISTINCT FROM request->>'storageClass'
+    AND admission->>'evaluatedAt' IS NOT NULL
+    AND (admission->>'evaluatedAt')::timestamptz = evaluated_at
   ),
   CONSTRAINT source_admission_snapshots_auth_secret_check CHECK (
     NOT (COALESCE(request->'requestedDataClassifications', '[]'::jsonb) @> '["AUTH_SECRET"]'::jsonb)
