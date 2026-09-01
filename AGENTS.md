@@ -44,6 +44,12 @@ If any working instruction changed, became incomplete, or is now misleading, the
 
 A task is not `READY_FOR_INTEGRATION` if code/workflow changed but required agent instructions remain stale.
 
+The executable repository guard is:
+
+`pnpm run verify:parallel`
+
+It is also run by the hosted CI quality gate. Agents that change coordination instructions/manifests must keep this verifier passing rather than bypassing or weakening it.
+
 ## Parallel development rules
 
 - One active work packet per agent.
@@ -78,6 +84,7 @@ Before merge:
 - declared dependencies are integrated or explicitly stacked;
 - no ownership/shared-file/migration collision remains;
 - no unresolved review threads remain;
+- `pnpm run verify:parallel` passes for the integration head;
 - required FAST/FULL verification is green for the exact integration head;
 - documentation/instruction drift check is complete;
 - merge uses the expected-head guard where supported.
