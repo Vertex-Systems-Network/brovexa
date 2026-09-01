@@ -108,6 +108,18 @@ Before creating a migration, the DB/integration owner reserves the identifier in
 
 Changing an existing released/integrated migration is prohibited unless the repository's explicit migration policy authorizes it. Prefer a new forward migration.
 
+## Executable governance gate
+
+The coordination contract is not documentation-only. The repository provides:
+
+`pnpm run verify:parallel`
+
+which executes `scripts/verify-parallel-development.mjs`.
+
+The hosted CI quality job runs the same verifier before dependency installation. The verifier currently fails closed when required governance files are missing, the mandatory Agent Instruction Drift Check is not referenced by canonical docs, core ownership/shared-file rules disappear, default 6-agent/8-agent-soft-max capacity drifts without a coordinated governance change, or `.agent/migrations.yaml` falls behind the latest integrated migration/next-number sequence.
+
+Agents must update the verifier when the machine-readable governance contract intentionally evolves. They must not weaken/remove assertions merely to make CI pass.
+
 ## Verification independence
 
 The implementation agent proves expected behavior. The verification/security agent separately searches for unsafe behavior.
@@ -136,6 +148,7 @@ A failing test is fixed at the implementation/invariant level. Tests are not wea
 A workstream may enter `READY_FOR_INTEGRATION` only when:
 
 - its declared implementation is complete;
+- `pnpm run verify:parallel` passes;
 - required local/repository verification for that work packet has passed;
 - dependency assumptions are still valid;
 - migration and ownership conflicts are clear;
@@ -237,11 +250,12 @@ Before an integration merge:
 2. verify dependency graph satisfaction;
 3. verify ownership/shared-file/migration collisions are resolved;
 4. inspect review threads/comments;
-5. run required exact-head FAST/FULL gates;
-6. run instruction drift/documentation check;
-7. verify mergeability/current base context;
-8. merge with expected-head protection where supported;
-9. re-read resulting `main` and record integration evidence when required.
+5. run `pnpm run verify:parallel`;
+6. run required exact-head FAST/FULL gates;
+7. run instruction drift/documentation check;
+8. verify mergeability/current base context;
+9. merge with expected-head protection where supported;
+10. re-read resulting `main` and record integration evidence when required.
 
 Default branch history must not be rewritten to bypass integration safeguards.
 
@@ -269,4 +283,4 @@ Increase concurrency only when these metrics remain healthy. If coordination ove
 
 ## Adoption
 
-This protocol is cross-cutting and applies to M02 and all future milestones. `docs/PROJECT_PLAN.md` references it as a permanent engineering execution layer. `AGENTS.md` is the canonical startup instruction entrypoint.
+This protocol is cross-cutting and applies to M02 and all future milestones. `docs/PROJECT_PLAN.md` references it as a permanent engineering execution layer. `AGENTS.md` is the canonical startup instruction entrypoint. `pnpm run verify:parallel` is the executable governance check used locally and by hosted CI.
