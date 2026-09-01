@@ -75,6 +75,12 @@ Default isolation rule:
 
 `1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
 
+The governance contract is executable, not documentation-only:
+
+`pnpm run verify:parallel`
+
+Hosted CI runs the same parallel-agent governance verifier in the quality job. Changes to coordination files, migration numbering or future-agent instructions must keep this gate green; do not remove/weaken the guard simply to pass CI.
+
 ### Mandatory Agent Instruction Drift Check
 
 At the **start of every task** and again **before completion**, the agent must verify that working instructions still match repository reality. At minimum read/check:
@@ -105,6 +111,7 @@ Parallelism never authorizes production provider/network credentials, unrestrict
 - Significant work is delivered in small reversible batches with FAST/FULL verification gates.
 - Parallel work follows explicit ownership, dependency, migration-reservation and integration rules.
 - Agent-working documentation must stay synchronized with actual repository behavior.
+- `pnpm run verify:parallel` must remain green for intentional governance changes.
 
 ## Current non-scope
 
@@ -116,6 +123,7 @@ M01A completion and the integrated M02 foundation do not activate production mod
 - Canonical agent instructions: `AGENTS.md`
 - Parallel-agent protocol: `docs/PARALLEL_AGENT_DEVELOPMENT.md`
 - Machine-readable agent coordination: `.agent/`
+- Parallel governance verifier: `pnpm run verify:parallel`
 - Current checkpoint: `docs/CHECKPOINT.md`
 - M01A contract checkpoint: `docs/M01A_AGENT_CONTRACTS_FOUNDATION.md`
 - M01A persistence checkpoint: `docs/M01A_AGENT_PERSISTENCE_CORE.md`
