@@ -2,8 +2,9 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import * as agentSchema from './agent-schema';
 import * as coreSchema from './schema';
+import * as sourceSchema from './source-schema';
 
-const schema = { ...coreSchema, ...agentSchema };
+const schema = { ...coreSchema, ...agentSchema, ...sourceSchema };
 
 export type BrovexaDatabase = NodePgDatabase<typeof schema>;
 
@@ -73,6 +74,10 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
         AND to_regclass('public.memory_record_lifecycle_events') IS NOT NULL
         AND to_regclass('public.agent_eval_results') IS NOT NULL
         AND to_regclass('public.agent_execution_plans') IS NOT NULL
+        AND to_regclass('public.source_capabilities') IS NOT NULL
+        AND to_regclass('public.connector_policies') IS NOT NULL
+        AND to_regclass('public.connector_definitions') IS NOT NULL
+        AND to_regclass('public.source_admission_snapshots') IS NOT NULL
         AS schema_ready
   `);
 

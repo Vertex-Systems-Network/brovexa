@@ -31,3 +31,5 @@ export * from './lifecycle-persistence';
 export * from './memory-eval-persistence';
 export * from './migrations';
 export * from './schema';
+export * from './source-registry-persistence';
+export * from './source-schema';
