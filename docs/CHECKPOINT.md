@@ -24,7 +24,8 @@ Parallel AI-assisted development now has a permanent repository-level operating 
 - `.agent/shared-files.yaml` — high-conflict integration-owned paths;
 - `.agent/workstreams.yaml` — role/capacity/state model;
 - `.agent/dependencies.yaml` — dependency DAG/interface-freeze rules;
-- `.agent/migrations.yaml` — serialized migration reservation state.
+- `.agent/migrations.yaml` — serialized migration reservation state;
+- `pnpm run verify:parallel` — executable governance verifier used locally and by hosted CI.
 
 Every agent must perform the **Agent Instruction Drift Check** at task start and before completion. If architecture, workflow, ownership, migration, dependency, verification, CI, security/policy or integration instructions changed, the same change set must update `AGENTS.md`, `README.md` and relevant coordination/module/checkpoint documentation. A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
@@ -223,6 +224,8 @@ Dependent work is coordinated through explicit contract/interface freeze points 
 
 The implementation agent does not self-certify security by itself: a separate verification role attempts replay, concurrency, tenant, authorization, budget, stale-state, migration and network-boundary failures.
 
+The executable coordination guard is `pnpm run verify:parallel`; hosted CI runs the same check before the broader quality/security gates.
+
 ## Supply-chain posture
 
 - exact direct dependency pins;
@@ -249,7 +252,7 @@ Dependency advisory evidence remains time-sensitive and must be rerun on future 
 
 ## Next safe actions
 
-1. Integrate the permanent parallel-agent development protocol and machine-readable coordination manifests through the normal PR/FULL-GATE/expected-head path.
+1. Integrate the permanent parallel-agent development protocol, machine-readable coordination manifests and executable `verify:parallel` gate through the normal PR/FULL-GATE/expected-head path.
 2. Use the protocol for subsequent work with a default six-agent concurrency target when the dependency DAG permits it.
 3. Continue M02 through the next bounded provider/network prerequisite slice only after defining exact SSRF/egress, source-policy, credential and provider-activation boundaries.
 4. Keep production network/provider execution disabled until that boundary is independently verified and explicitly integrated.
