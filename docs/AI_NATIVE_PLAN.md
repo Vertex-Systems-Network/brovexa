@@ -27,6 +27,21 @@ Before this plan was documented, the Supervisor created the standing branches re
 
 These are standing coordination branches, not permission to implement unspecified work. Every concrete task still requires a bounded work packet, write scope, dependency declaration and acceptance criteria.
 
+For future parallel waves, the Supervisor creates all required branches **before** documenting/assigning that wave, then updates this table and `.agent/workstreams.yaml`.
+
+## Live synchronization authority
+
+The branch table above is durable planning state. It is **not** the live post-merge synchronization ledger.
+
+Canonical live synchronization state is the latest valid Supervisor broadcast comment on GitHub issue **#50 — Multi-Agent Supervisor Broadcast Channel**. Each broadcast carries the newest:
+
+- `sync_epoch`;
+- resulting `main` SHA;
+- merged PR/branch;
+- cross-workstream impact.
+
+`.agent/supervisor.yaml` defines the protocol and baseline seed. Agents use issue #50 for the latest epoch/SHA so every merge does not require a recursive state-only PR.
+
 ## Merge priority and dependency strategy
 
 Merge order is **dependency-driven**, not first-finished-first-merged.
@@ -50,7 +65,7 @@ When any agent, including the Supervisor, finishes its assigned work packet, it 
 
 **Work Done and Submitted**
 
-For a non-Supervisor agent, the canonical repository signal is a **top-level comment on its pull request whose entire body is exactly `Work Done and Submitted`**. The signal is valid only when the PR also has a complete handoff containing the exact head SHA, verification evidence, dependency state, instruction-drift result and known limitations.
+For a non-Supervisor agent, the canonical repository signal is a **top-level comment on its pull request whose entire body is exactly `Work Done and Submitted`**. The signal is valid only when the PR also has a complete handoff containing the exact head SHA, verification evidence, dependency state, current synchronization epoch, instruction-drift result and known limitations.
 
 The phrase means **ready for Supervisor review**, not automatically approved or merged.
 
@@ -64,7 +79,7 @@ When a valid `Work Done and Submitted` signal is observed:
 2. Supervisor inspects the submitted PR, exact head SHA, changed paths, dependency assumptions, migration reservations, review threads, security impact and verification evidence.
 3. If defects exist, Supervisor leaves the branch unmerged, returns actionable review feedback, and resumes its own work unless another valid submission is waiting.
 4. If approved, Supervisor runs/requires the repository's applicable exact-head gates and merges using the expected-head guard.
-5. Supervisor re-reads resulting `main`, records the resulting main SHA and increments the synchronization epoch.
+5. Supervisor re-reads resulting `main`, records the resulting main SHA and increments the synchronization epoch relative to the latest issue #50 broadcast.
 6. Supervisor broadcasts the canonical alert to all active agents.
 7. Supervisor resumes its paused work only after issuing the alert; it does not need to wait for every agent to finish synchronizing before resuming unless a direct dependency requires that acknowledgement.
 
@@ -99,7 +114,7 @@ Required sequence:
 2. merge current `main` into the agent branch or use another explicitly approved non-destructive synchronization method;
 3. resolve conflicts inside the agent's owned scope; shared-file conflicts are escalated to the Supervisor;
 4. rerun the minimum verification needed to prove the synchronization did not break the work packet;
-5. record `synced_main_sha` and `sync_epoch` in the handoff/workstream state;
+5. record `synced_main_sha` and `sync_epoch` in the handoff/current work state;
 6. only then resume feature work.
 
 Force-push/history rewrite is not the default synchronization mechanism and must not be used to bypass integration safeguards.
@@ -116,10 +131,12 @@ If multiple agents submit while the Supervisor is already reviewing one branch, 
 
 The Supervisor never merges two overlapping branches concurrently. Each merge establishes a new `main` SHA/sync epoch before the next dependent integration decision.
 
-## Current bootstrap assignments
+## Assignment lifecycle
 
-At protocol bootstrap, branch ownership is established but concrete feature work is not auto-started. The Supervisor/integration branch owns this workflow implementation. Other standing branches remain available for the next bounded work packets after the Supervisor publishes assignments/dependencies.
+Standing branch ownership persists across work packets, but **live task assignment/status does not live permanently in this document**. Concrete active work is represented by the work packet, branch/PR and handoff. This avoids `main` claiming an old task is still `WORKING` after it has already merged.
+
+At the initial bootstrap, the Supervisor branch was assigned the repository-workflow implementation and the other standing branches remained idle until bounded work packets were published. Future assignments follow the same branch-first, document-second rule.
 
 ## Instruction drift
 
-Any change to branch names, Supervisor behavior, submission signaling, synchronization alerts, merge order, workstream states or acknowledgement requirements must update this document, `AGENTS.md`, `README.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, relevant `.agent/` manifests and the executable `pnpm run verify:parallel` contract in the same change set.
+Any change to branch names, Supervisor behavior, submission signaling, synchronization alerts, merge order, live-state authority, workstream states or acknowledgement requirements must update this document, `AGENTS.md`, `README.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, relevant `.agent/` manifests and the executable `pnpm run verify:parallel` contract in the same change set.
