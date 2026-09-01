@@ -12,9 +12,10 @@ Before planning or changing code, every agent must:
 4. Read `docs/CHECKPOINT.md` for the latest integrated state.
 5. Read `docs/PARALLEL_AGENT_DEVELOPMENT.md`.
 6. Read `docs/AI_NATIVE_PLAN.md` for branch/module/agent/merge assignments.
-7. Read the relevant milestone/module documents for the assigned workstream.
-8. Inspect the latest `main`, its own branch/head, the latest Supervisor synchronization epoch and declared dependencies before editing.
-9. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml` and `.agent/supervisor.yaml`.
+7. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
+8. Read the relevant milestone/module documents for the assigned workstream.
+9. Inspect the latest `main`, its own branch/head, the latest Supervisor synchronization epoch and declared dependencies before editing.
+10. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml` and `.agent/supervisor.yaml`.
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
 
@@ -25,7 +26,7 @@ A newly arriving agent **always starts from the exact current `main` branch/head
 Required flow:
 
 1. initialize/read the repository from current `main` and record the exact `main` SHA plus latest Supervisor synchronization epoch;
-2. stop there while the Supervisor reads `docs/AI_NATIVE_PLAN.md` and `.agent/slots.yaml`;
+2. stop there while the Supervisor reads `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md` and `.agent/slots.yaml`;
 3. the Supervisor checks for an assignable slot whose status is exactly `OPEN`;
 4. if an `OPEN` slot exists, the Supervisor selects one, verifies that standing branch is synchronized to the same current `main` SHA/latest epoch, and records the new agent name plus slot status `OCCUPIED` and start status in the AI-Native Plan/slot registry before feature work begins;
 5. only after assignment may the agent switch from `main` to the assigned standing module branch and receive/execute a bounded work packet;
@@ -164,6 +165,7 @@ If anything changed, became incomplete or misleading, the same change set must u
 - `README.md`;
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
 - `docs/AI_NATIVE_PLAN.md` when branch/role/slot/merge behavior changed;
+- `docs/NEW_AGENT_ONBOARDING.md` when onboarding/slot behavior changed;
 - the relevant module/ADR/checkpoint document;
 - `.agent/` manifests and `scripts/verify-parallel-development.mjs` when the machine-readable contract changed.
 
@@ -238,4 +240,4 @@ Every agent handoff includes at least:
 - instruction drift result;
 - completion signal status.
 
-See `docs/PARALLEL_AGENT_DEVELOPMENT.md` and `docs/AI_NATIVE_PLAN.md` for the full operating model.
+See `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md` and `docs/NEW_AGENT_ONBOARDING.md` for the full operating model.
