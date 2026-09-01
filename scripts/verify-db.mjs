@@ -203,3 +203,4 @@ await import('./verify-agent-memory-lifecycle.mjs');
 await import('./verify-agent-context-runtime.mjs');
 await import('./verify-agent-execution-plan.mjs');
 await import('./verify-agent-plan-dispatcher.mjs');
+await import('./verify-agent-execution-aggregation.mjs');

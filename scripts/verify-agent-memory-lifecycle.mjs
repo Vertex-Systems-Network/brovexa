@@ -55,6 +55,10 @@ function expectPersistenceCode(expectedCode) {
   };
 }
 
+function later(date, milliseconds) {
+  return new Date(date.getTime() + milliseconds);
+}
+
 async function resetDatabase() {
   await pool.query('DROP TABLE IF EXISTS agent_execution_plans CASCADE');
   await pool.query('DROP TABLE IF EXISTS memory_record_lifecycle_events CASCADE');
@@ -143,16 +147,27 @@ try {
     envelope: { id: 'lifecycle_run_1', workspaceId: workspaceA, status: 'queued' },
   });
 
+  const initialRunProjection = await pool.query(
+    `SELECT updated_at FROM agent_runs WHERE workspace_id = $1 AND id = 'lifecycle_run_1'`,
+    [workspaceA],
+  );
+  const initialRunUpdatedAt = initialRunProjection.rows[0]?.updated_at;
+  assert.ok(initialRunUpdatedAt instanceof Date);
+  const startAt = later(initialRunUpdatedAt, 1);
+  const staleReplayAt = later(startAt, 1);
+  const finishAt = later(startAt, 2);
+  const terminalEscapeAt = later(finishAt, 1);
+
   await assert.rejects(
     () =>
       pool.query(
         `UPDATE agent_runs
          SET status = 'running',
              envelope = jsonb_set(envelope, '{status}', '"running"'::jsonb),
-             started_at = '2026-09-01T01:00:00.000Z',
-             updated_at = '2026-09-01T01:00:00.000Z'
+             started_at = $2,
+             updated_at = $2
          WHERE workspace_id = $1 AND id = 'lifecycle_run_1'`,
-        [workspaceA],
+        [workspaceA, startAt],
       ),
     expectPostgresConstraint('23514', 'agent_runs_lifecycle_projection_guard'),
   );
@@ -167,14 +182,14 @@ try {
     actorType: 'worker',
     actorId: 'ci-worker',
     metadata: { queue: 'verification' },
-    occurredAt: new Date('2026-09-01T01:00:00.000Z'),
+    occurredAt: startAt,
   };
 
   assert.equal(await transitionAgentRun(pool, startTransition), startTransition.transitionId);
   assert.equal(await transitionAgentRun(pool, startTransition), startTransition.transitionId);
   const runningEnvelope = await getAgentRunEnvelope(pool, workspaceA, 'lifecycle_run_1');
   assert.equal(runningEnvelope?.status, 'running');
-  assert.equal(runningEnvelope?.startedAt, '2026-09-01T01:00:00.000Z');
+  assert.equal(runningEnvelope?.startedAt, startAt.toISOString());
   assert.equal((await getAgentRunTransitionHistory(pool, workspaceA, 'lifecycle_run_1')).length, 1);
   assert.deepEqual(await getAgentRunTransitionHistory(pool, workspaceB, 'lifecycle_run_1'), []);
 
@@ -187,7 +202,7 @@ try {
       transitionAgentRun(pool, {
         ...startTransition,
         transitionId: 'transition_stale_replay',
-        occurredAt: new Date('2026-09-01T01:01:00.000Z'),
+        occurredAt: staleReplayAt,
       }),
     expectPersistenceCode('AGENT_RUN_STATUS_CONFLICT'),
   );
@@ -201,12 +216,12 @@ try {
     reasonCode: 'deterministic_validation_passed',
     actorType: 'system',
     metadata: { validator: 'lifecycle-ci' },
-    occurredAt: new Date('2026-09-01T01:05:00.000Z'),
+    occurredAt: finishAt,
   };
   assert.equal(await transitionAgentRun(pool, finishTransition), finishTransition.transitionId);
   const succeededEnvelope = await getAgentRunEnvelope(pool, workspaceA, 'lifecycle_run_1');
   assert.equal(succeededEnvelope?.status, 'succeeded');
-  assert.equal(succeededEnvelope?.completedAt, '2026-09-01T01:05:00.000Z');
+  assert.equal(succeededEnvelope?.completedAt, finishAt.toISOString());
   assert.equal((await getAgentRunTransitionHistory(pool, workspaceA, 'lifecycle_run_1')).length, 2);
 
   await assert.rejects(
@@ -216,7 +231,7 @@ try {
         transitionId: 'transition_terminal_escape',
         fromStatus: 'succeeded',
         toStatus: 'running',
-        occurredAt: new Date('2026-09-01T01:06:00.000Z'),
+        occurredAt: terminalEscapeAt,
       }),
     expectPersistenceCode('AGENT_RUN_TERMINAL'),
   );
