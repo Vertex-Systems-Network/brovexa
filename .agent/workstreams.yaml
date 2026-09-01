@@ -1,4 +1,4 @@
-version: 2
+version: 3
 
 default_concurrency:
   target_agents: 6
@@ -30,9 +30,11 @@ claim_rules:
   - One active owner per work packet unless explicitly decomposed into child work packets.
   - One active coding workstream per agent by default.
   - One workstream uses one isolated branch/worktree and one PR by default.
+  - One occupied slot may have only one live mutating agent instance, enforced by its active slot lease.
   - An agent must not claim work whose required dependency contract is undefined.
   - A workstream behind the latest Supervisor synchronization epoch must enter PAUSED_FOR_SYNC before new feature work or completion submission.
   - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN live slot through GitHub issue #53.
+  - A logically assigned agent cannot mutate its branch until its unique runtime instance atomically acquires the slot lease on coordination/leases.
 
 standing_branches:
   - slot_id: SUPERVISOR
@@ -75,10 +77,21 @@ slot_registry:
   assignment_decisions_serialized: true
   no_open_slot_response: "Go Home Come Back Next Time"
 
+branch_leases:
+  branch_lease_source: coordination/leases
+  lease_path_pattern: .leases/<SLOT_ID>.json
+  one_live_instance_per_occupied_slot: true
+  lease_acquisition_atomic_create: true
+  lease_renewal_compare_and_swap: true
+  lease_release_compare_and_swap: true
+  implicit_expiry: false
+  policy_doc: docs/AGENT_BRANCH_LEASES.md
+
 live_state:
   active_workstreams_source: pull-requests-and-handoffs
   synchronization_source: github-issue-50-latest-supervisor-broadcast
   slot_occupancy_source: github-issue-53-body
+  branch_instance_lease_source: coordination/leases
   versioned_manifest_is_live_task_registry: false
   versioned_manifest_is_live_slot_registry: false
 
@@ -87,8 +100,11 @@ active_workstreams: []
 handoff_required_fields:
   - task_id
   - agent_id
+  - agent_instance_id
   - owner_role
   - assigned_slot_id
+  - lease_id
+  - lease_lock_path
   - status
   - base_sha
   - head_sha
