@@ -168,25 +168,27 @@ Governed 24-hour research scout monitors competitors/APIs/AI techniques/client p
 
 ## Cross-cutting — Parallel Multi-Agent Engineering System
 
-This execution layer applies to **M02 and every current/future milestone**. It reduces calendar development time through bounded parallelism without allowing agents to overwrite one another, duplicate architecture, collide on migrations, submit stale branches, silently widen contracts or weaken integration gates.
+This execution layer applies to **M02 and every current/future milestone**. It reduces calendar development time through bounded parallelism without allowing agents to overwrite one another, duplicate architecture, collide on migrations, double-claim module slots, submit stale branches, silently widen contracts or weaken integration gates.
 
 Canonical operating documents:
 
 - `AGENTS.md` — mandatory startup/working instructions;
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full coordination/integration protocol;
-- `docs/AI_NATIVE_PLAN.md` — current branch/module/agent assignment and merge strategy;
+- `docs/AI_NATIVE_PLAN.md` — branch/module/agent/slot occupancy and merge strategy;
+- `docs/NEW_AGENT_ONBOARDING.md` — main-first new-agent onboarding;
+- `.agent/slots.yaml` — Supervisor-owned slot availability/occupancy registry;
 - `.agent/ownership.yaml` — path/module ownership;
 - `.agent/shared-files.yaml` — Supervisor/integration-owned high-conflict paths;
 - `.agent/workstreams.yaml` — standing branches, roles and workstream state;
 - `.agent/dependencies.yaml` — dependency DAG/interface-freeze/default merge-layer rules;
 - `.agent/migrations.yaml` — serialized migration reservations;
-- `.agent/supervisor.yaml` — Supervisor state, completion signal, synchronization epoch and broadcast contract.
+- `.agent/supervisor.yaml` — Supervisor onboarding/completion/synchronization/broadcast contract.
 
 ### Supervisor model
 
-The Main-repository agent acts as the **Supervisor**. It reviews and merges incoming agent PRs and also works on its own bounded `supervisor/integration-control` branch.
+The Main-repository agent acts as the **Supervisor**. It onboards new agents, owns slot assignment/release, reviews and merges incoming agent PRs, and works on its own bounded `supervisor/integration-control` branch.
 
-For every newly planned parallel wave, the Supervisor's first repository mutation is branch bootstrap: create the branch for each module/agent workstream before publishing assignments or starting implementation. The branch/module/agent/merge mapping is then written to `docs/AI_NATIVE_PLAN.md` and `.agent/workstreams.yaml`.
+For every newly planned parallel wave, the Supervisor's first repository mutation is branch bootstrap: create the branch for each module/agent workstream before publishing assignments or starting implementation. New-agent arrival itself does not create capacity.
 
 Current standing branches:
 
@@ -196,6 +198,20 @@ Current standing branches:
 - `agent/worker-runtime`
 - `agent/module-infrastructure`
 - `agent/verification-security`
+
+### New Agent Onboarding
+
+A new agent always starts from exact current `main`, not from a module branch. The Supervisor immediately checks `docs/AI_NATIVE_PLAN.md` plus `.agent/slots.yaml` for an assignable slot whose status is exactly `OPEN`.
+
+If an `OPEN` slot exists, the Supervisor serializes assignment, verifies that standing branch is synchronized to current `main`/latest sync epoch, records the agent name, marks the slot `OCCUPIED`, records start status in both durable slot sources, publishes the assignment through the normal Supervisor integration path, and only then allows module work.
+
+If no assignable `OPEN` slot exists, the Supervisor stops onboarding immediately and responds exactly:
+
+**Go Home Come Back Next Time**
+
+That rejected arrival receives no assignment, module checkout, work packet, feature edit or implementation PR.
+
+Slot release is also Supervisor-owned and occurs only after no active/unmerged work remains for that slot. See `docs/NEW_AGENT_ONBOARDING.md`.
 
 ### Default concurrency model
 
@@ -208,7 +224,7 @@ Use **6 concurrent agents** when enough independent work exists:
 5. Module / Connector Infrastructure Agent;
 6. Verification / Security Agent.
 
-Scale to **8** only when ownership/dependency boundaries are explicit and metrics remain healthy. Beyond 8 requires evidence that conflict rate, CI queueing, rework and integration latency remain acceptable.
+Scale to **8** only when ownership/dependency boundaries are explicit and metrics remain healthy. Beyond 8 requires evidence that conflict rate, CI queueing, rework and integration latency remain acceptable. A newly arriving agent does not trigger capacity expansion.
 
 ### Isolation, ownership and dependencies
 
@@ -216,15 +232,13 @@ Default invariant:
 
 `1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
 
-Agents stay inside declared scopes. Public contracts/interfaces are the coordination boundary. Shared files are composed by the Supervisor when concurrent writers could collide. Parallel tasks form an explicit DAG; merge order follows dependencies rather than PR creation/completion time.
+Agents stay inside declared scopes. Public contracts/interfaces are coordination boundaries. Shared files and slot occupancy are composed by the Supervisor. Parallel tasks form an explicit DAG; merge order follows dependencies rather than completion time.
 
 Default layer priority when all are required:
 
 `contracts/policy → DB/persistence → module infrastructure → worker/runtime → verification changes → Supervisor integration`
 
-Independent nodes may merge earlier when they truly have no dependency/ownership/interface/migration collision.
-
-Migration numbers are reserved in `.agent/migrations.yaml` before creation.
+Independent nodes may merge earlier when they truly have no dependency/ownership/interface/migration collision. Migration numbers are reserved in `.agent/migrations.yaml` before creation.
 
 ### Completion and Supervisor interrupt protocol
 
@@ -234,7 +248,7 @@ When an agent finishes a work packet it explicitly announces:
 
 For a non-Supervisor agent, the canonical repository signal is a top-level PR comment whose entire body is exactly that phrase. It means `READY_FOR_SUPERVISOR_REVIEW`, not automatic approval.
 
-The Supervisor then checkpoints/pauses its own work, reviews the exact submitted head, dependencies, migration/shared-file state, security impact and verification evidence, requests changes or merges with expected-head protection, re-reads resulting `main`, increments the synchronization epoch, broadcasts to all active agents, then resumes its paused work.
+The Supervisor pauses/checkpoints its work, reviews exact head/dependencies/migration/shared-file/security/verification state, requests changes or merges with expected-head protection, re-reads resulting `main`, increments synchronization epoch, broadcasts to active agents, then resumes.
 
 Multiple submissions are FIFO subject to dependency priority; overlapping merges are serialized.
 
@@ -246,9 +260,7 @@ After every approved merge the Supervisor broadcasts:
 
 Canonical durable broadcast channel: GitHub issue `#50`.
 
-Each alert includes resulting `main` SHA and a monotonically increasing `sync_epoch`. Every active agent must pause new edits, synchronize current `main` into its branch non-destructively, resolve owned-scope conflicts, escalate shared-file conflicts, rerun minimum required verification, record the new `synced_main_sha`/`sync_epoch`, then resume.
-
-A branch behind the latest epoch may not validly submit `Work Done and Submitted`.
+Each alert includes resulting `main` SHA and a monotonically increasing `sync_epoch`. Active agents pause, synchronize current `main` non-destructively, resolve/escalate conflicts, rerun minimum verification, record new `synced_main_sha`/`sync_epoch`, then resume. A stale branch cannot validly submit completion.
 
 ### Independent verification
 
@@ -256,38 +268,17 @@ Implementation and adversarial verification are separate. Verification agents te
 
 ### Agent Instruction Drift Check — mandatory every task
 
-Every agent checks instruction freshness before starting and before completion. At minimum it reads/checks:
+Every agent checks instruction freshness before starting and before completion. At minimum it reads/checks `README.md`, `AGENTS.md`, this project plan, `docs/CHECKPOINT.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md` when relevant, module/ADR docs, `.agent/` manifests including `.agent/slots.yaml`, latest Supervisor epoch, current `main`, own branch/head and verification commands.
 
-- `README.md`;
-- `AGENTS.md`;
-- `docs/PROJECT_PLAN.md`;
-- `docs/CHECKPOINT.md`;
-- `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
-- `docs/AI_NATIVE_PLAN.md`;
-- relevant module/ADR docs;
-- `.agent/` manifests including Supervisor epoch;
-- current `main`, own branch/head and verification commands.
-
-If architecture, modules, branches, Supervisor behavior, submission signals, sync rules, ownership, migrations, dependency order, CI/verification, security/policy boundaries or tooling changed, the same change set updates the relevant instructions and machine-readable governance.
+If architecture, modules, onboarding/slot rules, branches, Supervisor behavior, submission signals, sync rules, ownership, migrations, dependency order, CI/verification, security/policy boundaries or tooling changed, the same change set updates relevant instructions and machine-readable governance.
 
 A task cannot become `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
 ### Integration gate
 
-Before merge require:
+Before merge require exact verified head SHA, valid assigned slot, latest sync epoch, satisfied dependency graph, no ownership/shared-file/migration collision, resolved reviews, `pnpm run verify:parallel` PASS, required exact-head FAST/FULL verification, completed instruction-drift check, current-base/mergeability revalidation and expected-head merge guard where supported.
 
-- exact verified head SHA;
-- latest synchronization epoch;
-- satisfied dependency graph;
-- no ownership/shared-file/migration collision;
-- resolved reviews;
-- `pnpm run verify:parallel` PASS;
-- required exact-head FAST/FULL verification;
-- completed instruction-drift check;
-- current-base/mergeability revalidation;
-- expected-head merge guard where supported.
-
-Parallel development never authorizes production credentials, network/provider activation, unrestricted acquisition, autonomous outreach, destructive production actions or any separately gated capability.
+Parallel development/onboarding never authorizes production credentials, network/provider activation, unrestricted acquisition, autonomous outreach, destructive production actions or any separately gated capability.
 
 ## Technology recommendation for ADR validation
 
@@ -314,13 +305,13 @@ Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely becaus
 
 A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and UI failure/partial states are defined. Acquisition work additionally needs geography/taxonomy/source capability/preflight. Lead work additionally needs lifecycle/scoring/routing/compliance semantics.
 
-For parallel work, READY additionally requires a bounded work packet with branch, write scope, synchronization epoch, dependency declarations, shared-file impact, migration reservation when applicable, interface-freeze information and required verification/handoff criteria.
+For parallel work, READY additionally requires a valid assigned slot, bounded work packet with branch/write scope, synchronization epoch, dependency declarations, shared-file impact, migration reservation when applicable, interface-freeze information and verification/handoff criteria. A newly arriving agent is not READY until main-first onboarding/slot assignment is complete.
 
 ## Definition of Done
 
 Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
 
-For agent-executed work, DONE also requires the Agent Instruction Drift Check, current synchronization epoch, applicable verification and explicit **Work Done and Submitted** submission. Any change that alters future agent working behavior must update `AGENTS.md`, `README.md`, `docs/AI_NATIVE_PLAN.md` and relevant coordination/module documentation in the same change set.
+For agent-executed work, DONE also requires the Agent Instruction Drift Check, current synchronization epoch, applicable verification and explicit **Work Done and Submitted** submission. Any change that alters future agent working behavior must update `AGENTS.md`, `README.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md` when applicable, and relevant coordination/module documentation in the same change set.
 
 ## Development authorization
 
