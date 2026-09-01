@@ -6,32 +6,76 @@ Updated: 2026-09-02
 
 ## Purpose
 
-This document is the canonical branch/module/agent integration plan for parallel repository development. It complements `AGENTS.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md` and the machine-readable `.agent/` manifests.
+This document is the canonical branch/module/agent integration and slot-occupancy plan for parallel repository development. It complements `AGENTS.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md` and the machine-readable `.agent/` manifests.
 
-The Main-repository agent is the **Supervisor**. The Supervisor owns integration review, merge ordering, synchronization broadcasts and resumption of its own bounded work after handling completed submissions.
+The Main-repository agent is the **Supervisor**. The Supervisor owns new-agent onboarding, slot assignment/release, integration review, merge ordering, synchronization broadcasts and resumption of its own bounded work after handling completed submissions.
 
 ## Immediate branch bootstrap
 
-Before this plan was documented, the Supervisor created the standing branches required for the current six-agent operating model. All branches were then synchronized to the verified governance baseline merged to `main` at:
+Before this plan was documented, the Supervisor created the standing branches required for the current six-agent operating model. The original governance bootstrap baseline was:
 
 `890618e28c5e300496389051b1b3d9c32880adf7`
 
-| Agent ID | Role / module | Branch | Default ownership | Merge strategy |
+Live post-merge synchronization is not inferred from this historical bootstrap SHA; use the latest valid Supervisor broadcast on GitHub issue #50.
+
+| Slot ID | Role / module | Branch | Default ownership | Merge strategy |
 |---|---|---|---|---|
 | `SUPERVISOR` | Integration Control / Architecture | `supervisor/integration-control` | shared files, integration policy, branch plan, merge queue | Integrate after exact-head verification; Supervisor changes follow the same FULL-GATE discipline |
-| `AGENT-CONTRACTS` | Contracts / Policy | `agent/contracts-policy` | `packages/contracts/**` | Merge first when downstream work depends on a new/frozen public contract |
-| `AGENT-DB` | Database / Persistence | `agent/database-persistence` | `packages/db/**` | Merge after required contract dependency; migration reservation required before SQL migration creation |
-| `AGENT-RUNTIME` | Worker / Runtime | `agent/worker-runtime` | `apps/worker/**`, `packages/queue/**` | Merge after required contract/persistence dependencies and current-main revalidation |
-| `AGENT-MODULE` | Module / Connector Infrastructure | `agent/module-infrastructure` | task-specific bounded paths declared in work packet | Merge according to explicit dependency DAG; no implicit shared-file ownership |
-| `AGENT-VERIFY` | Verification / Security | `agent/verification-security` | verifier/test paths within assigned packet | Normally reviews/tests implementation branches; independent verifier changes merge only when explicitly required |
+| `CONTRACTS` | Contracts / Policy | `agent/contracts-policy` | `packages/contracts/**` | Merge first when downstream work depends on a new/frozen public contract |
+| `DATABASE` | Database / Persistence | `agent/database-persistence` | `packages/db/**` | Merge after required contract dependency; migration reservation required before SQL migration creation |
+| `RUNTIME` | Worker / Runtime | `agent/worker-runtime` | `apps/worker/**`, `packages/queue/**` | Merge after required contract/persistence dependencies and current-main revalidation |
+| `MODULE` | Module / Connector Infrastructure | `agent/module-infrastructure` | task-specific bounded paths declared in work packet | Merge according to explicit dependency DAG; no implicit shared-file ownership |
+| `VERIFY` | Verification / Security | `agent/verification-security` | verifier/test paths within assigned packet | Normally reviews/tests implementation branches; independent verifier changes merge only when explicitly required |
 
 These are standing coordination branches, not permission to implement unspecified work. Every concrete task still requires a bounded work packet, write scope, dependency declaration and acceptance criteria.
 
-For future parallel waves, the Supervisor creates all required branches **before** documenting/assigning that wave, then updates this table and `.agent/workstreams.yaml`.
+For future parallel waves, the Supervisor creates all required branches **before** documenting/assigning that wave, then updates this document and `.agent/workstreams.yaml`. A newly arriving agent does not itself trigger extra capacity or branch creation.
+
+## New Agent Onboarding and Slot Board
+
+A newly arriving agent must **always start from exact current `main`**. It may read the repository and onboarding instructions there, but it must not begin from or edit a standing module branch before Supervisor assignment.
+
+Canonical machine-readable slot registry: `.agent/slots.yaml`.
+
+Current slot board:
+
+| Slot | Module branch | Assignable to new agent | Status | Assigned agent | Start status |
+|---|---|---:|---|---|---|
+| `SUPERVISOR` | `supervisor/integration-control` | No | `OCCUPIED` | `SUPERVISOR` | `WORKING` |
+| `CONTRACTS` | `agent/contracts-policy` | Yes | `OPEN` | — | `WAITING` |
+| `DATABASE` | `agent/database-persistence` | Yes | `OPEN` | — | `WAITING` |
+| `RUNTIME` | `agent/worker-runtime` | Yes | `OPEN` | — | `WAITING` |
+| `MODULE` | `agent/module-infrastructure` | Yes | `OPEN` | — | `WAITING` |
+| `VERIFY` | `agent/verification-security` | Yes | `OPEN` | — | `WAITING` |
+
+### Supervisor onboarding algorithm
+
+When a new agent arrives:
+
+1. require the agent to initialize from the exact current `main` SHA and read the canonical instructions;
+2. read this slot board and `.agent/slots.yaml` from current repository state;
+3. inspect only slots that are assignable and exactly `OPEN`;
+4. if one or more `OPEN` slots exist, choose the slot appropriate to the ready bounded work packet/agent capability; serialize the decision so concurrent arrivals cannot claim the same slot;
+5. verify the selected standing branch is synchronized to current `main` and the latest Supervisor sync epoch before the new agent switches to it;
+6. immediately update this plan and `.agent/slots.yaml` with the new agent name, `OCCUPIED` status and start status;
+7. publish the assignment through the normal Supervisor integration path so repository-visible occupancy is authoritative;
+8. only after that assignment is recorded may the new agent switch from `main` to the assigned branch and begin its bounded work packet.
+
+If **no assignable `OPEN` slot exists**, the Supervisor stops onboarding immediately and responds exactly:
+
+**Go Home Come Back Next Time**
+
+No slot/branch/task/work packet/feature edit/agent PR is created for that rejected arrival.
+
+### Slot release
+
+A slot becomes `OPEN` again only by explicit Supervisor action after the assigned agent has no active work packet and no unmerged work for that slot. The Supervisor clears the assigned agent, sets start status to `WAITING`, updates this plan and `.agent/slots.yaml`, and publishes the change through the normal integration path.
+
+The plan and slot registry must agree. A mismatch is governance failure and blocks integration.
 
 ## Live synchronization authority
 
-The branch table above is durable planning state. It is **not** the live post-merge synchronization ledger.
+The branch/slot tables above are durable planning and occupancy state. They are **not** the live post-merge synchronization ledger.
 
 Canonical live synchronization state is the latest valid Supervisor broadcast comment on GitHub issue **#50 — Multi-Agent Supervisor Broadcast Channel**. Each broadcast carries the newest:
 
@@ -133,10 +177,13 @@ The Supervisor never merges two overlapping branches concurrently. Each merge es
 
 ## Assignment lifecycle
 
-Standing branch ownership persists across work packets, but **live task assignment/status does not live permanently in this document**. Concrete active work is represented by the work packet, branch/PR and handoff. This avoids `main` claiming an old task is still `WORKING` after it has already merged.
+Standing branch ownership persists across work packets. New-agent occupancy is persisted in this document and `.agent/slots.yaml`; concrete active task state remains represented by work packet, branch/PR and handoff so `main` does not incorrectly claim an old task remains `WORKING` after integration.
 
-At the initial bootstrap, the Supervisor branch was assigned the repository-workflow implementation and the other standing branches remained idle until bounded work packets were published. Future assignments follow the same branch-first, document-second rule.
+Slot occupancy and task state are therefore distinct:
+
+- slot occupancy answers **which agent currently owns this module lane**;
+- PR/handoff state answers **what bounded task that agent is currently executing**.
 
 ## Instruction drift
 
-Any change to branch names, Supervisor behavior, submission signaling, synchronization alerts, merge order, live-state authority, workstream states or acknowledgement requirements must update this document, `AGENTS.md`, `README.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, relevant `.agent/` manifests and the executable `pnpm run verify:parallel` contract in the same change set.
+Any change to branch names, new-agent onboarding, slot states/occupancy, Supervisor behavior, submission signaling, synchronization alerts, merge order, live-state authority, workstream states or acknowledgement requirements must update this document, `AGENTS.md`, `README.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, relevant `.agent/` manifests and the executable `pnpm run verify:parallel` contract in the same change set.
