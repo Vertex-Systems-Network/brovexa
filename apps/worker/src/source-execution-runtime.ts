@@ -242,7 +242,7 @@ function buildSourceExecutionHandler(options: SourceExecutionRegistryOptions): W
         registry.policyId !== task.policyId ||
         registry.policyVersion !== task.policyVersion ||
         registry.status !== 'approved' ||
-        registry.activation !== 'active'
+        registry.activation !== 'enabled'
       ) {
         throw new PermanentWorkError('SOURCE_EXECUTION_REGISTRY_IDENTITY_MISMATCH');
       }
