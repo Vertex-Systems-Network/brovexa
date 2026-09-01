@@ -138,7 +138,7 @@ requireText(sharedFiles, '- README.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- docs/AI_NATIVE_PLAN.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- .github/PULL_REQUEST_TEMPLATE.md', '.agent/shared-files.yaml');
 
-requireText(dependencies, 'completion signal does not override dependency order', '.agent/dependencies.yaml');
+requireText(dependencies, 'A completion signal does not override dependency order.', '.agent/dependencies.yaml');
 requireText(dependencies, 'contracts_policy', '.agent/dependencies.yaml');
 requireText(dependencies, 'database_persistence', '.agent/dependencies.yaml');
 requireText(dependencies, 'worker_runtime', '.agent/dependencies.yaml');
