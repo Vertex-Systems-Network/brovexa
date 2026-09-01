@@ -25,6 +25,8 @@ export {
 } from './agent-runtime-hardening';
 export { getPrivilegedAgentExecutionTrace } from './agent-runtime-observability';
 export * from './client';
+export * from './connector-health-persistence';
+export * from './connector-health-schema';
 export * from './identity';
 export * from './jobs';
 export * from './lifecycle-persistence';
