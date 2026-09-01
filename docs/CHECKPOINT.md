@@ -6,28 +6,31 @@ Updated: 2026-09-01
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS is ACTIVE with ten FULL-GATE verified implementation slices integrated to `main`.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. The planned provider-neutral M01A — AI Agent Runtime & Memory OS foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE with eleven FULL-GATE verified slices on `main`. M02 — Business Discovery & Source Connectors is the next active implementation phase.**
 
-This means the governed platform foundation plus the current AI runtime/memory foundations are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production providers/connectors/payments/outreach.
+This means the governed platform foundation and provider-neutral AI runtime/memory foundation are built and integrated. It does **not** mean deployed, released, production-verified, or authorized for production model providers, source connectors, payments or outreach.
 
 ## Authorization boundary
 
-The approved M01 implementation scope is complete. M01A implementation is proceeding in small reversible slices under the approved architecture/security boundary.
+The approved M01 and provider-neutral M01A foundation scopes are complete.
 
-Still separately gated: production model/provider execution, production connectors, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and unresolved legal/provider/commercial decisions.
+Still separately gated: production model/provider invocation and credentials, production source connector credentials/activation, payment-provider activation, unrestricted acquisition, autonomous/bulk outreach, Daily Market Intelligence Scout activation, production deployment, destructive production data actions, and unresolved legal/provider/commercial decisions.
+
+M02 implementation may proceed in small reversible provider-neutral slices that do not activate external production credentials or connectors until their own policy/provider gates are satisfied.
 
 ## VCS / integration state
 
 - default branch: `main`
-- current integrated `main` head at this checkpoint branch base: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
+- current integrated `main` head at this checkpoint branch base: `a3c55faef0d350dca70f576ab6ab89972dd10020`
 - original planning PR #1: closed unmerged; superseded by same-head replacement PR #12
 - planning integration PR #12: merged as `0c9ce138fe0b4dc80ce60c33f291cb00b0a59859`
 - consolidated M01 stack PR #11: merged into `m01/platform-foundation` as `825bddeb00a2d571e5e8132b077fb9707b2021e0`
 - final M01 default-branch integration PR #13: merged to `main` as `c82c46649033988c5f90d0e4407a47d02aab4d8a`
-- M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged to `main` as `2a455d561472417a8b353b0303bb848b94e0cdf2`
-- M01A deterministic specialist execution bridge PR #31: exact source head `18340eed0d1be87e27cbe60b2b4777ba6113fc30`, merged to `main` as `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
-- M01A execution aggregation + evaluator handoff PR #33: exact source head `65fa365ef22c481d721bd93ce630f631b67fde46`, merged to `main` as `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
-- M01A evaluator decision + review resolution PR #35: exact source head `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`, merged to `main` as `206e9f00b14674f6ec182751d0b56f85821b6e4b`
+- M01A deterministic dispatcher PR #29: exact source head `eba81cabe2d8bcfa1bb6b8785ac50d56b03d8b8a`, merged as `2a455d561472417a8b353b0303bb848b94e0cdf2`
+- M01A deterministic specialist execution bridge PR #31: exact source head `18340eed0d1be87e27cbe60b2b4777ba6113fc30`, merged as `2d1ed2d0f6cb5b24b0601b9a92fe9ba3282fd93f`
+- M01A execution aggregation + evaluator handoff PR #33: exact source head `65fa365ef22c481d721bd93ce630f631b67fde46`, merged as `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
+- M01A evaluator decision + review resolution PR #35: exact source head `9dcdc3383ec7ff665660cb2833fa2b2e97b26fd6`, merged as `206e9f00b14674f6ec182751d0b56f85821b6e4b`
+- M01A runtime trace + route hardening PR #37: exact source head `80259f7ebb2e40d30512862d0333e315207700f2`, merged as `a3c55faef0d350dca70f576ab6ab89972dd10020`
 - legacy tracker/stacked PRs #2/#8/#9/#10 are superseded integration artifacts and may remain closed/unmerged
 
 Local developer working-copy/runtime/database state remains `UNKNOWN` because repository changes were performed through remote GitHub tooling.
@@ -105,7 +108,7 @@ Exact-head run `33377314942`: PASS.
 
 ## M01A verification state
 
-State: **ACTIVE — ten verified/integrated slices**.
+State: **VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE — eleven provider-neutral foundation slices**.
 
 Integrated slices:
 
@@ -118,7 +121,8 @@ Integrated slices:
 7. deterministic `AgentExecutionPlan → JobRun/WorkUnit` dispatch using the canonical M01 execution foundation;
 8. deterministic specialist execution bridge with per-attempt child ContextReceipt/AgentRun trace, retry lifecycle, canonical checkpoints/budgets and structured governed result persistence;
 9. deterministic completed-DAG aggregation with exact specialist-result/run/budget validation, explicit orchestrator outcome handling and exact deterministic independent-evaluator handoff;
-10. deterministic evaluator decision application with current authorization/definition/context/evidence-policy revalidation, durable independent EvalResult finalization, fail-closed review normalization, and active-owner-only explicit review/resume resolution.
+10. deterministic evaluator decision application with current authorization/definition/context/evidence-policy revalidation, durable independent EvalResult finalization, fail-closed review normalization, and active-owner-only explicit review/resume resolution;
+11. provider-neutral exact route-policy resolution and privileged bounded execution tracing across canonical Job/Plan/Work/Agent/Eval lifecycle state.
 
 ### Seventh-slice exact evidence — deterministic plan dispatcher
 
@@ -154,7 +158,7 @@ The first specialist-bridge run `33452024750` passed quality, PostgreSQL/RBAC an
 - canonical worker + Valkey job `99781739052`: PASS
 - merge SHA: `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
 
-The initial aggregation run `33483976613` passed quality/security but the PostgreSQL lane stopped before reaching the new aggregation verifier because the older lifecycle verifier used a fixed `2026-09-01T01:00:00Z` transition time while persisted AgentRun state used current database time. The existing `AGENT_RUN_TRANSITION_TIME_REGRESSION` guard correctly rejected the stale fixture. The verifier was changed to derive transition timestamps from the persisted run `updated_at`; no lifecycle invariant was weakened. The final exact-head run passed the complete DB/RBAC and worker/Valkey gates, including the new aggregation/evaluator integration harness.
+The initial aggregation run `33483976613` passed quality/security but the PostgreSQL lane stopped before reaching the new aggregation verifier because the older lifecycle verifier used a fixed `2026-09-01T01:00:00Z` transition time while persisted AgentRun state used current database time. The existing `AGENT_RUN_TRANSITION_TIME_REGRESSION` guard correctly rejected the stale fixture. The verifier was changed to derive transition timestamps from the persisted run `updated_at`; no lifecycle invariant was weakened.
 
 ### Tenth-slice exact evidence — evaluator decision + owner review resolution
 
@@ -166,11 +170,21 @@ The initial aggregation run `33483976613` passed quality/security but the Postgr
 - canonical worker + Valkey job `99798867860`: PASS
 - merge SHA: `206e9f00b14674f6ec182751d0b56f85821b6e4b`
 
-The exact-head run passed source/security/runtime quality, the complete PostgreSQL 18 data/RBAC stack including the new evaluator-decision verifier, and the canonical worker/Valkey regression. The verifier proved high-confidence verified acceptance, durable EvalResult persistence and replay, fail-closed evidence-scope rejection, low-confidence/unverified acceptance normalization to review, non-owner denial, owner-attributed resume/approval lifecycle, and contradiction-backed rejection.
+The verifier proved high-confidence verified acceptance, durable EvalResult persistence and replay, fail-closed evidence-scope rejection, low-confidence/unverified acceptance normalization to review, non-owner denial, owner-attributed resume/approval lifecycle, and contradiction-backed rejection.
 
-Current evidence-based estimate: M01A approximately **92%** complete with approximately **1–2 focused engineering days** remaining. This is an engineering estimate, not a calendar commitment.
+### Eleventh-slice exact evidence — runtime trace + route hardening
 
-Current remaining M01A gap is bounded to runtime lifecycle read/trace hardening plus provider-neutral route-resolution enforcement around the integrated deterministic lifecycle. Actual provider/model invocation remains separately gated and is not implied by completing that hardening slice.
+- source head: `80259f7ebb2e40d30512862d0333e315207700f2`
+- PR #37: `feat(m01a): harden runtime trace and route policy`
+- exact-head FULL GATE run `33492278414`: PASS
+- quality/security job `99806288562`: PASS
+- PostgreSQL 18 migration + RBAC job `99807024306`: PASS
+- canonical worker + Valkey job `99807298693`: PASS
+- merge SHA: `a3c55faef0d350dca70f576ab6ab89972dd10020`
+
+The verifier proved deterministic-only provider/model rejection, approved provider/model allowlists, explicit fallback opt-in, real persisted Job/Work/effect/checkpoint/transition trace composition, `workspace.audit.read` enforcement, normal-member denial and cross-tenant isolation. No provider/model invocation, credential access or network execution was activated.
+
+Current evidence-based estimate: planned provider-neutral M01A foundation **100% complete**, with **0 focused engineering days** remaining in that bounded phase. Production provider/model execution remains a later gated capability and is not implied by M01A completion.
 
 ## Integration verification layers
 
@@ -185,18 +199,7 @@ M01 was not merged to `main` from source evidence alone. It passed three verific
 
 PR #13 then merged with expected head `825bddeb00a2d571e5e8132b077fb9707b2021e0` and produced `main` commit `c82c46649033988c5f90d0e4407a47d02aab4d8a`.
 
-The same compensating integration discipline is being applied to M01A: each implementation slice is isolated, verified on its exact current PR head through the hosted FULL GATE, and merged only with an expected-head SHA guard.
-
-## ABD-216 acceptance criteria reconciliation
-
-- Fresh setup reproducible from documented instructions: **VERIFIED**.
-- CI fails closed on required quality gates: **VERIFIED**.
-- No tracked secrets: **VERIFIED**.
-- Queue idempotent retry/recovery behavior: **VERIFIED**.
-- Migrations apply and roll back in test: **VERIFIED**.
-- Auth/RBAC/tenant boundaries have automated tests: **VERIFIED**.
-- Request/job correlation is traceable: **VERIFIED**.
-- Durable project checkpoint reflects actual M01/M01A integration state: **VERIFIED by this checkpoint PR once merged**.
+The same compensating integration discipline was applied through M01A: each implementation slice was isolated, verified on its exact current PR head through the hosted FULL GATE, and merged only with an expected-head SHA guard.
 
 ## Supply-chain posture
 
@@ -224,7 +227,7 @@ Dependency advisory evidence is time-sensitive and must be rerun on future integ
 
 ## Next safe action
 
-1. Verify and merge this M01A progress/checkpoint-only PR through normal hosted FULL GATE and expected-head integration.
-2. Start a fresh implementation branch from the resulting `main` head.
-3. Implement the bounded M01A hardening slice: tenant-scoped lifecycle read/trace state across orchestrator/specialist/evaluator/review projections plus provider-neutral route-resolution enforcement from approved AgentDefinition model policy.
-4. Keep actual provider/model invocation and production provider credentials/configuration separately gated after route-resolution hardening is independently FULL-GATE verified.
+1. Verify and merge this M01A completion/progress-only PR through the normal hosted FULL GATE and expected-head integration path.
+2. Start a fresh implementation branch from the resulting `main` head for **M02 — Business Discovery & Source Connectors**.
+3. Implement the first bounded M02 slice: executable provider-neutral `SourceCapability`, `SourcePolicy`, `ConnectorPolicy` and normalized source-result/provenance/quota contracts plus deterministic connector admission/health primitives.
+4. Keep external production source credentials/network activation separately gated until source/legal/provider policy allows specific connectors.

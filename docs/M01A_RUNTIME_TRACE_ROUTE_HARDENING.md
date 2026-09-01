@@ -1,12 +1,12 @@
 # M01A — Runtime Trace + Route Hardening
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
 ## Purpose
 
-This is the eleventh bounded implementation slice of **M01A — AI Agent Runtime & Memory OS**. It hardens the now-complete deterministic execution lifecycle with a tenant-authorized bounded runtime trace and an exact provider-neutral route-policy resolver.
+This is the eleventh bounded implementation slice of **M01A — AI Agent Runtime & Memory OS**. It hardens the completed deterministic execution lifecycle with a tenant-authorized bounded runtime trace and an exact provider-neutral route-policy resolver.
 
 The slice introduces no migration, provider SDK, model invocation, credential store, network call, connector, queue framework or production business-specialist activation.
 
@@ -42,7 +42,7 @@ Trace reads are bounded with fail-closed cardinality limits for WorkUnits, effec
 
 Because trace payloads can contain operational/evaluation detail, the package root does **not** expose the lower-privilege internal reader. The public package surface exposes `getPrivilegedAgentExecutionTrace`, which re-resolves current tenant authorization and requires `workspace.audit.read` before delegating to the tenant-scoped trace reader. A normal member with only `workspace.read` cannot retrieve the full execution trace.
 
-## Verification target
+## Verification
 
 `scripts/verify-agent-runtime-hardening.mjs` is chained through canonical `scripts/verify-db.mjs` and verifies:
 
@@ -59,7 +59,19 @@ Because trace payloads can contain operational/evaluation detail, the package ro
 11. a normal workspace member cannot read the privileged trace;
 12. an owner of another workspace receives no cross-tenant trace.
 
-All previous migration, identity/RBAC, Agent/Memory lifecycle, Context Builder, plan, dispatcher, specialist execution, aggregation/evaluator, evaluator-decision and worker/Valkey regressions remain in the same hosted FULL GATE.
+All previous migration, identity/RBAC, Agent/Memory lifecycle, Context Builder, plan, dispatcher, specialist execution, aggregation/evaluator, evaluator-decision and worker/Valkey regressions remained in the same hosted FULL GATE.
+
+### Exact integration evidence
+
+- PR #37: `feat(m01a): harden runtime trace and route policy`
+- exact source head: `80259f7ebb2e40d30512862d0333e315207700f2`
+- exact-head FULL GATE run `33492278414`: PASS
+- quality/security job `99806288562`: PASS
+- PostgreSQL 18 migration + RBAC job `99807024306`: PASS
+- canonical worker + Valkey job `99807298693`: PASS
+- merge SHA: `a3c55faef0d350dca70f576ab6ab89972dd10020`
+
+No guardrail was weakened and no provider/model execution was activated during verification.
 
 ## Explicit non-scope
 
@@ -76,6 +88,10 @@ This slice does not implement or activate:
 
 ## M01A completion interpretation
 
-If this exact slice passes the complete hosted FULL GATE and is integrated to `main`, the planned **provider-neutral M01A runtime foundation** can be considered implementation-complete: governed contracts, durable memory/lifecycle, registry/context, planner, dispatch, deterministic specialist bridge, aggregation, evaluator/review lifecycle, route-policy resolution and privileged execution trace are all independently verified.
+With this exact slice FULL-GATE verified and integrated, the planned **provider-neutral M01A runtime foundation is implementation-complete**: governed contracts, durable memory/lifecycle, registry/context, planner, dispatch, deterministic specialist bridge, aggregation, evaluator/review lifecycle, route-policy resolution and privileged execution trace are independently verified.
 
 Actual provider/model invocation remains a later separately gated capability and must not be inferred from M01A foundation completion.
+
+## Next safe phase
+
+Proceed from fresh `main` into **M02 — Business Discovery & Source Connectors** with a provider-neutral source-adapter foundation: executable SourceCapability / SourcePolicy / ConnectorPolicy contracts, normalized source-result envelopes, quota/cost/provenance boundaries and deterministic connector admission/health primitives. Production source credentials and external connector activation remain separately gated.
