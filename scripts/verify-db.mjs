@@ -205,3 +205,4 @@ await import('./verify-agent-execution-plan.mjs');
 await import('./verify-agent-plan-dispatcher.mjs');
 await import('./verify-agent-execution-aggregation.mjs');
 await import('./verify-agent-evaluator-decision.mjs');
+await import('./verify-agent-runtime-hardening.mjs');
