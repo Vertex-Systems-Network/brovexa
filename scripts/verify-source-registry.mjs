@@ -202,6 +202,15 @@ try {
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), expectedMigrations);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
+  await assert.rejects(
+    () =>
+      pool.query(
+        `INSERT INTO source_capabilities (source_key, version, source_class, envelope)
+         VALUES ('source.direct-invalid', '1.0.0', 'company_first_party', '{}'::jsonb)`,
+      ),
+    expectPostgresConstraint('source_capabilities_envelope_identity_check'),
+  );
+
   const capabilityId = await persistSourceCapability(pool, {
     sourceKey: capability.sourceKey,
     version: capability.version,
@@ -416,14 +425,16 @@ try {
     decision: 'allow',
     reasonCodes: ['source_policy_admitted'],
     warnings: [],
-    sourceKey: capability.sourceKey,
+    policySnapshot: { policyId: policy.policyId, policyVersion: policy.version },
     connectorKey: definition.connectorKey,
     connectorVersion: definition.version,
-    policySnapshot: { policyId: policy.policyId, policyVersion: policy.version },
-    storageClass: 'EVIDENCE_MINIMAL',
+    sourceKey: capability.sourceKey,
+    operation: request.operation,
+    storageClass: request.storageClass,
+    allowedStorageClasses: ['EVIDENCE_MINIMAL'],
     exportAllowed: false,
     rawPayloadAllowed: false,
-    budget: request.budget,
+    effectiveBudget: request.budget,
     evaluatedAt: evaluatedAt.toISOString(),
   };
 
@@ -447,6 +458,8 @@ try {
   assert.equal(snapshot.sourceTaskId, request.sourceTaskId);
   assert.equal(snapshot.decision, 'allow');
   assert.deepEqual(snapshot.reasonCodes, ['source_policy_admitted']);
+  assert.equal(snapshot.admission.operation, request.operation);
+  assert.equal(snapshot.admission.storageClass, request.storageClass);
   assert.equal(await getSourceAdmissionSnapshot(pool, workspaceB, snapshotInput.id), null);
 
   await assert.rejects(
@@ -471,6 +484,30 @@ try {
       persistSourceAdmissionSnapshot(pool, {
         ...snapshotInput,
         admission: { ...admission, connectorVersion: '2.0.0' },
+      }),
+    expectSourceCode('SOURCE_ADMISSION_IDENTITY_MISMATCH'),
+  );
+  await assert.rejects(
+    () =>
+      persistSourceAdmissionSnapshot(pool, {
+        ...snapshotInput,
+        admission: { ...admission, operation: 'lookup' },
+      }),
+    expectSourceCode('SOURCE_ADMISSION_IDENTITY_MISMATCH'),
+  );
+  await assert.rejects(
+    () =>
+      persistSourceAdmissionSnapshot(pool, {
+        ...snapshotInput,
+        admission: { ...admission, storageClass: 'REFERENCE_ONLY' },
+      }),
+    expectSourceCode('SOURCE_ADMISSION_IDENTITY_MISMATCH'),
+  );
+  await assert.rejects(
+    () =>
+      persistSourceAdmissionSnapshot(pool, {
+        ...snapshotInput,
+        admission: { ...admission, evaluatedAt: new Date(evaluatedAt.getTime() + 1_000).toISOString() },
       }),
     expectSourceCode('SOURCE_ADMISSION_IDENTITY_MISMATCH'),
   );
