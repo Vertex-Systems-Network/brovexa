@@ -193,6 +193,11 @@ function executionNow(options: SourceExecutionRegistryOptions): Date {
   return now;
 }
 
+function sameInstant(value: string, expected: Date): boolean {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp === expected.getTime();
+}
+
 function readExecutionPayload(context: WorkHandlerContext): SourceTaskExecutionPayload {
   const payload = context.payload;
   if (
@@ -354,8 +359,8 @@ function assertExecutionPolicy(
 ): void {
   if (
     policy.state !== registry.policyState ||
-    policy.reviewedAt !== registry.reviewedAt.toISOString() ||
-    policy.nextReviewAt !== registry.nextReviewAt.toISOString()
+    !sameInstant(policy.reviewedAt, registry.reviewedAt) ||
+    !sameInstant(policy.nextReviewAt, registry.nextReviewAt)
   ) {
     throw new PermanentWorkError('SOURCE_EXECUTION_POLICY_IDENTITY_MISMATCH');
   }
