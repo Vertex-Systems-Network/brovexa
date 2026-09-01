@@ -16,7 +16,7 @@
     "verify:db": "pnpm --filter @brovexa/db build && node scripts/verify-db.mjs",
     "verify:identity": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && node scripts/verify-identity.mjs",
     "verify:queue:foundation": "node scripts/verify-queue-foundation.mjs",
-    "verify:queue": "pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs && node scripts/verify-agent-specialist-queue.mjs",
+    "verify:queue": "pnpm --filter @brovexa/contracts build && pnpm --filter @brovexa/db build && pnpm --filter @brovexa/queue build && pnpm --filter @brovexa/worker build && node scripts/verify-queue.mjs && node scripts/verify-agent-specialist-queue.mjs && node scripts/verify-source-execution-queue.mjs",
     "verify:foundation": "node scripts/verify-foundation.mjs",
     "verify:foundation:test": "node scripts/verify-foundation.test.mjs",
     "verify:format": "node scripts/verify-source-hygiene.mjs",
