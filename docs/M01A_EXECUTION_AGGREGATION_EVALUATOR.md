@@ -1,6 +1,6 @@
 # M01A — Execution Aggregation + Evaluator Handoff
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -9,6 +9,18 @@ Updated: 2026-09-01
 This is the ninth reversible implementation slice of **M01A — AI Agent Runtime & Memory OS**. It adds a deterministic completed-DAG aggregation boundary after canonical specialist WorkUnits have finished, validates the specialist execution projections and either completes the orchestrator, sends it to explicit review, maps terminal dispatch failure/cancellation state, or creates an exact independent evaluator handoff.
 
 Provider/model invocation remains disabled. This slice uses the existing PostgreSQL AgentRun, ContextReceipt, execution-plan, JobRun/WorkUnit, effect, budget and lifecycle primitives and therefore introduces no new migration or queue framework.
+
+## Integration evidence
+
+- PR: `#33` — `feat(m01a): aggregate specialist DAGs and create evaluator handoff`
+- final exact source head: `65fa365ef22c481d721bd93ce630f631b67fde46`
+- final exact-head FULL GATE run: `33484348956` — PASS
+- quality/security job: `99780868770` — PASS
+- PostgreSQL 18 migration + RBAC job: `99781570196` — PASS
+- canonical worker + Valkey job: `99781739052` — PASS
+- merge SHA: `bd67b1331652f7aee390f1d43fc171fa39ea10e4`
+
+The initial run `33483976613` exposed a stale pre-existing lifecycle verifier timestamp rather than an aggregation runtime defect. `verify-agent-memory-lifecycle.mjs` used a fixed `2026-09-01T01:00:00Z` transition time while persisted AgentRun `updated_at` used current database time. The existing time-regression guard correctly rejected it. The verifier was changed to derive transition times from the persisted run projection; no lifecycle guard or runtime invariant was weakened. The final exact-head run then passed every FULL GATE lane, including the new aggregation verifier.
 
 ## Aggregation boundary
 
@@ -58,9 +70,9 @@ The bounded evaluator path is intentionally deterministic-only in this slice:
 
 A provider/model-routed evaluator fails closed with `AGENT_AGGREGATION_EVALUATOR_ROUTE_UNAVAILABLE`. Actual evaluator execution and EvalResult acceptance/rejection are a later bounded step.
 
-## Verification target
+## Verified behavior
 
-`scripts/verify-agent-execution-aggregation.mjs` is chained through canonical `scripts/verify-db.mjs` and covers:
+`scripts/verify-agent-execution-aggregation.mjs` is chained through canonical `scripts/verify-db.mjs` and proves:
 
 1. a successful specialist WorkUnit is prepared through the real specialist execution persistence boundary;
 2. bounded usage is recorded through the canonical dispatch budget ledger;
@@ -72,7 +84,7 @@ A provider/model-routed evaluator fails closed with `AGENT_AGGREGATION_EVALUATOR
 8. evaluator aggregation replay is idempotent;
 9. confidence below the configured review threshold moves the orchestrator to `review_required` with explicit issue state.
 
-Existing migration, Agent/Memory lifecycle, Context Builder, execution-plan and dispatcher regressions remain part of the same canonical PostgreSQL 18 FULL GATE.
+Existing migration, Agent/Memory lifecycle, Context Builder, execution-plan, dispatcher, identity/RBAC and canonical worker/Valkey regressions also passed in the final integration context.
 
 ## Explicit non-scope
 
@@ -88,6 +100,6 @@ This slice does not implement or activate:
 - memory promotion/curation;
 - outreach, CRM, billing or production deployment.
 
-## Next safe slice after verification
+## Next safe slice
 
 Complete deterministic evaluator decision application and explicit review/resume semantics: execute an already-approved deterministic evaluator boundary, persist an independent `EvalResult`, validate evaluator separation and evidence state, then transition the subject orchestrator from evaluation pending to `succeeded`, `failed` or `review_required` without activating provider/model execution.
