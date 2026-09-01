@@ -49,7 +49,7 @@ export const connectorHealthSnapshots = pgTable(
     check('connector_health_snapshots_version_check', sql`length(btrim(${table.connectorVersion})) > 0`),
     check(
       'connector_health_snapshots_quota_check',
-      sql`${table.quotaRemaining} IS NULL OR ${table.quotaRemaining} >= 0`,
+      sql`${table.quotaRemaining} IS NULL OR (${table.quotaRemaining} >= 0 AND ${table.quotaRemaining} <= 9007199254740991)`,
     ),
     check(
       'connector_health_snapshots_error_rate_check',
@@ -57,7 +57,7 @@ export const connectorHealthSnapshots = pgTable(
     ),
     check(
       'connector_health_snapshots_latency_check',
-      sql`${table.p95LatencyMs} IS NULL OR ${table.p95LatencyMs} >= 0`,
+      sql`${table.p95LatencyMs} IS NULL OR (${table.p95LatencyMs} >= 0 AND ${table.p95LatencyMs} <= 9007199254740991)`,
     ),
   ],
 );
