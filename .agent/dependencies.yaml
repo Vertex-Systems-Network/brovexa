@@ -1,0 +1,20 @@
+version: 1
+policy: explicit-dag
+
+rules:
+  - Every non-trivial parallel work packet declares depends_on, even when the list is empty.
+  - Dependency edges must not form cycles.
+  - Dependent work may stack on an explicit dependency SHA/branch only when the interface version is frozen.
+  - A frozen interface change requires impact review for all dependent workstreams.
+  - Random merge ordering is prohibited when dependencies exist.
+  - Final integration must revalidate dependent work against current main after required dependencies merge.
+
+interface_freeze_required_fields:
+  - contract_path
+  - contract_version_or_sha
+  - owner_workstream
+  - dependent_workstreams
+  - compatibility_assumptions
+
+active_dependencies: []
+active_interface_freezes: []
