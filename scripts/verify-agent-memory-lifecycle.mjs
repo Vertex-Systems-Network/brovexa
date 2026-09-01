@@ -60,6 +60,9 @@ function later(date, milliseconds) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
+  await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
+  await pool.query('DROP TABLE IF EXISTS research_job_preflights CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_admission_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_definitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_policies CASCADE');
@@ -113,6 +116,7 @@ try {
     '0005_agent_memory_lifecycle',
     '0006_agent_execution_plan',
     '0007_source_registry_foundation',
+    '0008_source_task_preflight',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
