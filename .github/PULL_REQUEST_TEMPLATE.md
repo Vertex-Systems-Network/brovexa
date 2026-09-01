@@ -2,6 +2,7 @@
 
 - Task/workstream ID:
 - Agent ID / role:
+- Assigned slot ID:
 - Module:
 - Branch:
 - Base SHA:
@@ -35,4 +36,4 @@
 
 Do not treat PR creation as task completion. When the work packet is actually ready for Supervisor review, add a **new top-level PR comment** whose entire body is the canonical completion signal defined in `AGENTS.md`.
 
-The Supervisor will review the exact head, dependency state, synchronization epoch and verification evidence before any merge.
+The Supervisor will review the exact head, assigned slot, dependency state, synchronization epoch and verification evidence before any merge.
