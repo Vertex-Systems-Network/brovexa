@@ -1,4 +1,4 @@
-version: 1
+version: 2
 policy: supervisor-reviewed-integration
 
 supervisor:
@@ -11,15 +11,23 @@ supervisor:
 new_agent_onboarding:
   required_start_branch: main
   require_exact_current_main_sha: true
-  slot_registry: .agent/slots.yaml
+  slot_definitions: .agent/slots.yaml
+  live_slot_registry_issue: 53
+  live_slot_registry_authority: github-issue-53-body
   plan: docs/AI_NATIVE_PLAN.md
   assignment_authority: SUPERVISOR
   decisions_serialized: true
+  re_read_live_registry_before_assignment: true
+  re_read_live_registry_after_assignment: true
   assign_only_status: OPEN
   branch_must_match_current_main_before_agent_switch: true
-  mark_plan_occupied_before_feature_work: true
+  update_live_registry_before_feature_work: true
   record_agent_name: true
   record_start_status: true
+  record_assigned_main_sha: true
+  record_sync_epoch: true
+  increment_registry_revision: true
+  versioned_docs_do_not_track_live_occupancy: true
   no_open_slot_response: "Go Home Come Back Next Time"
   no_open_slot_action: STOP_WITHOUT_ASSIGNMENT_OR_WORK
   arrival_must_not_expand_capacity: true
@@ -28,6 +36,8 @@ completion_signal:
   exact_phrase: "Work Done and Submitted"
   canonical_event: top-level-pr-comment-exact-body
   meaning: READY_FOR_SUPERVISOR_REVIEW
+  head_change_invalidates_prior_signal: true
+  latest_signal_must_postdate_current_head: true
   requires:
     - open_pull_request
     - exact_head_sha
@@ -36,6 +46,7 @@ completion_signal:
     - dependency_state
     - verification_evidence
     - synced_to_latest_broadcast_epoch
+    - valid_live_slot_assignment
 
 interrupt_flow:
   - PAUSE_SUPERVISOR_WORK
@@ -71,6 +82,13 @@ synchronization:
   shared_file_conflicts_escalate_to_supervisor: true
   must_sync_before_resume: true
   must_sync_before_completion_signal: true
+
+main_integration:
+  direct_push_prohibited: true
+  pr_and_expected_head_required: true
+  hosted_ci_runs_on_pull_request_and_main_push: true
+  main_push_provenance_check_required: true
+  github_branch_protection_external_setting_required: true
 
 states:
   - WORKING
