@@ -80,6 +80,7 @@ requireText(plan, 'Cross-cutting — Parallel Multi-Agent Engineering System', '
 requireText(protocol, '1 agent = 1 work packet = 1 isolated branch/worktree = 1 PR', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
 requireText(protocol, 'Main-repository Supervisor', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
 requireText(aiNativePlan, 'Brovexa AI-Native Multi-Agent Plan', 'docs/AI_NATIVE_PLAN.md');
+requireText(aiNativePlan, 'latest valid Supervisor broadcast comment', 'docs/AI_NATIVE_PLAN.md');
 
 const completionSignal = 'Work Done and Submitted';
 const syncAlert = 'New changes have been merged — please merge these changes into your branch first, then resume your own work.';
@@ -99,6 +100,8 @@ for (const [source, content] of [
 
 requireText(supervisor, 'issue_number: 50', '.agent/supervisor.yaml');
 requireText(supervisor, 'live_state_authority: latest-supervisor-broadcast-comment', '.agent/supervisor.yaml');
+requireText(supervisor, 'live_epoch_source: github-issue-50-latest-supervisor-broadcast', '.agent/supervisor.yaml');
+requireText(supervisor, 'live_main_sha_source: github-issue-50-latest-supervisor-broadcast', '.agent/supervisor.yaml');
 requireText(supervisor, 'policy: fifo-with-dependency-priority', '.agent/supervisor.yaml');
 requireText(supervisor, 'MERGE_WITH_EXPECTED_HEAD', '.agent/supervisor.yaml');
 requireText(supervisor, 'BROADCAST_ALL_ACTIVE_AGENTS', '.agent/supervisor.yaml');
@@ -114,6 +117,9 @@ requireMatch(workstreams, /soft_max_agents:\s*8\b/, '.agent/workstreams.yaml', '
 requireText(workstreams, 'PAUSED_FOR_SYNC', '.agent/workstreams.yaml');
 requireText(workstreams, 'synced_main_sha', '.agent/workstreams.yaml');
 requireText(workstreams, 'sync_epoch', '.agent/workstreams.yaml');
+requireText(workstreams, 'active_workstreams_source: pull-requests-and-handoffs', '.agent/workstreams.yaml');
+requireText(workstreams, 'synchronization_source: github-issue-50-latest-supervisor-broadcast', '.agent/workstreams.yaml');
+requireText(workstreams, 'versioned_manifest_is_live_task_registry: false', '.agent/workstreams.yaml');
 
 const requiredStandingBranches = [
   'supervisor/integration-control',
