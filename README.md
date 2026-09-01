@@ -67,36 +67,74 @@ Discovery → Entity Resolution → Contact Enrichment → Website Intelligence 
 
 ## For AI agents / parallel development
 
-**Every coding, review or integration agent must start with `AGENTS.md`.** The permanent multi-agent protocol is defined in `docs/PARALLEL_AGENT_DEVELOPMENT.md`, with machine-readable coordination state under `.agent/`.
+**Every coding, review or integration agent must start with `AGENTS.md`.** The permanent multi-agent protocol is `docs/PARALLEL_AGENT_DEVELOPMENT.md`; the current branch/module/agent/merge plan is `docs/AI_NATIVE_PLAN.md`; machine-readable state lives under `.agent/`.
 
-Default parallel operating target is **6 agents**: integration/architecture, contracts/policy, database/persistence, worker/runtime, module specialist, and independent verification/security. Scale to **8** only when workstreams are genuinely independent and ownership/dependency boundaries are explicit.
+The Main-repository agent is the **Supervisor**. It reviews and merges incoming agent PRs, manages dependency-safe merge order, publishes post-merge synchronization epochs, alerts all active agents, and works on its own bounded `supervisor/integration-control` branch between integration interrupts.
+
+Default parallel operating target is **6 agents** and soft maximum is **8** unless metrics justify more.
+
+Standing branches:
+
+- `supervisor/integration-control`
+- `agent/contracts-policy`
+- `agent/database-persistence`
+- `agent/worker-runtime`
+- `agent/module-infrastructure`
+- `agent/verification-security`
 
 Default isolation rule:
 
 `1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
 
-The governance contract is executable, not documentation-only:
+### Completion signal
+
+When an agent finishes its work packet it must explicitly announce:
+
+**Work Done and Submitted**
+
+For non-Supervisor agents, the canonical signal is a top-level PR comment whose complete body is exactly that phrase. It means ready for Supervisor review, **not automatic merge approval**.
+
+The branch must already be synchronized to the latest Supervisor `sync_epoch` and `main` SHA before this completion signal is valid.
+
+### Supervisor interrupt / merge / resume rule
+
+On a valid completion signal, the Supervisor pauses/checkpoints its own work, reviews the exact submitted head, checks dependencies/migrations/shared files/security/verification, requests changes or merges with expected-head protection, re-reads resulting `main`, increments the synchronization epoch, broadcasts to all active agents, then resumes its paused work.
+
+Canonical post-merge alert:
+
+**New changes have been merged — please merge these changes into your branch first, then resume your own work.**
+
+Durable broadcast channel: GitHub issue `#50`.
+
+Every active agent receiving a newer epoch must enter sync mode, merge current `main` into its branch using a non-destructive method, resolve owned-scope conflicts, escalate shared-file conflicts to the Supervisor, rerun minimum required verification, record the new `synced_main_sha`/`sync_epoch`, then resume work.
+
+This prevents stale branches from being submitted after other agents have already changed `main`.
+
+### Executable governance
+
+The governance contract is executable:
 
 `pnpm run verify:parallel`
 
-Hosted CI runs the same parallel-agent governance verifier in the quality job. Changes to coordination files, migration numbering or future-agent instructions must keep this gate green; do not remove/weaken the guard simply to pass CI.
+Hosted CI runs the same verifier. Coordination files, Supervisor rules, branch plan, completion/sync signals, migration numbering and future-agent instructions must keep this gate green.
 
 ### Mandatory Agent Instruction Drift Check
 
-At the **start of every task** and again **before completion**, the agent must verify that working instructions still match repository reality. At minimum read/check:
+At the start of every task and again before completion, read/check at minimum:
 
 1. `README.md`;
 2. `AGENTS.md`;
 3. `docs/PROJECT_PLAN.md`;
 4. `docs/CHECKPOINT.md`;
 5. `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
-6. relevant module/ADR documents;
-7. `.agent/` ownership/dependency/shared-file/migration manifests;
-8. current branch/head and required verification commands.
+6. `docs/AI_NATIVE_PLAN.md`;
+7. relevant module/ADR documents;
+8. `.agent/` manifests including Supervisor sync epoch;
+9. current `main`, own branch/head and required verification commands.
 
-If a task changes architecture, module boundaries, workflow, ownership, shared files, migration rules, dependencies, verification commands, CI gates, security/policy boundaries, tooling or integration behavior, the **same change set must update the relevant agent instructions**. At minimum check/update `AGENTS.md` and this `README.md`, plus the relevant coordination/module/checkpoint document.
+If a task changes architecture, module boundaries, Supervisor behavior, branch workflow, submission signal, sync rules, ownership, shared files, migration rules, dependencies, CI/verification, security/policy boundaries or tooling, the same change set must update the relevant agent instructions and machine-readable governance.
 
-A task is **not `READY_FOR_INTEGRATION`** while future-agent instructions are materially stale. If no instruction update is required, the handoff must explicitly state that instruction drift was checked and none was found.
+A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
 Parallelism never authorizes production provider/network credentials, unrestricted acquisition, autonomous outreach, destructive production actions or other separately gated capabilities.
 
@@ -109,7 +147,7 @@ Parallelism never authorizes production provider/network credentials, unrestrict
 - Long-running AI/research work uses durable job/checkpoint state.
 - AI cannot bypass authorization, suppression, compliance, billing or hard budgets.
 - Significant work is delivered in small reversible batches with FAST/FULL verification gates.
-- Parallel work follows explicit ownership, dependency, migration-reservation and integration rules.
+- Parallel work follows explicit ownership, dependency, migration-reservation, synchronization and integration rules.
 - Agent-working documentation must stay synchronized with actual repository behavior.
 - `pnpm run verify:parallel` must remain green for intentional governance changes.
 
@@ -121,8 +159,11 @@ M01A completion and the integrated M02 foundation do not activate production mod
 
 - Linear project: https://linear.app/abdulhanan237/project/brovexa-066a4b14d055
 - Canonical agent instructions: `AGENTS.md`
+- AI-Native branch/agent plan: `docs/AI_NATIVE_PLAN.md`
 - Parallel-agent protocol: `docs/PARALLEL_AGENT_DEVELOPMENT.md`
 - Machine-readable agent coordination: `.agent/`
+- Supervisor state: `.agent/supervisor.yaml`
+- Supervisor broadcast channel: GitHub issue `#50`
 - Parallel governance verifier: `pnpm run verify:parallel`
 - Current checkpoint: `docs/CHECKPOINT.md`
 - M01A contract checkpoint: `docs/M01A_AGENT_CONTRACTS_FOUNDATION.md`
