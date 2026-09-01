@@ -58,6 +58,9 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
+  await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
+  await pool.query('DROP TABLE IF EXISTS research_job_preflights CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_admission_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_definitions CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_policies CASCADE');
@@ -111,6 +114,7 @@ try {
     '0005_agent_memory_lifecycle',
     '0006_agent_execution_plan',
     '0007_source_registry_foundation',
+    '0008_source_task_preflight',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
@@ -310,6 +314,7 @@ try {
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.assigned'));
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.removed'));
 
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0008_source_task_preflight');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
   assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0005_agent_memory_lifecycle');
@@ -329,7 +334,10 @@ try {
       to_regclass('public.memory_record_lifecycle_events')::text AS memory_record_lifecycle_events,
       to_regclass('public.agent_eval_results')::text AS agent_eval_results,
       to_regclass('public.agent_execution_plans')::text AS agent_execution_plans,
-      to_regclass('public.source_capabilities')::text AS source_capabilities
+      to_regclass('public.source_capabilities')::text AS source_capabilities,
+      to_regclass('public.research_job_preflights')::text AS research_job_preflights,
+      to_regclass('public.source_tasks')::text AS source_tasks,
+      to_regclass('public.source_task_usage_events')::text AS source_task_usage_events
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, 'workspaces');
   assert.equal(afterRollback.rows[0]?.job_runs, 'job_runs');
@@ -342,6 +350,9 @@ try {
   assert.equal(afterRollback.rows[0]?.agent_eval_results, null);
   assert.equal(afterRollback.rows[0]?.agent_execution_plans, null);
   assert.equal(afterRollback.rows[0]?.source_capabilities, null);
+  assert.equal(afterRollback.rows[0]?.research_job_preflights, null);
+  assert.equal(afterRollback.rows[0]?.source_tasks, null);
+  assert.equal(afterRollback.rows[0]?.source_task_usage_events, null);
 
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
     '0002_identity_authorization_foundation',
@@ -350,6 +361,7 @@ try {
     '0005_agent_memory_lifecycle',
     '0006_agent_execution_plan',
     '0007_source_registry_foundation',
+    '0008_source_task_preflight',
   ]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
