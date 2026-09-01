@@ -1,6 +1,6 @@
 # M02 — Provider-Neutral Source Adapter Foundation
 
-Status: **IMPLEMENTED ON FEATURE BRANCH — AWAITING FULL GATE / INTEGRATION**
+Status: **VERIFIED / INTEGRATED TO `main`**
 
 Updated: 2026-09-01
 
@@ -86,6 +86,18 @@ Contract tests cover:
 
 No database migration is introduced by this slice. Verification therefore runs through the existing contracts build/typecheck/unit path plus the complete repository FULL GATE regressions.
 
+### Exact integration evidence
+
+- source head: `efbf0f3f2ad8cfd24ccd7c597e1624cd7dd8dbcd`
+- PR #39: `feat(m02): add governed source adapter foundation`
+- exact-head FULL GATE run `33501506534`: PASS
+- quality/security job `99835692432`: PASS
+- PostgreSQL 18 migration + RBAC job `99836284266`: PASS
+- canonical worker + Valkey job `99836496455`: PASS
+- merge SHA: `f2852d9055d55e332e0617e455901ca673f46503`
+
+The exact-head run passed tracked-source/security checks, dependency audit, build/typecheck/unit tests including the new source-adapter suites, live API observability smoke, the complete PostgreSQL 18 + tenant/RBAC regression stack and canonical worker/Valkey recovery/correlation checks.
+
 ## Explicit non-scope
 
 This slice does **not** implement or activate:
@@ -101,6 +113,6 @@ This slice does **not** implement or activate:
 
 Those remain separate independently verified M02/M02A slices.
 
-## Next safe slice after integration
+## Next safe slice
 
 Implement durable versioned `SourceCapability` / `ConnectorPolicy` / `ConnectorDefinition` registry persistence plus tenant-safe SourceTask/preflight admission snapshots. Keep all real provider network execution disabled until that registry/persistence boundary is independently FULL-GATE verified.
