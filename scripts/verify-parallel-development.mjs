@@ -116,6 +116,7 @@ requireText(aiNativePlan, 'Brovexa AI-Native Multi-Agent Plan', 'docs/AI_NATIVE_
 requireText(aiNativePlan, 'Current slot board:', 'docs/AI_NATIVE_PLAN.md');
 requireText(aiNativePlan, 'latest valid Supervisor broadcast comment', 'docs/AI_NATIVE_PLAN.md');
 requireText(onboarding, 'Brovexa New Agent Onboarding', 'docs/NEW_AGENT_ONBOARDING.md');
+requireText(onboarding, '.agent/slots.yaml', 'docs/NEW_AGENT_ONBOARDING.md');
 
 const completionSignal = 'Work Done and Submitted';
 const syncAlert = 'New changes have been merged — please merge these changes into your branch first, then resume your own work.';
@@ -158,6 +159,7 @@ requireText(supervisor, 'assign_only_status: OPEN', '.agent/supervisor.yaml');
 requireText(supervisor, 'arrival_must_not_expand_capacity: true', '.agent/supervisor.yaml');
 requireText(workstreams, 'new_agent_start_branch: main', '.agent/workstreams.yaml');
 requireText(workstreams, 'assignment_authority: SUPERVISOR', '.agent/workstreams.yaml');
+requireText(workstreams, 'assigned_slot_id', '.agent/workstreams.yaml');
 
 requireText(supervisor, 'issue_number: 50', '.agent/supervisor.yaml');
 requireText(supervisor, 'live_state_authority: latest-supervisor-broadcast-comment', '.agent/supervisor.yaml');
@@ -274,6 +276,7 @@ for (const match of slotMatches) {
 
 requireText(ownership, 'policy: default-deny-outside-assigned-write-scope', '.agent/ownership.yaml');
 requireText(ownership, 'supervisor_of_main: true', '.agent/ownership.yaml');
+requireText(ownership, '- docs/NEW_AGENT_ONBOARDING.md', '.agent/ownership.yaml');
 requireText(ownership, 'onboard_new_agents_from_current_main_only', '.agent/ownership.yaml');
 requireText(ownership, 'serialize_slot_assignments', '.agent/ownership.yaml');
 requireText(ownership, 'reject_new_agent_when_no_open_slot', '.agent/ownership.yaml');
@@ -282,6 +285,8 @@ requireText(ownership, 'broadcast_all_active_agents_after_merge', '.agent/owners
 requireText(sharedFiles, '- AGENTS.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- README.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- docs/AI_NATIVE_PLAN.md', '.agent/shared-files.yaml');
+requireText(sharedFiles, '- docs/NEW_AGENT_ONBOARDING.md', '.agent/shared-files.yaml');
+requireText(sharedFiles, '- .agent/**', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- .github/PULL_REQUEST_TEMPLATE.md', '.agent/shared-files.yaml');
 
 requireText(dependencies, 'A completion signal does not override dependency order.', '.agent/dependencies.yaml');
