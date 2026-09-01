@@ -16,7 +16,7 @@ Canonical companion documents:
 - `docs/AI_NATIVE_PLAN.md` — current branch/module/agent/merge plan;
 - `docs/PROJECT_PLAN.md` — program architecture and permanent cross-cutting governance;
 - `docs/CHECKPOINT.md` — latest integrated project state;
-- `.agent/*.yaml` — machine-readable coordination state.
+- `.agent/*.yaml` — machine-readable coordination policy/baseline state.
 
 ## Main-repository Supervisor
 
@@ -83,7 +83,7 @@ Every parallel task defines before implementation:
 - agent ID and role;
 - module;
 - branch and base SHA;
-- current `synced_main_sha` and `sync_epoch`;
+- current `synced_main_sha` and `sync_epoch` from the latest Supervisor broadcast;
 - goal and explicit non-goals;
 - write scope;
 - read-only/dependency scope;
@@ -183,7 +183,7 @@ A valid completion submission also requires:
 - applicable test/CI evidence;
 - security/compliance impact;
 - Agent Instruction Drift Check result;
-- `synced_main_sha` and `sync_epoch` matching the latest Supervisor epoch.
+- `synced_main_sha` and `sync_epoch` matching the latest Supervisor broadcast.
 
 A stale branch may not issue a valid completion signal.
 
@@ -206,7 +206,7 @@ Required behavior:
 5. if approved, require applicable exact-head FAST/FULL gates;
 6. merge with expected-head SHA protection where supported;
 7. re-read resulting `main` and record the resulting SHA;
-8. increment the synchronization epoch;
+8. increment the synchronization epoch relative to the latest Supervisor broadcast;
 9. broadcast the synchronization alert to all active agents;
 10. resume the Supervisor's own paused work after the alert is issued, unless a direct dependency requires immediate follow-up.
 
@@ -226,12 +226,14 @@ After every approved merge, the Supervisor sends the exact alert:
 
 Canonical durable broadcast channel: GitHub issue **#50**.
 
-Each broadcast includes:
+Each Supervisor broadcast includes:
 
 - merged PR/branch;
 - resulting `main` SHA;
-- synchronization epoch;
+- monotonically increasing synchronization epoch;
 - relevant contract/migration/shared-file impact.
+
+The **latest valid Supervisor broadcast comment on issue #50 is the canonical live synchronization state**. This avoids a recursive state-update PR after every merge. `.agent/supervisor.yaml` stores the protocol and baseline seed, not an always-current post-merge SHA.
 
 When active agent PRs exist, the Supervisor should also place the alert on each active PR so it appears in that agent's immediate work context.
 
@@ -240,26 +242,26 @@ When active agent PRs exist, the Supervisor should also place the alert on each 
 Every active agent that observes a newer synchronization epoch must:
 
 1. enter `PAUSED_FOR_SYNC` and stop new feature edits;
-2. fetch/read the new `main` SHA;
+2. fetch/read the new `main` SHA from the latest Supervisor broadcast;
 3. merge current `main` into its branch or use another explicitly approved **non-destructive** synchronization method;
 4. resolve conflicts inside its owned scope;
 5. escalate shared/integration-owned conflicts to the Supervisor instead of independently rewriting those files;
 6. rerun the minimum verification needed to prove the sync did not break the work packet;
-7. record the new `synced_main_sha` and `sync_epoch`;
+7. record the new `synced_main_sha` and `sync_epoch` in its handoff/current work state;
 8. only then resume work.
 
 Force-push/history rewrite is not the default sync method and cannot be used to bypass integration safeguards.
 
 ## Synchronization epoch / stale-branch protection
 
-`.agent/supervisor.yaml` tracks the canonical synchronization epoch and current integrated `main` SHA.
+`.agent/supervisor.yaml` defines the synchronization protocol and baseline seed. The latest Supervisor broadcast on GitHub issue #50 supplies the live `sync_epoch` and integrated `main` SHA.
 
 Every agent handoff records:
 
 - `synced_main_sha`;
 - `sync_epoch`.
 
-A completion submission is stale and invalid when its epoch is behind the latest Supervisor epoch. The agent must sync, rerun appropriate verification and then resubmit/confirm completion.
+A completion submission is stale and invalid when its epoch is behind the latest Supervisor broadcast epoch. The agent must sync, rerun appropriate verification and then resubmit/confirm completion.
 
 This prevents “passed yesterday against old main” work from silently entering today's merge queue.
 
@@ -293,7 +295,7 @@ The repository provides:
 
 which runs `scripts/verify-parallel-development.mjs` and is also invoked by hosted CI.
 
-The verifier fails closed for material governance drift, including missing canonical files/manifests, missing instruction-drift rules, default concurrency drift, migration manifest drift, missing Supervisor workflow contracts, missing branch plan, missing completion/sync signals, or inconsistent machine-readable coordination state.
+The verifier fails closed for material governance drift, including missing canonical files/manifests, missing instruction-drift rules, default concurrency drift, migration manifest drift, missing Supervisor workflow contracts, missing branch plan, missing completion/sync signals, or inconsistent machine-readable coordination policy/baseline state.
 
 When governance intentionally changes, update the verifier and documentation together. Do not weaken assertions only to make CI pass.
 
@@ -303,7 +305,7 @@ A workstream may enter `READY_FOR_INTEGRATION` only when:
 
 - declared implementation is complete;
 - valid `Work Done and Submitted` signal exists;
-- it is synchronized to the latest Supervisor epoch;
+- it is synchronized to the latest Supervisor broadcast epoch;
 - `pnpm run verify:parallel` passes where applicable;
 - required work-packet verification has passed;
 - dependency assumptions remain valid;
@@ -346,7 +348,7 @@ Read/check:
 5. `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
 6. `docs/AI_NATIVE_PLAN.md`;
 7. relevant module docs/ADRs;
-8. `.agent/` manifests, including Supervisor epoch;
+8. `.agent/` manifests plus the latest Supervisor broadcast epoch on issue #50;
 9. current `main`, own branch/head and required verification commands.
 
 Repository/runtime/test evidence wins over stale prompts/checkpoints/memory.
@@ -390,7 +392,7 @@ Agents receive task-specific context packs pointing to authoritative repository 
 Before each merge, the Supervisor:
 
 1. freezes/checks exact head SHA;
-2. verifies latest synchronization epoch;
+2. verifies latest Supervisor broadcast epoch;
 3. verifies dependency graph satisfaction;
 4. resolves ownership/shared-file/migration collisions;
 5. inspects review threads/comments;
@@ -428,4 +430,4 @@ Parallelism never authorizes broader product behavior. Tenant isolation, source 
 
 ## Adoption
 
-This protocol applies to M02 and all future milestones. The current standing branch/module/agent mapping lives in `docs/AI_NATIVE_PLAN.md`; `AGENTS.md` is the canonical startup instruction entrypoint; `.agent/supervisor.yaml` carries Supervisor coordination state; and `pnpm run verify:parallel` enforces the machine-readable governance contract.
+This protocol applies to M02 and all future milestones. The current standing branch/module/agent mapping lives in `docs/AI_NATIVE_PLAN.md`; `AGENTS.md` is the canonical startup instruction entrypoint; `.agent/supervisor.yaml` defines Supervisor coordination policy/baseline; GitHub issue #50 carries live synchronization broadcasts; and `pnpm run verify:parallel` enforces the machine-readable governance contract.
