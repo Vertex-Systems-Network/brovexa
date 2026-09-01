@@ -1,4 +1,5 @@
 export * from './agent-context-runtime';
+export * from './agent-evaluator-decision';
 export * from './agent-execution-aggregation';
 export * from './agent-execution-dispatcher';
 export * from './agent-execution-persistence';
