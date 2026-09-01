@@ -38,6 +38,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Verify PR agent branch lease
+        if: github.event_name == 'pull_request'
+        run: node scripts/verify-pr-agent-lease.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Verify foundation contract
         run: node scripts/verify-foundation.mjs
 
