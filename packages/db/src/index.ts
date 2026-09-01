@@ -33,3 +33,5 @@ export * from './migrations';
 export * from './schema';
 export * from './source-registry-persistence';
 export * from './source-schema';
+export * from './source-task-persistence';
+export * from './source-task-schema';
