@@ -13,6 +13,10 @@ function fixture(): SourceTransportAdmissionInput {
     transportPolicyVersion: '1.0.0',
     connectorKey: 'connector.company_sites',
     connectorVersion: '1.0.0',
+    sourcePolicySnapshot: {
+      policyId: 'policy.source.company_sites',
+      policyVersion: '1.0.0',
+    },
     networkMode: 'test_only',
     allowedSchemes: ['https'],
     allowCleartextHttp: false,
@@ -42,9 +46,49 @@ function fixture(): SourceTransportAdmissionInput {
 
   return {
     policy,
+    sourceRequest: {
+      version: '1.0.0',
+      requestId: 'source-request-1',
+      workspaceId: 'workspace-1',
+      researchJobId: 'research-job-1',
+      researchRunId: 'research-run-1',
+      workUnitId: 'work-unit-1',
+      sourceTaskId: 'source-task-1',
+      connectorKey: policy.connectorKey,
+      connectorVersion: policy.connectorVersion,
+      sourceKey: 'source.company_sites',
+      operation: 'fetch',
+      executionIntent: 'execute',
+      purpose: 'research.website',
+      intendedUse: 'business.verification',
+      requestedFields: ['business.name', 'website.url'],
+      requestedDataClassifications: ['PUBLIC_BUSINESS'],
+      geography: { countryCodes: ['TR'], areaRefs: [] },
+      storageClass: 'EVIDENCE_MINIMAL',
+      exportRequested: false,
+      rawPayloadRequested: false,
+      robotsDecision: 'allowed',
+      targetUrl: 'https://example.com/business',
+      query: { categories: [], externalRefs: [], filters: {} },
+      pagination: {},
+      budget: {
+        maxRequests: 4,
+        maxPages: 4,
+        maxBytes: 750_000,
+        maxCurrencyMicros: 0,
+        maxRuntimeMs: 7_500,
+        maxConcurrency: 1,
+      },
+      policySnapshot: {
+        policyId: policy.sourcePolicySnapshot.policyId,
+        policyVersion: policy.sourcePolicySnapshot.policyVersion,
+      },
+      requestedAt: '2026-09-03T00:00:00.000Z',
+    },
     request: {
       version: '1.0.0',
       transportRequestId: 'transport-request-1',
+      sourceRequestId: 'source-request-1',
       sourceTaskId: 'source-task-1',
       connectorKey: policy.connectorKey,
       connectorVersion: policy.connectorVersion,
@@ -72,8 +116,7 @@ describe('SourceTransportPolicySchema', () => {
   it('requires every-hop DNS and redirect revalidation plus ambient credential isolation', () => {
     const input = fixture().policy as unknown as Record<string, unknown>;
     const redirects = { ...(input.redirects as Record<string, unknown>), revalidateEachHop: false };
-    const parsed = SourceTransportPolicySchema.safeParse({ ...input, redirects });
-    expect(parsed.success).toBe(false);
+    expect(SourceTransportPolicySchema.safeParse({ ...input, redirects }).success).toBe(false);
 
     const dns = { ...(input.dns as Record<string, unknown>), requireFreshResolutionEachHop: false };
     expect(SourceTransportPolicySchema.safeParse({ ...input, dns }).success).toBe(false);
@@ -93,13 +136,47 @@ describe('SourceTransportPolicySchema', () => {
 });
 
 describe('evaluateSourceTransportAdmission', () => {
-  it('allows a bounded test transport only when identity, host and public resolution all match', () => {
+  it('allows a bounded test transport only when source admission, host and public resolution all match', () => {
     const decision = evaluateSourceTransportAdmission(fixture());
     expect(decision.decision).toBe('allow');
     expect(decision.reasonCodes).toEqual([]);
     expect(decision.canonicalUrl).toBe('https://example.com/business');
     expect(decision.hostname).toBe('example.com');
     expect(decision.port).toBe(443);
+    expect(decision.maxResponseBytes).toBe(500_000);
+    expect(decision.timeoutMs).toBe(5_000);
+  });
+
+  it('binds transport identity to the exact admitted SourceRequest and policy snapshot', () => {
+    const wrongRequest = fixture();
+    wrongRequest.request.sourceRequestId = 'source-request-other';
+    expect(evaluateSourceTransportAdmission(wrongRequest).reasonCodes).toContain('transport_source_request_identity_mismatch');
+
+    const wrongTask = fixture();
+    wrongTask.request.sourceTaskId = 'source-task-other';
+    expect(evaluateSourceTransportAdmission(wrongTask).reasonCodes).toContain('transport_source_request_identity_mismatch');
+
+    const wrongPolicy = fixture();
+    wrongPolicy.policy = {
+      ...wrongPolicy.policy,
+      sourcePolicySnapshot: { policyId: 'policy.other', policyVersion: '1.0.0' },
+    };
+    expect(evaluateSourceTransportAdmission(wrongPolicy).reasonCodes).toContain('transport_source_policy_snapshot_mismatch');
+  });
+
+  it('does not let transport widen the admitted SourceRequest target or resource budgets', () => {
+    const target = fixture();
+    target.request.url = 'https://example.com/other';
+    target.resolution.url = target.request.url;
+    expect(evaluateSourceTransportAdmission(target).reasonCodes).toContain('transport_source_target_mismatch');
+
+    const bytes = fixture();
+    bytes.request.maxResponseBytes = 750_001;
+    expect(evaluateSourceTransportAdmission(bytes).reasonCodes).toContain('transport_source_byte_budget_exceeded');
+
+    const runtime = fixture();
+    runtime.request.timeoutMs = 7_501;
+    expect(evaluateSourceTransportAdmission(runtime).reasonCodes).toContain('transport_source_runtime_budget_exceeded');
   });
 
   it('does not let test-only policy activate a real network transport', () => {
@@ -108,6 +185,14 @@ describe('evaluateSourceTransportAdmission', () => {
     const decision = evaluateSourceTransportAdmission(input);
     expect(decision.decision).toBe('blocked');
     expect(decision.reasonCodes).toContain('transport_network_test_only');
+  });
+
+  it('requires an executable SourceRequest before any real network transport', () => {
+    const input = fixture();
+    input.policy = { ...input.policy, networkMode: 'provider_network' };
+    input.sourceRequest.executionIntent = 'preflight';
+    input.request.transportKind = 'network';
+    expect(evaluateSourceTransportAdmission(input).reasonCodes).toContain('transport_source_request_not_executable');
   });
 
   it.each(['private', 'loopback', 'link_local', 'metadata', 'reserved'] as const)(
@@ -135,7 +220,7 @@ describe('evaluateSourceTransportAdmission', () => {
     expect(evaluateSourceTransportAdmission(empty).reasonCodes).toContain('transport_resolution_empty');
   });
 
-  it('binds the resolution to the exact request and exact URL', () => {
+  it('binds the resolution to the exact transport request and exact hop URL', () => {
     const wrongRequest = fixture();
     wrongRequest.resolution.transportRequestId = 'transport-request-other';
     expect(evaluateSourceTransportAdmission(wrongRequest).reasonCodes).toContain('transport_resolution_request_mismatch');
@@ -145,14 +230,16 @@ describe('evaluateSourceTransportAdmission', () => {
     expect(evaluateSourceTransportAdmission(wrongTarget).reasonCodes).toContain('transport_resolution_target_mismatch');
   });
 
-  it('uses label-boundary domain suffix matching instead of substring matching', () => {
+  it('uses label-boundary domain suffix matching instead of substring matching on redirected hops', () => {
     const allowed = fixture();
+    allowed.request.redirectHop = 1;
     allowed.request.url = 'https://api.example.org/business';
     allowed.resolution.url = allowed.request.url;
     allowed.resolution.hostname = 'api.example.org';
     expect(evaluateSourceTransportAdmission(allowed).decision).toBe('allow');
 
     const confusion = fixture();
+    confusion.request.redirectHop = 1;
     confusion.request.url = 'https://example.org.attacker.test/business';
     confusion.resolution.url = confusion.request.url;
     confusion.resolution.hostname = 'example.org.attacker.test';
@@ -161,6 +248,7 @@ describe('evaluateSourceTransportAdmission', () => {
 
   it('honors explicit deny hosts before a matching suffix allowlist', () => {
     const input = fixture();
+    input.request.redirectHop = 1;
     input.request.url = 'https://blocked.example.org/business';
     input.resolution.url = input.request.url;
     input.resolution.hostname = 'blocked.example.org';
@@ -183,6 +271,7 @@ describe('evaluateSourceTransportAdmission', () => {
       ...literal.policy,
       hostPolicy: { mode: 'public_internet', exactHosts: [], domainSuffixes: [], deniedHosts: [] },
     };
+    literal.request.redirectHop = 1;
     literal.request.url = 'https://93.184.216.34/business';
     literal.resolution.url = literal.request.url;
     literal.resolution.hostname = '93.184.216.34';
@@ -193,6 +282,7 @@ describe('evaluateSourceTransportAdmission', () => {
     const blocked = fixture();
     blocked.policy = { ...blocked.policy, allowedSchemes: ['https', 'http'], allowedPorts: [80, 443] };
     blocked.request.url = 'http://example.com/business';
+    blocked.sourceRequest.targetUrl = blocked.request.url;
     blocked.resolution.url = blocked.request.url;
     const blockedDecision = evaluateSourceTransportAdmission(blocked);
     expect(blockedDecision.reasonCodes).toContain('transport_cleartext_http_not_allowed');
@@ -205,14 +295,17 @@ describe('evaluateSourceTransportAdmission', () => {
       allowedPorts: [80, 443],
     };
     allowed.request.url = 'http://example.com/business';
+    allowed.sourceRequest.targetUrl = allowed.request.url;
     allowed.resolution.url = allowed.request.url;
     const allowedDecision = evaluateSourceTransportAdmission(allowed);
     expect(allowedDecision.decision).toBe('allow');
     expect(allowedDecision.warnings).toContain('transport_cleartext_http');
   });
 
-  it('blocks redirect, response-size, timeout, method and content-type widening', () => {
+  it('blocks redirect, policy-limit, method and content-type widening', () => {
     const input = fixture();
+    input.sourceRequest.budget.maxBytes = 2_000_000;
+    input.sourceRequest.budget.maxRuntimeMs = 20_000;
     input.request.redirectHop = 4;
     input.request.maxResponseBytes = 1_000_001;
     input.request.timeoutMs = 10_001;
@@ -234,5 +327,6 @@ describe('evaluateSourceTransportAdmission', () => {
     const input = fixture();
     input.request.connectorVersion = '2.0.0';
     expect(evaluateSourceTransportAdmission(input).reasonCodes).toContain('transport_connector_identity_mismatch');
+    expect(evaluateSourceTransportAdmission(input).reasonCodes).toContain('transport_source_request_identity_mismatch');
   });
 });
