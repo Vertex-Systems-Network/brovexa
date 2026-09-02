@@ -50,13 +50,15 @@ Canonical coordination model:
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md` — permanent multi-agent protocol;
 - `docs/AI_NATIVE_PLAN.md` — versioned standing branch/module/slot definitions and merge strategy;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
+- `docs/AGENT_BRANCH_LEASES.md` — atomic one-live-instance-per-slot mutation contract;
 - `.agent/slots.yaml` — static slot definitions only;
 - GitHub issue **#50** — live integrated `main` SHA and synchronization epoch;
-- GitHub issue **#53** — live slot `OPEN` / `OCCUPIED`, assigned agent, start status and registry revision;
+- GitHub issue **#53** — live logical slot `OPEN` / `OCCUPIED`, assigned agent, start status and registry revision;
+- Git branch **`coordination/leases`** — live instance leases at `.leases/<SLOT_ID>.json`;
 - PR/work packet/handoff — live bounded task state;
 - GitHub issue **#54** — external `main` branch-protection setting still required.
 
-The Main-repository agent is the **Supervisor**. It owns onboarding, dependency-safe integration, migration/shared-file coordination, expected-head merges, synchronization broadcasts, and its own bounded `supervisor/integration-control` work.
+The Main-repository agent is the **Supervisor**. It owns onboarding, dependency-safe integration, migration/shared-file coordination, expected-head merges, synchronization broadcasts, and its own bounded Supervisor work. The Supervisor is not exempt from atomic branch leases.
 
 Default parallel operating target is **6 agents**, with a soft maximum of **8** while conflict/rework/CI metrics remain healthy.
 
@@ -73,21 +75,35 @@ Default isolation rule:
 
 `1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
 
+Live-writer invariant:
+
+`one occupied slot = at most one live mutating agent instance`
+
 ### New Agent Onboarding
 
 Every new agent starts from **exact current `main`** and does not start on a standing module branch.
 
 The Supervisor reads issue #50, static slot definitions, and **re-reads issue #53 immediately before assignment**. Only a pre-planned assignable slot whose live issue #53 status is exactly `OPEN` may be assigned.
 
-For an OPEN slot, Supervisor synchronizes the idle standing branch to current main, updates issue #53 to `OCCUPIED` with agent/start/main/epoch/revision, re-reads issue #53 to confirm ownership, then hands the branch/work packet to the agent.
+For an OPEN slot, Supervisor synchronizes the idle standing branch to current main, updates issue #53 to `OCCUPIED` with agent/start/main/epoch/revision, re-reads issue #53 to confirm logical ownership, then the exact runtime/session instance atomically acquires the slot lease before any branch mutation.
 
-Temporary assignment/release in issue #53 **does not require a repository governance PR** when standing definitions/rules are unchanged. This avoids serializing agent startup behind FULL GATE.
+Temporary assignment/release in issue #53 **does not require a repository governance PR** when standing definitions/rules are unchanged. Live lease acquire/renew/release on `coordination/leases` is likewise coordination state, not a product merge.
 
 If no assignable live slot is OPEN, Supervisor responds exactly:
 
 **Go Home Come Back Next Time**
 
 The rejected arrival receives no assignment, module checkout, work packet, feature work or implementation PR.
+
+### Atomic branch leases
+
+Issue #53 assigns the logical lane. `coordination/leases` assigns the exact live writer.
+
+Before mutating a work branch, every agent instance—including Supervisor—must atomically create `.leases/<SLOT_ID>.json` with unique `agent_instance_id` and `lease_id`. Existing lease means another live instance owns mutation rights and the newcomer must stop.
+
+Renewal and release are compare-and-swap operations using the current lease blob SHA. Leases do not expire silently; crash/stale takeover requires explicit audit and recovery. Full rules: `docs/AGENT_BRANCH_LEASES.md`.
+
+Hosted PR CI runs `scripts/verify-pr-agent-lease.mjs` and validates the live lease against PR branch, slot, logical agent, runtime instance, work packet, synchronized main/epoch and acquisition-head ancestry.
 
 ### Completion signal
 
@@ -99,17 +115,17 @@ For non-Supervisor agents this is a top-level PR comment whose complete body is 
 
 The signal is **head-bound**. Any commit pushed after the signal invalidates it; the agent must update the exact-head handoff, rerun required verification, and post a fresh signal.
 
-A valid submission also requires current issue #53 slot ownership and issue #50 synchronization state.
+A valid submission also requires current issue #53 logical slot ownership, a matching active `coordination/leases` instance lease, and current issue #50 synchronization state.
 
 ### Supervisor interrupt / merge / resume
 
-On a valid completion signal, Supervisor pauses/checkpoints its own work, reviews the current head/signal freshness/live slot/dependencies/migrations/shared files/security/verification, requests changes or merges with expected-head protection, re-reads `main`, increments issue #50 epoch, broadcasts, then resumes.
+On a valid completion signal, Supervisor pauses/checkpoints its own work, reviews current head/signal freshness/live slot/live lease/dependencies/migrations/shared files/security/verification, requests changes or merges with expected-head protection, re-reads `main`, increments issue #50 epoch, broadcasts, then resumes.
 
 Canonical post-merge alert:
 
 **New changes have been merged — please merge these changes into your branch first, then resume your own work.**
 
-Every active agent receiving a newer issue #50 epoch must synchronize current `main` non-destructively, rerun minimum verification, record new SHA/epoch, then resume.
+Every active agent receiving a newer issue #50 epoch must synchronize current `main` non-destructively, rerun minimum verification, renew the same lease with new SHA/epoch via compare-and-swap, record state, then resume.
 
 ### Main integration integrity
 
@@ -125,7 +141,7 @@ GitHub native branch protection remains the preventive external setting. Current
 
 `pnpm run verify:parallel`
 
-Hosted CI runs the same verifier. It validates standing slots/branches, live issue #53 authority, main-first onboarding, exact rejection text, Supervisor workflow, head-bound completion, synchronization rules, migration numbering and main-push provenance wiring.
+This includes the original parallel governance verifier plus static atomic-lease governance verification. Hosted PR CI additionally validates the live instance lease before the normal FULL GATE proceeds.
 
 ### Agent Instruction Drift Check
 
@@ -138,12 +154,14 @@ At the start of every task and again before completion, perform the **Agent Inst
 5. `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
 6. `docs/AI_NATIVE_PLAN.md`;
 7. `docs/NEW_AGENT_ONBOARDING.md` when relevant;
-8. `.agent/` manifests;
-9. issue #50 synchronization state;
-10. issue #53 live slot state;
-11. relevant module/ADR docs and required verification commands.
+8. `docs/AGENT_BRANCH_LEASES.md`;
+9. `.agent/` manifests;
+10. issue #50 synchronization state;
+11. issue #53 logical slot state;
+12. active slot lease on `coordination/leases`;
+13. relevant module/ADR docs and required verification commands.
 
-If architecture, modules, onboarding/live-slot rules, branch workflow, Supervisor behavior, completion-signal freshness, synchronization, ownership, migrations, dependencies, CI/integration integrity, security/policy boundaries or tooling change, update the relevant instructions in the same change set.
+If architecture, modules, onboarding/live-slot rules, live-instance lease rules, branch workflow, Supervisor behavior, completion-signal freshness, synchronization, ownership, migrations, dependencies, CI/integration integrity, security/policy boundaries or tooling change, update the relevant instructions in the same change set.
 
 A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
@@ -156,7 +174,7 @@ A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materi
 - Long-running AI/research work uses durable job/checkpoint state.
 - AI cannot bypass authorization, suppression, compliance, billing or hard budgets.
 - Significant work is delivered in small reversible batches with verification gates.
-- Parallel work follows explicit slot, ownership, dependency, migration-reservation, synchronization and integration rules.
+- Parallel work follows explicit slot, live-instance lease, ownership, dependency, migration-reservation, synchronization and integration rules.
 - Production provider/network credentials, unrestricted acquisition, autonomous outreach and destructive production actions remain separately gated.
 
 ## Planning and state
@@ -164,9 +182,11 @@ A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materi
 - Canonical agent instructions: `AGENTS.md`
 - AI-Native standing plan: `docs/AI_NATIVE_PLAN.md`
 - New-agent onboarding: `docs/NEW_AGENT_ONBOARDING.md`
+- Atomic branch leases: `docs/AGENT_BRANCH_LEASES.md`
 - Parallel-agent protocol: `docs/PARALLEL_AGENT_DEVELOPMENT.md`
 - Static slot definitions: `.agent/slots.yaml`
 - Live slot registry: GitHub issue `#53`
+- Live instance lease branch: `coordination/leases`
 - Supervisor synchronization channel: GitHub issue `#50`
 - Branch-protection follow-up: GitHub issue `#54`
 - Parallel governance verifier: `pnpm run verify:parallel`

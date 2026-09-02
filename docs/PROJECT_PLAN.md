@@ -30,8 +30,6 @@ Each async stage must be independently retryable, idempotent, versioned, observa
 
 M00/ABD-215 readiness and explicit owner consent are satisfied for active development. Production/provider/legal/commercial gates remain separately authoritative.
 
-Core baseline includes product scope, source/privacy/outreach policy, canonical data/evidence schemas, AI contracts/evals, threat model, architecture/deployment/queues/storage/cost, client surfaces, AI Agent OS/memory, global acquisition, lead OS, universal signals, website/auth/billing and launch readiness.
-
 ## M01 — Platform Foundation & Developer Experience
 Linear: ABD-216
 
@@ -122,7 +120,7 @@ Governed research scout can create evidence-backed Add/Experiment/Watch/Reject p
 
 ## Cross-cutting — Parallel Multi-Agent Engineering System
 
-This control plane applies to **M02 and all current/future milestones**. It is designed to increase calendar throughput without agents overwriting one another, double-claiming work, colliding on migrations, submitting stale heads or bypassing integration gates.
+This control plane applies to **M02 and all current/future milestones**. It is designed to increase calendar throughput without agents overwriting one another, double-claiming work, colliding on migrations, submitting stale heads, running duplicate live writers, or bypassing integration gates.
 
 ### Canonical coordination sources
 
@@ -130,21 +128,23 @@ This control plane applies to **M02 and all current/future milestones**. It is d
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full protocol;
 - `docs/AI_NATIVE_PLAN.md` — versioned standing branches/modules/static slot definitions/merge strategy;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
+- `docs/AGENT_BRANCH_LEASES.md` — atomic per-slot live-instance lease protocol;
 - `.agent/slots.yaml` — static slot definitions only;
 - `.agent/ownership.yaml` / `.agent/shared-files.yaml` — write/shared ownership;
 - `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream/DAG rules;
 - `.agent/migrations.yaml` — serialized migration reservations;
-- `.agent/supervisor.yaml` — Supervisor workflow contract;
+- `.agent/supervisor.yaml` — Supervisor workflow/lease contract;
 - GitHub issue **#50** — live integrated-main SHA/synchronization epoch;
-- GitHub issue **#53** — live slot occupancy/assigned agent/start state;
+- GitHub issue **#53** — live logical slot occupancy/assigned agent/start state;
+- branch `coordination/leases` — atomic live mutating-instance authority for occupied slots;
 - PR/work packet/handoff — live bounded task state;
 - GitHub issue **#54** — external native `main` branch-protection action.
 
 ### Supervisor model
 
-The Main-repository agent is the **Supervisor**. It owns onboarding, live slot assignment/release, dependency/interface coordination, shared-file integration, migration ordering, exact-head PR review/merge, synchronization broadcasts and its own bounded `supervisor/integration-control` work.
+The Main-repository agent is the **Supervisor**. It owns onboarding, live slot assignment/release, dependency/interface coordination, shared-file integration, migration ordering, exact-head PR review/merge, synchronization broadcasts and its own bounded integration work.
 
-For new capacity, branches are created **before** new slots are added to the versioned plan. A new agent never creates capacity merely by arriving.
+Supervisor is **not exempt** from `docs/AGENT_BRANCH_LEASES.md`: before mutating a bounded Supervisor work branch it must own the active `SUPERVISOR` slot lease.
 
 ### Default concurrency
 
@@ -172,16 +172,27 @@ Assignment transaction:
 3. select a statically assignable live `OPEN` slot;
 4. synchronize/fast-forward its idle branch to current `main`;
 5. update issue #53 with `OCCUPIED`, agent/start/main/epoch and incremented registry revision;
-6. re-read issue #53 to confirm ownership;
-7. only then hand the branch/work packet to the agent.
+6. re-read issue #53 to confirm logical ownership;
+7. acquire/re-read the atomic per-slot live-instance lease on `coordination/leases` according to `docs/AGENT_BRANCH_LEASES.md`;
+8. only then hand the branch/work packet to that unique agent instance.
 
-Temporary assignment/release **does not require a governance PR** when standing definitions/rules are unchanged. This removes a major startup serialization bottleneck.
+Temporary assignment/release **does not require a governance PR** when standing definitions/rules are unchanged.
 
 If no assignable live slot is `OPEN`, Supervisor responds exactly:
 
 **Go Home Come Back Next Time**
 
 The rejected arrival receives no assignment, branch checkout, work packet, feature changes or implementation PR.
+
+### Atomic live-instance lease
+
+Hard invariant:
+
+**one occupied slot = at most one live mutating agent instance**
+
+Issue #53 answers *which logical agent owns the slot*. `coordination/leases` answers *which concrete agent process/session may mutate for that slot right now*.
+
+Each lease records `agent_instance_id`, `lease_id`, slot, branch, work packet, synchronized main SHA/epoch and acquisition head. Acquisition is create-if-absent; renewal/release require compare-and-swap ownership. Leases do not silently expire. Crash/stale-owner takeover requires explicit Supervisor recovery audit. PR CI verifies handoff lease identity against the live slot lease before integration.
 
 ### Isolation, ownership and dependencies
 
@@ -209,17 +220,17 @@ For non-Supervisor agents this is a top-level PR comment whose full body is exac
 
 The signal is **head-bound**. PR body/handoff exact head must equal current PR head, and the latest exact completion comment must postdate the current head commit. Any later commit invalidates the signal and requires re-verification + a fresh announcement.
 
-A valid submission also requires current issue #53 slot ownership and latest issue #50 synchronization state.
+A valid submission also requires current issue #53 slot ownership, active matching slot lease, and latest issue #50 synchronization state.
 
 ### Supervisor review / merge / synchronization
 
-Supervisor serializes overlapping merges, uses FIFO review subject to dependency priority, requires exact-head verification, and merges approved PRs using expected-head protection.
+Supervisor serializes overlapping merges, uses FIFO review subject to dependency priority, requires exact-head verification, validates the active lease, and merges approved PRs using expected-head protection.
 
 After every approved merge it broadcasts exactly:
 
 **New changes have been merged — please merge these changes into your branch first, then resume your own work.**
 
-Issue #50 carries resulting `main` SHA and monotonic `sync_epoch`. Active agents pause, synchronize non-destructively, rerun minimum verification, record new SHA/epoch, then resume.
+Issue #50 carries resulting `main` SHA and monotonic `sync_epoch`. Active agents pause, synchronize non-destructively, rerun minimum verification, renew their lease metadata for the synchronized state when applicable, record new SHA/epoch, then resume.
 
 ### Main-branch integration integrity
 
@@ -233,15 +244,15 @@ Native GitHub branch protection/ruleset is still required as the preventive laye
 
 ### Independent verification
 
-Implementation and adversarial verification remain separate. Verification covers replay/idempotency, stale state, concurrency, tenant isolation, auth/policy/budget bypass, migration rollback, hostile inputs, dependency drift, network/credential boundaries and queue recovery.
+Implementation and adversarial verification remain separate. Verification covers replay/idempotency, stale state, concurrency, tenant isolation, auth/policy/budget bypass, migration rollback, hostile inputs, dependency drift, network/credential boundaries, queue recovery and lease/provenance races.
 
 Tests/invariants are not weakened merely to get green CI.
 
 ### Agent Instruction Drift Check — mandatory every task
 
-Every agent performs the **Agent Instruction Drift Check** at task start and before completion. Check README, AGENTS, this plan, checkpoint, parallel/onboarding docs, `.agent/` manifests, issue #50, issue #53, relevant module/ADR docs, current `main`, own branch/head and verification commands.
+Every agent performs the **Agent Instruction Drift Check** at task start and before completion. Check README, AGENTS, this plan, checkpoint, parallel/onboarding/lease docs, `.agent/` manifests, issue #50, issue #53, live slot lease, relevant module/ADR docs, current `main`, own branch/head and verification commands.
 
-If architecture, modules, slot definitions/live-state authority, Supervisor behavior, branch workflow, completion-signal freshness, synchronization, ownership, migrations, dependencies, CI/integration integrity, security/policy boundaries or tooling change, update relevant instructions in the same change set.
+If architecture, modules, slot definitions/live-state authority, lease protocol, Supervisor behavior, branch workflow, completion-signal freshness, synchronization, ownership, migrations, dependencies, CI/integration integrity, security/policy boundaries or tooling change, update relevant instructions in the same change set.
 
 A task cannot become `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
@@ -251,6 +262,7 @@ Before merge require:
 
 - exact current head SHA and fresh completion signal;
 - valid issue #53 slot ownership;
+- active matching lease per `docs/AGENT_BRANCH_LEASES.md`;
 - latest issue #50 synchronization;
 - satisfied dependency graph;
 - no ownership/shared-file/migration collision;
@@ -288,13 +300,13 @@ Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely becaus
 
 A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and UI failure/partial states are defined.
 
-Parallel work additionally requires a valid live slot assignment, bounded work packet, branch/write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information and verification/handoff criteria.
+Parallel work additionally requires a valid live slot assignment, active live-instance lease, bounded work packet, branch/write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information and verification/handoff criteria.
 
 ## Definition of Done
 
 Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
 
-For agent work, DONE also requires a current issue #50 epoch, valid issue #53 slot ownership, fresh head-bound **Work Done and Submitted**, required verification and Agent Instruction Drift Check.
+For agent work, DONE also requires a current issue #50 epoch, valid issue #53 slot ownership, matching active lease, fresh head-bound **Work Done and Submitted**, required verification and Agent Instruction Drift Check.
 
 ## Development authorization
 

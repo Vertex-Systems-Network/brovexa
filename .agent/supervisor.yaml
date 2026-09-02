@@ -1,4 +1,4 @@
-version: 2
+version: 3
 policy: supervisor-reviewed-integration
 
 supervisor:
@@ -33,6 +33,24 @@ new_agent_onboarding:
   no_open_slot_action: STOP_WITHOUT_ASSIGNMENT_OR_WORK
   arrival_must_not_expand_capacity: true
 
+branch_leases:
+  lease_branch: coordination/leases
+  lease_path_pattern: .leases/<SLOT_ID>.json
+  lease_scope: per-slot-single-live-instance
+  lease_required_before_branch_mutation: true
+  lease_required_for_supervisor: true
+  atomic_acquire: create-file-if-absent
+  renew_strategy: compare-and-swap-current-blob-sha
+  release_strategy: delete-with-current-blob-sha
+  implicit_expiry: false
+  lease_takeover_requires_explicit_recovery_audit: true
+  live_slot_assignment_also_required: true
+  agent_instance_id_required: true
+  lease_id_required: true
+  acquisition_head_must_remain_ancestor: true
+  pr_lease_verifier: scripts/verify-pr-agent-lease.mjs
+  policy_doc: docs/AGENT_BRANCH_LEASES.md
+
 completion_signal:
   exact_phrase: "Work Done and Submitted"
   canonical_event: top-level-pr-comment-exact-body
@@ -48,6 +66,7 @@ completion_signal:
     - verification_evidence
     - synced_to_latest_broadcast_epoch
     - valid_live_slot_assignment
+    - valid_active_branch_lease
 
 interrupt_flow:
   - PAUSE_SUPERVISOR_WORK
@@ -83,6 +102,7 @@ synchronization:
   shared_file_conflicts_escalate_to_supervisor: true
   must_sync_before_resume: true
   must_sync_before_completion_signal: true
+  active_lease_must_be_renewed_after_sync: true
 
 main_integration:
   direct_push_prohibited: true
