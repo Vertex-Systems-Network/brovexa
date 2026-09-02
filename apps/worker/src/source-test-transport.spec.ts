@@ -66,6 +66,12 @@ describe('executeInjectedTestTransport', () => {
     expect(exchange).not.toHaveBeenCalled();
   });
 
+  it('rejects invalid accepted content-type declarations before exchange', async () => {
+    const exchange = vi.fn(async () => successfulResult);
+    await expectCode(executeInjectedTestTransport({ ...request, acceptedContentTypes: [''] }, admission, exchange), 'TEST_TRANSPORT_CONTENT_TYPES_INVALID');
+    expect(exchange).not.toHaveBeenCalled();
+  });
+
   it('requires redirect revalidation instead of following injected redirects', async () => {
     await expectCode(
       executeInjectedTestTransport(request, admission, async () => ({ ...successfulResult, status: 302 })),
@@ -85,6 +91,21 @@ describe('executeInjectedTestTransport', () => {
     await expectCode(
       executeInjectedTestTransport(request, admission, async () => ({ ...successfulResult, contentType: 'text/html' })),
       'TEST_TRANSPORT_CONTENT_TYPE_NOT_ALLOWED',
+    );
+  });
+
+  it('fails closed for malformed injected result shapes', async () => {
+    await expectCode(
+      executeInjectedTestTransport(request, admission, async () => ({ ...successfulResult, finalUrl: undefined as unknown as string })),
+      'TEST_TRANSPORT_INVALID_FINAL_URL',
+    );
+    await expectCode(
+      executeInjectedTestTransport(request, admission, async () => ({ ...successfulResult, body: undefined as unknown as Uint8Array })),
+      'TEST_TRANSPORT_INVALID_BODY',
+    );
+    await expectCode(
+      executeInjectedTestTransport(request, admission, async () => ({ ...successfulResult, contentType: undefined as unknown as string })),
+      'TEST_TRANSPORT_INVALID_CONTENT_TYPE',
     );
   });
 
