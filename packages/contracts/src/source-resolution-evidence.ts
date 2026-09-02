@@ -13,6 +13,15 @@ function normalizedHost(value: string): string {
   return host.endsWith('.') ? host.slice(0, -1) : host;
 }
 
+function canonicalAddressKey(address: string, family: 4 | 6): string {
+  const normalizedAddress = address.trim().toLowerCase();
+  if (family === 4 || isIP(normalizedAddress) !== 6) return `${family}:${normalizedAddress}`;
+
+  const hostname = new URL(`http://[${normalizedAddress}]/`).hostname.toLowerCase();
+  const canonicalIpv6 = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+  return `6:${canonicalIpv6}`;
+}
+
 export const SourceResolvedAddressEvidenceSchema = z
   .object({
     address: z.string().trim().min(2).max(64),
@@ -67,7 +76,7 @@ export const SourceTransportResolutionEvidenceSchema = z
       });
     }
 
-    const keys = resolution.addresses.map((address) => `${address.family}:${address.address.toLowerCase()}`);
+    const keys = resolution.addresses.map((address) => canonicalAddressKey(address.address, address.family));
     if (new Set(keys).size !== keys.length) {
       ctx.addIssue({
         code: 'custom',
