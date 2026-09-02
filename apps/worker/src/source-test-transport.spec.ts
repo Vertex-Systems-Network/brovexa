@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TestSourceTransportError, executeInjectedTestTransport } from './source-test-transport';
+import { executeInjectedTestTransport } from './source-test-transport';
 
 const request = {
   transportRequestId: 'transport.req.1',
@@ -27,7 +27,7 @@ const successfulResult = {
 };
 
 async function expectCode(promise: Promise<unknown>, code: string): Promise<void> {
-  await expect(promise).rejects.toMatchObject<TestSourceTransportError>({ code });
+  await expect(promise).rejects.toMatchObject({ code });
 }
 
 describe('executeInjectedTestTransport', () => {
