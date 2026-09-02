@@ -1,3 +1,5 @@
+import { URL } from 'node:url';
+
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/;
 const connectorKeyPattern = /^connector\.[a-z0-9_.-]+$/;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -76,6 +78,11 @@ function normalizeCodes(values: readonly string[], field: string): string[] {
   return normalized;
 }
 
+function normalizeHostname(value: string): string {
+  const hostname = value.trim().toLowerCase();
+  return hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
+}
+
 export function buildSourceTransportAuditRecord(input: SourceTransportAuditRecordInput): SourceTransportAuditRecord {
   assertIdentifier(input.id, 'id');
   if (!uuidPattern.test(input.workspaceId)) invalid('workspaceId must be a UUID.');
@@ -94,8 +101,17 @@ export function buildSourceTransportAuditRecord(input: SourceTransportAuditRecor
 
   const canonicalUrl = input.canonicalUrl.trim();
   if (canonicalUrl.length === 0 || canonicalUrl.length > 2048) invalid('canonicalUrl must be non-empty and no longer than 2048 characters.');
-  const hostname = input.hostname.trim().toLowerCase();
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(canonicalUrl);
+  } catch {
+    invalid('canonicalUrl must be a valid absolute URL.');
+  }
+
+  const hostname = normalizeHostname(input.hostname);
   if (hostname.length === 0 || hostname.length > 253) invalid('hostname must be non-empty and no longer than 253 characters.');
+  if (normalizeHostname(parsedUrl.hostname) !== hostname) invalid('hostname must match the canonicalUrl hostname.');
   if (input.port !== null && (!Number.isInteger(input.port) || input.port < 1 || input.port > 65535)) {
     invalid('port must be null or an integer between 1 and 65535.');
   }
