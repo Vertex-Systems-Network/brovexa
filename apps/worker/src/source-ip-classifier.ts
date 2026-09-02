@@ -117,9 +117,12 @@ function classifyIpv6(address: string): SourceIpAddressClass {
 
   if (
     ipv6InCidr(value, '100::', 64) ||
+    ipv6InCidr(value, '2001::', 32) ||
     ipv6InCidr(value, '2001:2::', 48) ||
     ipv6InCidr(value, '2001:10::', 28) ||
     ipv6InCidr(value, '2001:20::', 28) ||
+    ipv6InCidr(value, '2002::', 16) ||
+    ipv6InCidr(value, '3ffe::', 16) ||
     ipv6InCidr(value, '3fff::', 20)
   ) {
     return 'reserved';
