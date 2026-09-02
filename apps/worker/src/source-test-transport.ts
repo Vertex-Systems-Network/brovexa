@@ -65,8 +65,11 @@ export async function executeInjectedTestTransport(
     throw new TestSourceTransportError('TEST_TRANSPORT_BYTE_BUDGET_WIDENED');
   }
   if (request.timeoutMs > admission.timeoutMs) throw new TestSourceTransportError('TEST_TRANSPORT_TIMEOUT_BUDGET_WIDENED');
-  if (request.acceptedContentTypes.length === 0) {
-    throw new TestSourceTransportError('TEST_TRANSPORT_CONTENT_TYPES_EMPTY');
+  if (
+    request.acceptedContentTypes.length === 0 ||
+    request.acceptedContentTypes.some((value) => typeof value !== 'string' || normalizedContentType(value).length === 0)
+  ) {
+    throw new TestSourceTransportError('TEST_TRANSPORT_CONTENT_TYPES_INVALID');
   }
 
   const result = await exchange({
@@ -82,13 +85,16 @@ export async function executeInjectedTestTransport(
   if (result.status >= 300 && result.status < 400) {
     throw new TestSourceTransportError('TEST_TRANSPORT_REDIRECT_REQUIRES_REVALIDATION');
   }
+  if (typeof result.finalUrl !== 'string') throw new TestSourceTransportError('TEST_TRANSPORT_INVALID_FINAL_URL');
   if (result.finalUrl !== request.url) throw new TestSourceTransportError('TEST_TRANSPORT_FINAL_URL_CHANGED');
   if (!Number.isFinite(result.elapsedMs) || result.elapsedMs < 0 || result.elapsedMs > request.timeoutMs) {
     throw new TestSourceTransportError('TEST_TRANSPORT_TIMEOUT_EXCEEDED');
   }
+  if (!(result.body instanceof Uint8Array)) throw new TestSourceTransportError('TEST_TRANSPORT_INVALID_BODY');
   if (result.body.byteLength > request.maxResponseBytes) {
     throw new TestSourceTransportError('TEST_TRANSPORT_RESPONSE_TOO_LARGE');
   }
+  if (typeof result.contentType !== 'string') throw new TestSourceTransportError('TEST_TRANSPORT_INVALID_CONTENT_TYPE');
 
   const contentType = normalizedContentType(result.contentType);
   const accepted = new Set(request.acceptedContentTypes.map(normalizedContentType));
