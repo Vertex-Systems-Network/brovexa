@@ -4,6 +4,7 @@ export * from './agent-execution';
 export * from './ai';
 export * from './identity';
 export * from './source-adapter';
+export * from './source-transport';
 
 export const HealthResponseSchema = z.object({
   status: z.literal('ok'),
