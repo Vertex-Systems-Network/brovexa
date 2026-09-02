@@ -53,6 +53,14 @@ describe('buildSourceTransportAuditRecord', () => {
     expect(Object.isFrozen(record.envelope)).toBe(true);
   });
 
+  it('requires canonical URL evidence to be valid and bound to the hostname', () => {
+    expectInvalid(() => buildSourceTransportAuditRecord({ ...fixture(), canonicalUrl: 'not-a-url' }));
+    expectInvalid(() => buildSourceTransportAuditRecord({ ...fixture(), hostname: 'attacker.example' }));
+
+    const trailingDot = buildSourceTransportAuditRecord({ ...fixture(), canonicalUrl: 'https://example.com./business', hostname: 'Example.COM.' });
+    expect(trailingDot.hostname).toBe('example.com');
+  });
+
   it('requires a blocked admission to retain at least one reason code', () => {
     expectInvalid(() => buildSourceTransportAuditRecord({ ...fixture(), decision: 'blocked', reasonCodes: [] }));
   });
