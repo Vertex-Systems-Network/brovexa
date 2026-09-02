@@ -1,124 +1,115 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-02
+Updated: 2026-09-03
 
 ## Project state
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. The provider-neutral M01A — AI Agent Runtime & Memory OS foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with five bounded implementation slices FULL-GATE verified and integrated. Supervisor-driven parallel-agent workflow, main-first onboarding, live slot registry and main-push provenance controls are integrated. Atomic live-instance branch leases are the current final coordination-hardening slice.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS provider-neutral foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with five bounded provider-neutral implementation slices FULL-GATE verified and integrated. The Supervisor-driven multi-agent workflow, main-first onboarding, live slot registry, head-bound completion signals, main-push provenance controls and atomic live-instance branch leases are integrated.**
 
-Current integrated `main` at this slice base:
+Current integrated `main`:
 
-`09fc8ba7b6cc3cbf5cdea4af21ed5b869519d1c1`
+`baa79779db608823f5d9696ebf8e7dda8db6d6ef`
 
-That commit integrated PR #55 (`chore(agent): remove remaining multi-agent coordination blockers`). PR #55 exact head `21d43939bdce3e50780e9dd4a6fb8bed0e7a6b77` passed hosted CI run `33566370299` (#236) with all three FULL GATE lanes green. The post-merge push-to-main CI run `33566907096` (#237) executed the new main integration-provenance check successfully in the quality lane; PostgreSQL/RBAC also passed and the worker/Valkey lane was subsequently required to complete before the next integration step.
+This is the merge result of PR #56 (`chore(agent): enforce atomic live-instance branch leases`). Its post-merge push-to-main CI run `33607121538` (#243) completed successfully with the repository FULL GATE and main-integration provenance controls active.
 
-Latest Supervisor synchronization state for this hardening work is GitHub issue #50 **sync epoch 4**, pointing to `09fc8ba7b6cc3cbf5cdea4af21ed5b869519d1c1`.
+Latest canonical Supervisor synchronization state is GitHub issue #50 **sync epoch 5**, pointing to `baa79779db608823f5d9696ebf8e7dda8db6d6ef`.
 
-Issue #53 is updated to the same epoch/main baseline. Five assignable standing module branches were synchronized to this main SHA. The Supervisor standing lane was synchronized non-destructively.
+Issue #53 is aligned to the same main SHA / epoch. The five assignable standing module slots are `OPEN`; the `SUPERVISOR` logical slot remains `OCCUPIED` by `SUPERVISOR`. Exact live mutation authority is independently controlled through per-slot lease files on `coordination/leases`.
 
 ## Canonical agent working instructions
 
-- `AGENTS.md` — canonical startup/working instructions;
-- `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full multi-agent protocol;
+- `AGENTS.md` — canonical startup / working instructions;
+- `docs/PARALLEL_AGENT_DEVELOPMENT.md` — complete multi-agent protocol;
 - `docs/AI_NATIVE_PLAN.md` — versioned standing branch/module/static-slot plan;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
 - `docs/AGENT_BRANCH_LEASES.md` — atomic per-slot live mutating-instance protocol;
 - `.agent/slots.yaml` — static standing slot definitions only;
 - `.agent/ownership.yaml` / `.agent/shared-files.yaml` — path/shared-file ownership;
-- `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream/DAG and lease metadata rules;
+- `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream DAG and lease metadata rules;
 - `.agent/migrations.yaml` — serialized migration reservations;
 - `.agent/supervisor.yaml` — Supervisor onboarding/review/merge/broadcast/lease contract;
-- GitHub issue **#50** — live integrated-main SHA/synchronization epoch;
-- GitHub issue **#53** — live logical slot occupancy/assigned agent/start state;
-- branch `coordination/leases` — live instance-level mutation authority;
-- PR/work packet/handoff — live bounded task state;
+- GitHub issue **#50** — canonical integrated-main SHA / synchronization epoch;
+- GitHub issue **#53** — canonical logical slot occupancy / assignment state;
+- branch `coordination/leases` — exact live mutating-instance authority;
+- PR/work packet/handoff — bounded task state;
 - GitHub issue **#54** — required external native `main` branch-protection configuration;
 - `pnpm run verify:parallel` — executable governance verifier.
 
 Every agent performs the **Agent Instruction Drift Check** at task start and before completion. A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
 
-## Multi-agent throughput hardening
+## Multi-agent integration state
 
 ### Live slot assignment
 
-Temporary `OPEN` / `OCCUPIED` state is not stored in Git. Issue #53 is the canonical live logical slot registry; issue #50 remains canonical live synchronization state; PR/work packet/handoff carries bounded task state.
-
-New agents always start from exact current `main`. Supervisor re-reads issue #53 immediately before assignment, updates agent/status/main/epoch/registry revision, then re-reads it after assignment to confirm ownership.
+Temporary `OPEN` / `OCCUPIED` state is not stored in Git. Issue #53 is the canonical live logical slot registry. New agents start from exact current `main`; the Supervisor re-reads issue #53 immediately before assignment, synchronizes the selected idle standing branch, updates assignment state and registry revision, re-reads it, then the assigned live instance acquires the slot lease.
 
 If no assignable live `OPEN` slot exists, Supervisor responds exactly:
 
 **Go Home Come Back Next Time**
 
-No assignment, module checkout, work packet, feature edit or implementation PR is created for that arrival.
+No assignment, branch checkout, work packet, feature mutation or implementation PR is created for that arrival.
 
 ### Atomic live-instance branch leases
-
-Logical slot ownership alone does not prevent two concurrent sessions using the same logical agent identity. This final repository-controlled race is addressed by `docs/AGENT_BRANCH_LEASES.md` and dedicated branch `coordination/leases`.
 
 Hard invariant:
 
 **one occupied slot = at most one live mutating agent instance**
 
-Each occupied slot has at most one active lock file such as `.leases/SUPERVISOR.json`. The lease records slot, branch, work packet, `agent_instance_id`, `lease_id`, synchronized main SHA/epoch and acquisition head.
+Each active live writer owns at most one exact slot lock file such as `.leases/SUPERVISOR.json` on `coordination/leases`. The lease records slot, branch, work packet, `agent_instance_id`, `lease_id`, synchronized main SHA/epoch and acquisition head.
 
 Lease behavior:
 
-- acquisition is create-if-absent;
-- renewal/release use compare-and-swap ownership validation;
+- acquisition is create-if-absent and fails closed on collision;
+- renewal/release use the current lease blob SHA as compare-and-swap protection;
 - leases do not silently expire;
-- stale/crashed-owner takeover requires explicit Supervisor recovery audit;
+- stale/crashed-owner takeover requires explicit recovery audit;
 - Supervisor is not exempt;
-- PR handoff carries instance/lease/lock-path fields;
-- PR CI reads the active slot lease from `coordination/leases` and verifies it against issue #53, PR branch/work packet and handoff identity before integration;
-- `scripts/verify-agent-lease-governance.mjs` checks the versioned governance wiring;
-- `scripts/verify-pr-agent-lease.mjs` checks live PR lease authority.
+- PR handoff carries instance/lease/lock-path identity;
+- hosted PR CI validates the active lease against issue #53, branch, work packet, handoff identity and synchronized epoch;
+- `scripts/verify-agent-lease-governance.mjs` verifies versioned governance wiring;
+- `scripts/verify-pr-agent-lease.mjs` verifies live PR lease authority.
 
-The current hardening session successfully acquired the `SUPERVISOR` slot lease on `coordination/leases`, demonstrating the atomic lock path before final integration.
-
-### Completion signal is head-bound
+### Completion signal
 
 A finished work packet announces exactly:
 
 **Work Done and Submitted**
 
-This means ready for Supervisor review, not automatic merge approval. Any commit pushed after that exact signal invalidates the signal; current handoff exact head, current verification and active lease must be revalidated before a fresh signal.
+For non-Supervisor agents this is a top-level PR comment. It means ready for Supervisor review, not automatic approval. The signal is head-bound: any later commit invalidates it until re-verification and a fresh signal.
 
 ### Synchronization signal
 
-After every approved merge, Supervisor broadcasts exactly:
+After each approved integration, Supervisor broadcasts exactly:
 
 **New changes have been merged — please merge these changes into your branch first, then resume your own work.**
 
-Issue #50 is the canonical durable synchronization ledger. Active agents sync current `main` non-destructively and renew/reconcile their live lease metadata before resuming when required.
+Issue #50 is the durable synchronization ledger. Active agents pause, synchronize non-destructively to the new main SHA, rerun required minimum verification and renew/reconcile lease metadata before resuming.
 
 ## Main-branch integration integrity
 
-Native GitHub `main` protection currently reports `protected: false`. Direct protection endpoint access through the connected integration returns 403, and no branch-protection write action is exposed by the available connector.
+Repository-controlled protections are active:
 
-Repository-controlled compensating controls are active:
+- normal integration path is `PR → exact-head FULL GATE → expected-head merge`;
+- direct pushes to `main` are prohibited by project governance;
+- hosted CI runs on PRs and pushes to `main`;
+- main-push quality verification runs `scripts/verify-main-integration-provenance.mjs` and fails a `main` commit that is not associated with a merged PR targeting `main`.
 
-- hosted CI runs on pull requests and `push` to `main`;
-- main-push quality lane runs `scripts/verify-main-integration-provenance.mjs`;
-- the verifier fails when the pushed `main` commit is not associated with a merged PR targeting `main`;
-- direct pushes remain prohibited by project governance;
-- normal path remains `PR → exact-head FULL GATE → expected-head merge`.
-
-Native branch protection/ruleset remains the stronger external preventive control. GitHub issue **#54** stays open until repository settings require PR/status checks, block force pushes/deletion, and `main` re-reads as protected.
+Native GitHub protection is still the unresolved preventive layer. Current branch readback reports `main` as unprotected. Issue **#54** remains open until a repository ruleset / branch-protection rule requires PRs and the required status checks, blocks force pushes and deletion, and `main` re-reads as protected.
 
 ## Authorization boundary
 
-M01 and provider-neutral M01A foundations are complete. M02 may continue in small reversible provider-neutral slices.
+M01 and provider-neutral M01A are complete. M02 may continue only through small reversible provider-neutral slices unless a separately controlled gate is explicitly opened.
 
 Still separately gated:
 
-- production model/provider invocation/credentials;
-- production source connector credentials/activation;
+- production model/provider invocation and credentials;
+- production source connector credentials / activation;
 - real provider HTTP/API transport until network/SSRF/policy/credential controls are independently verified;
 - payment-provider activation;
 - unrestricted acquisition;
-- autonomous/bulk outreach;
+- autonomous or bulk outreach;
 - production deployment;
 - destructive production data actions;
 - unresolved legal/provider/commercial decisions.
@@ -148,10 +139,6 @@ State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
 ### ABD-266 — default-branch protection / compensating controls
 State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACTION OPEN AS ISSUE #54**.
 
-M01 platform, PostgreSQL/data layer, durable worker/queue, identity/RBAC/tenant primitives, API/observability and continuous FULL GATE remain **VERIFIED / INTEGRATED**.
-
-Default-branch protection posture: repository compensating controls active; native protection external action open as issue #54.
-
 ## M01A state
 
 **VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE — eleven provider-neutral foundation slices.** Production model/provider execution remains separately gated.
@@ -170,7 +157,7 @@ Real provider transport remains intentionally absent. Production `source.execute
 
 ## Parallel engineering operating model
 
-Standing slots/branches:
+Standing slots / branches:
 
 - `SUPERVISOR` → `supervisor/integration-control`
 - `CONTRACTS` → `agent/contracts-policy`
@@ -185,9 +172,9 @@ Default invariant:
 
 Additional hard invariant: one occupied slot has at most one live mutating instance lease.
 
-Default capacity target: **6**. Soft maximum: **8**, subject to healthy conflict/rework/CI metrics.
+Default capacity target: **6**. Soft maximum: **8**, only while conflict/rework/CI latency remains healthy.
 
-The executable coordination guard is `pnpm run verify:parallel`. It verifies static slots/branches, issue #53 live-registry authority, main-first onboarding, exact rejection phrase, Supervisor workflow, atomic lease governance, head-bound completion, synchronization rules, migration numbering and main-push provenance wiring.
+`pnpm run verify:parallel` verifies static slot/branch consistency, live-registry authority, main-first onboarding, the exact rejection phrase, Supervisor workflow, lease governance, head-bound completion, synchronization, migration numbering and main-push provenance wiring.
 
 ## Known limitations / not production verification
 
@@ -195,17 +182,15 @@ The executable coordination guard is `pnpm run verify:parallel`. It verifies sta
 - no production deployment has occurred;
 - no production model/provider/source connector is activated;
 - no production source-provider network transport or credentials are enabled;
-- local developer working-copy/runtime/database state is unknown when work is performed through remote GitHub tooling;
+- remote GitHub sessions cannot prove an unseen local developer working-copy/runtime/database state;
 - governance integration does not authorize payments, unrestricted acquisition, autonomous outreach or release gates.
 
 ## Next safe actions
 
-1. Finish this atomic lease hardening branch and renew the live `SUPERVISOR` lease to the exact final head.
-2. Open the lease-hardening PR with complete lease-aware handoff.
-3. Post fresh **Work Done and Submitted** for the exact PR head.
-4. Require all three FULL GATE lanes plus the live PR lease verifier to pass.
-5. Merge only with expected-head protection.
-6. Verify the post-merge push-to-main provenance lane passes.
-7. Publish the next issue #50 synchronization epoch, update issue #53 baseline, synchronize idle standing branches, and release the hardening lease safely.
-8. Enable native `main` branch protection/ruleset through GitHub repository settings per issue #54 and re-read it as protected.
-9. Then start parallel M02 work using issue #53 assignments + atomic slot leases.
+1. Keep issue #54 open until native `main` protection/ruleset is enabled and verified by branch readback.
+2. Continue M02 from exact epoch-5 `main` using issue #53 assignments plus atomic per-slot leases.
+3. Select the next bounded provider-neutral M02 slice through the dependency DAG; do not activate real provider transport or credentials.
+4. Prefer infrastructure that strengthens connector execution boundaries before real network transport: explicit outbound request/egress contracts, SSRF-safe destination policy, redirect/DNS/rebinding constraints, bounded response/body/time budgets, and test-only injected transport.
+5. Keep source authorization version-bound and revalidated at execution time; no runtime widening of policy, quota, storage, export or credential rights.
+6. Require exact-head FULL GATE, live PR lease verification, instruction-drift completion and expected-head merge for every new slice.
+7. After each merge, advance issue #50 synchronization epoch, update issue #53 baselines, synchronize idle standing branches and release completed live leases safely.
