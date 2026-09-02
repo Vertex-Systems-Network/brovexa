@@ -21,6 +21,9 @@ describe('classifySourceIpAddress', () => {
     ['::', 6, 'unspecified'],
     ['2001:db8::1', 6, 'documentation'],
     ['100::1', 6, 'reserved'],
+    ['2001:0:7f00:1::1', 6, 'reserved'],
+    ['2002:7f00:1::1', 6, 'reserved'],
+    ['3ffe::1', 6, 'reserved'],
   ] as const)('classifies %s as %s/%s', (address, family, classification) => {
     expect(classifySourceIpAddress(address)).toMatchObject({ family, classification });
   });
@@ -29,6 +32,13 @@ describe('classifySourceIpAddress', () => {
     expect(classifySourceIpAddress('::ffff:127.0.0.1')).toMatchObject({ family: 6, classification: 'loopback' });
     expect(classifySourceIpAddress('::ffff:10.1.2.3')).toMatchObject({ family: 6, classification: 'private' });
     expect(classifySourceIpAddress('::ffff:169.254.169.254')).toMatchObject({ family: 6, classification: 'metadata' });
+  });
+
+  it('fails closed for IPv6 transition mechanisms that can encode IPv4 destinations', () => {
+    expect(classifySourceIpAddress('2001:0:7f00:1::1')).toMatchObject({ family: 6, classification: 'reserved' });
+    expect(classifySourceIpAddress('2002:7f00:1::1')).toMatchObject({ family: 6, classification: 'reserved' });
+    expect(isPublicSourceIpAddress('2001:0:7f00:1::1')).toBe(false);
+    expect(isPublicSourceIpAddress('2002:7f00:1::1')).toBe(false);
   });
 
   it('fails closed for malformed and zone-scoped addresses', () => {
