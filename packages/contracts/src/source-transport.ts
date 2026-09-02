@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SourceRequestEnvelopeSchema } from './source';
 
 const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/);
 const VersionSchema = z.string().trim().min(1).max(64);
@@ -89,6 +90,10 @@ export const SourceTransportPolicySchema = z
     transportPolicyVersion: VersionSchema,
     connectorKey: z.string().regex(/^connector\.[a-z0-9_.-]+$/),
     connectorVersion: VersionSchema,
+    sourcePolicySnapshot: z.object({
+      policyId: IdentifierSchema,
+      policyVersion: VersionSchema,
+    }),
     networkMode: SourceTransportNetworkModeSchema,
     allowedSchemes: z.array(z.enum(['https', 'http'])).min(1).max(2),
     allowCleartextHttp: z.boolean(),
@@ -186,6 +191,7 @@ export type SourceTransportPolicy = z.infer<typeof SourceTransportPolicySchema>;
 export const SourceTransportRequestSchema = z.object({
   version: z.literal('1.0.0'),
   transportRequestId: IdentifierSchema,
+  sourceRequestId: IdentifierSchema,
   sourceTaskId: IdentifierSchema,
   connectorKey: z.string().regex(/^connector\.[a-z0-9_.-]+$/),
   connectorVersion: VersionSchema,
@@ -228,6 +234,7 @@ export type SourceTransportResolution = z.infer<typeof SourceTransportResolution
 
 export const SourceTransportAdmissionInputSchema = z.object({
   policy: SourceTransportPolicySchema,
+  sourceRequest: SourceRequestEnvelopeSchema,
   request: SourceTransportRequestSchema,
   resolution: SourceTransportResolutionSchema,
   evaluatedAt: DateTimeSchema,
@@ -242,10 +249,11 @@ export const SourceTransportAdmissionDecisionSchema = z.object({
   transportPolicyVersion: VersionSchema,
   connectorKey: z.string().regex(/^connector\.[a-z0-9_.-]+$/),
   connectorVersion: VersionSchema,
+  sourceRequestId: IdentifierSchema,
   transportRequestId: IdentifierSchema,
   canonicalUrl: UrlSchema,
   hostname: HostnameSchema,
-  port: PortSchema,
+  port: PortSchema.nullable(),
   maxResponseBytes: PositiveSafeIntegerSchema,
   timeoutMs: z.number().int().min(100).max(120_000),
   evaluatedAt: DateTimeSchema,
@@ -279,7 +287,7 @@ function hostAllowed(policy: SourceTransportPolicy, hostname: string): boolean {
 
 export function evaluateSourceTransportAdmission(rawInput: SourceTransportAdmissionInput): SourceTransportAdmissionDecision {
   const input = SourceTransportAdmissionInputSchema.parse(rawInput);
-  const { policy, request, resolution } = input;
+  const { policy, sourceRequest, request, resolution } = input;
   const blocked = new Set<string>();
   const warnings = new Set<string>();
   const target = parseCanonicalUrl(request.url);
@@ -291,6 +299,30 @@ export function evaluateSourceTransportAdmission(rawInput: SourceTransportAdmiss
   if (policy.connectorKey !== request.connectorKey || policy.connectorVersion !== request.connectorVersion) {
     blocked.add('transport_connector_identity_mismatch');
   }
+  if (
+    sourceRequest.requestId !== request.sourceRequestId ||
+    sourceRequest.sourceTaskId !== request.sourceTaskId ||
+    sourceRequest.connectorKey !== request.connectorKey ||
+    sourceRequest.connectorVersion !== request.connectorVersion
+  ) {
+    blocked.add('transport_source_request_identity_mismatch');
+  }
+  if (
+    policy.sourcePolicySnapshot.policyId !== sourceRequest.policySnapshot.policyId ||
+    policy.sourcePolicySnapshot.policyVersion !== sourceRequest.policySnapshot.policyVersion
+  ) {
+    blocked.add('transport_source_policy_snapshot_mismatch');
+  }
+  if (request.transportKind === 'network' && sourceRequest.executionIntent !== 'execute') {
+    blocked.add('transport_source_request_not_executable');
+  }
+  if (request.maxResponseBytes > sourceRequest.budget.maxBytes) blocked.add('transport_source_byte_budget_exceeded');
+  if (request.timeoutMs > sourceRequest.budget.maxRuntimeMs) blocked.add('transport_source_runtime_budget_exceeded');
+  if (request.redirectHop === 0 && sourceRequest.targetUrl) {
+    const admittedTarget = parseCanonicalUrl(sourceRequest.targetUrl);
+    if (admittedTarget.href !== target.href) blocked.add('transport_source_target_mismatch');
+  }
+
   if (resolution.transportRequestId !== request.transportRequestId) {
     blocked.add('transport_resolution_request_mismatch');
   }
@@ -303,8 +335,8 @@ export function evaluateSourceTransportAdmission(rawInput: SourceTransportAdmiss
     blocked.add('transport_network_test_only');
   }
 
-  const scheme = target.protocol.slice(0, -1) as 'https' | 'http';
-  if (!policy.allowedSchemes.includes(scheme)) blocked.add('transport_scheme_not_allowed');
+  const scheme = target.protocol.slice(0, -1);
+  if (!policy.allowedSchemes.includes(scheme as 'https' | 'http')) blocked.add('transport_scheme_not_allowed');
   if (scheme === 'http') {
     if (!policy.allowCleartextHttp) blocked.add('transport_cleartext_http_not_allowed');
     else warnings.add('transport_cleartext_http');
@@ -343,12 +375,13 @@ export function evaluateSourceTransportAdmission(rawInput: SourceTransportAdmiss
     transportPolicyVersion: policy.transportPolicyVersion,
     connectorKey: request.connectorKey,
     connectorVersion: request.connectorVersion,
+    sourceRequestId: request.sourceRequestId,
     transportRequestId: request.transportRequestId,
     canonicalUrl: target.href,
     hostname,
-    port: port ?? 1,
-    maxResponseBytes: Math.min(request.maxResponseBytes, policy.limits.maxResponseBytes),
-    timeoutMs: Math.min(request.timeoutMs, policy.limits.maxTimeoutMs),
+    port,
+    maxResponseBytes: Math.min(request.maxResponseBytes, policy.limits.maxResponseBytes, sourceRequest.budget.maxBytes),
+    timeoutMs: Math.min(request.timeoutMs, policy.limits.maxTimeoutMs, sourceRequest.budget.maxRuntimeMs),
     evaluatedAt: input.evaluatedAt,
   });
 }
