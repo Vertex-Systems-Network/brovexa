@@ -69,4 +69,16 @@ describe('SourceTransportResolutionEvidenceSchema', () => {
       }),
     ).toThrow(/duplicate addresses/);
   });
+
+  it('rejects semantically duplicate IPv6 evidence with different textual forms', () => {
+    expect(() =>
+      SourceTransportResolutionEvidenceSchema.parse({
+        ...base,
+        addresses: [
+          { address: '2001:db8::1', family: 6, classification: 'documentation' },
+          { address: '2001:0db8:0:0:0:0:0:1', family: 6, classification: 'documentation' },
+        ],
+      }),
+    ).toThrow(/duplicate addresses/);
+  });
 });
