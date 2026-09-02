@@ -6,17 +6,22 @@ Updated: 2026-09-03
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS provider-neutral foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with five bounded provider-neutral implementation slices FULL-GATE verified and integrated. The Supervisor-driven multi-agent workflow, main-first onboarding, live slot registry, head-bound completion signals, main-push provenance controls and atomic live-instance branch leases are integrated.**
+**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS provider-neutral foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with six bounded provider-neutral implementation slices FULL-GATE verified and integrated. The Supervisor-driven multi-agent workflow, main-first onboarding, live slot registry, head-bound completion signals, main-push provenance controls and atomic live-instance branch leases are integrated.**
 
-Current integrated `main`:
+Product implementation state in this checkpoint is reconciled through PR #58 (`feat(m02): add fail-closed source transport admission contract`). PR #58 integrated as `0d03b538e22deeac481800c81a6f8176752b70d7` after all three hosted FULL-GATE lanes passed on its exact PR head.
 
-`baa79779db608823f5d9696ebf8e7dda8db6d6ef`
+### Live-state authority
 
-This is the merge result of PR #56 (`chore(agent): enforce atomic live-instance branch leases`). Its post-merge push-to-main CI run `33607121538` (#243) completed successfully with the repository FULL GATE and main-integration provenance controls active.
+This versioned file intentionally does **not** claim a permanently current `main` SHA or synchronization epoch. A documentation merge changes `main` again and would make such a claim stale immediately.
 
-Latest canonical Supervisor synchronization state is GitHub issue #50 **sync epoch 5**, pointing to `baa79779db608823f5d9696ebf8e7dda8db6d6ef`.
+For exact live coordination state, always read:
 
-Issue #53 is aligned to the same main SHA / epoch. The five assignable standing module slots are `OPEN`; the `SUPERVISOR` logical slot remains `OCCUPIED` by `SUPERVISOR`. Exact live mutation authority is independently controlled through per-slot lease files on `coordination/leases`.
+- GitHub issue **#50** — canonical current integrated-main SHA and synchronization epoch;
+- GitHub issue **#53** — canonical current logical slot occupancy, assignment baseline and registry revision;
+- branch `coordination/leases` — exact live mutating-instance authority;
+- GitHub issue **#54** — native `main` branch-protection status.
+
+At task start, agents must resolve those live sources before mutating a standing branch. Historical SHAs in the M02 slice list below identify specific integrated implementation milestones only; they are not a substitute for the live ledgers.
 
 ## Canonical agent working instructions
 
@@ -96,7 +101,7 @@ Repository-controlled protections are active:
 - hosted CI runs on PRs and pushes to `main`;
 - main-push quality verification runs `scripts/verify-main-integration-provenance.mjs` and fails a `main` commit that is not associated with a merged PR targeting `main`.
 
-Native GitHub protection is still the unresolved preventive layer. Current branch readback reports `main` as unprotected. Issue **#54** remains open until a repository ruleset / branch-protection rule requires PRs and the required status checks, blocks force pushes and deletion, and `main` re-reads as protected.
+Native GitHub protection is still the unresolved preventive layer. Issue **#54** remains open until a repository ruleset / branch-protection rule requires PRs and the required status checks, blocks force pushes and deletion, and `main` re-reads as protected.
 
 ## Authorization boundary
 
@@ -145,13 +150,16 @@ State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACT
 
 ## M02 state
 
-**ACTIVE — five bounded slices VERIFIED / INTEGRATED.**
+**ACTIVE — six bounded slices VERIFIED / INTEGRATED.**
 
 1. Provider-neutral source adapter foundation — PR #39, merge `f2852d9055d55e332e0617e455901ca673f46503`.
 2. Durable source registry + admission persistence — PR #41, merge `e8198d259a4ffccbebd723154e1eafd5dac5365a`.
 3. Durable ResearchJob preflight + SourceTask lifecycle — PR #44, merge `ce4f43648f764aeef8e153d21cbc769ddf2bdf60`.
 4. Provider-neutral SourceTask execution bridge — PR #46, merge `08b33930bb6678a23ffcc5299ae56ed4b029f1ba`.
 5. Connector execution safety / durable health — PR #48, merge `bec3c6bb9fd89dd496b155b0f6087e5a8f77b223`.
+6. Fail-closed source transport admission / SSRF-egress contract — PR #58, merge `0d03b538e22deeac481800c81a6f8176752b70d7`.
+
+Slice 6 adds version-bound transport admission contracts, source-request target/budget binding, host/scheme/method/port restrictions, DNS-resolution evidence requirements, redirect revalidation requirements, non-public destination blocking, content/byte/time limits and adversarial contract tests. It intentionally does **not** add a DNS resolver, socket/HTTP client, provider credentials or production network activation.
 
 Real provider transport remains intentionally absent. Production `source.execute`, provider HTTP/network and credentialed connector execution remain separately gated.
 
@@ -188,9 +196,10 @@ Default capacity target: **6**. Soft maximum: **8**, only while conflict/rework/
 ## Next safe actions
 
 1. Keep issue #54 open until native `main` protection/ruleset is enabled and verified by branch readback.
-2. Continue M02 from exact epoch-5 `main` using issue #53 assignments plus atomic per-slot leases.
-3. Select the next bounded provider-neutral M02 slice through the dependency DAG; do not activate real provider transport or credentials.
-4. Prefer infrastructure that strengthens connector execution boundaries before real network transport: explicit outbound request/egress contracts, SSRF-safe destination policy, redirect/DNS/rebinding constraints, bounded response/body/time budgets, and test-only injected transport.
-5. Keep source authorization version-bound and revalidated at execution time; no runtime widening of policy, quota, storage, export or credential rights.
-6. Require exact-head FULL GATE, live PR lease verification, instruction-drift completion and expected-head merge for every new slice.
-7. After each merge, advance issue #50 synchronization epoch, update issue #53 baselines, synchronize idle standing branches and release completed live leases safely.
+2. Resolve exact current `main` SHA, synchronization epoch and slot occupancy from issues #50/#53 before every new work packet; do not hardcode live coordination state in this versioned checkpoint.
+3. Continue M02 through the dependency DAG without activating real provider transport or credentials.
+4. Next preferred bounded slice: deterministic IPv4/IPv6 destination classification plus injected test-only resolution/transport primitives that satisfy the new transport-admission contract while preserving `networkAccess: 'none'` for real provider traffic.
+5. Adversarially cover private/loopback/link-local/metadata/multicast/unspecified/documentation/reserved ranges, IPv4-mapped IPv6, encoded/confusable destination forms, mixed DNS answers, redirect-hop revalidation and rebinding-style evidence changes.
+6. Keep source authorization version-bound and revalidated at execution time; no runtime widening of policy, quota, target, storage, export or credential rights.
+7. Require exact-head FULL GATE, live PR lease verification, instruction-drift completion and expected-head merge for every new slice.
+8. After each merge, advance issue #50 synchronization epoch, update issue #53 baselines, synchronize active/idle standing branches as required and release completed live leases safely.
