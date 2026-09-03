@@ -6,6 +6,7 @@ export * from './identity';
 export * from './source-adapter';
 export * from './source-transport';
 export * from './source-transport-hop-chain';
+export * from './source-transport-result';
 
 export const HealthResponseSchema = z.object({
   status: z.literal('ok'),
