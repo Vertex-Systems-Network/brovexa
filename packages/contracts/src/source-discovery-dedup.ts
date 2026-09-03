@@ -15,54 +15,62 @@ export const sourceDiscoveryDedupKeyKindValues = [
 export const SourceDiscoveryDedupKeyKindSchema = z.enum(sourceDiscoveryDedupKeyKindValues);
 export type SourceDiscoveryDedupKeyKind = z.infer<typeof SourceDiscoveryDedupKeyKindSchema>;
 
-const SourceDiscoveryDedupKeySchema = z
+type DedupKey = {
+  keyKind: SourceDiscoveryDedupKeyKind;
+  keyValue: string;
+  keyScope: string | null;
+};
+
+function validateDedupKey(key: DedupKey, ctx: z.RefinementCtx): void {
+  const scoped = key.keyKind === 'source_external_ref' || key.keyKind === 'provider_fingerprint';
+  if (scoped && key.keyScope === null) {
+    ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} requires a source or connector scope.` });
+  }
+  if (!scoped && key.keyScope !== null) {
+    ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} must not declare a provider scope.` });
+  }
+  if (key.keyKind !== 'website_origin') return;
+
+  let url: URL;
+  try {
+    url = new URL(key.keyValue);
+  } catch {
+    ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must be a valid HTTP(S) origin.' });
+    return;
+  }
+  if (
+    (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+    !url.hostname ||
+    url.username ||
+    url.password ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash
+  ) {
+    ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must contain only a credential-free HTTP(S) origin.' });
+  }
+}
+
+export const SourceDiscoveryDedupEvidenceSchema = z
+  .object({
+    candidateId: IdentifierSchema,
+    keyKind: SourceDiscoveryDedupKeyKindSchema,
+    keyValue: DedupValueSchema,
+    keyScope: DedupScopeSchema.nullable(),
+    sourceReferenceIds: z.array(IdentifierSchema).min(1).max(64),
+  })
+  .strict()
+  .superRefine(validateDedupKey);
+export type SourceDiscoveryDedupEvidence = z.infer<typeof SourceDiscoveryDedupEvidenceSchema>;
+
+export const SourceDiscoveryDedupMatchedKeySchema = z
   .object({
     keyKind: SourceDiscoveryDedupKeyKindSchema,
     keyValue: DedupValueSchema,
     keyScope: DedupScopeSchema.nullable(),
   })
   .strict()
-  .superRefine((key, ctx) => {
-    const scoped = key.keyKind === 'source_external_ref' || key.keyKind === 'provider_fingerprint';
-    if (scoped && key.keyScope === null) {
-      ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} requires a source or connector scope.` });
-    }
-    if (!scoped && key.keyScope !== null) {
-      ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} must not declare a provider scope.` });
-    }
-    if (key.keyKind === 'website_origin') {
-      let url: URL;
-      try {
-        url = new URL(key.keyValue);
-      } catch {
-        ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must be a valid HTTP(S) origin.' });
-        return;
-      }
-      if (
-        (url.protocol !== 'https:' && url.protocol !== 'http:') ||
-        !url.hostname ||
-        url.username ||
-        url.password ||
-        url.pathname !== '/' ||
-        url.search ||
-        url.hash
-      ) {
-        ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must contain only a credential-free HTTP(S) origin.' });
-      }
-    }
-  });
-
-export const SourceDiscoveryDedupEvidenceSchema = SourceDiscoveryDedupKeySchema.and(
-  z
-    .object({
-      candidateId: IdentifierSchema,
-      sourceReferenceIds: z.array(IdentifierSchema).min(1).max(64),
-    })
-    .strict(),
-);
-export type SourceDiscoveryDedupEvidence = z.infer<typeof SourceDiscoveryDedupEvidenceSchema>;
-
-export const SourceDiscoveryDedupMatchedKeySchema = SourceDiscoveryDedupKeySchema;
+  .superRefine(validateDedupKey);
 export type SourceDiscoveryDedupMatchedKey = z.infer<typeof SourceDiscoveryDedupMatchedKeySchema>;
 
 export const SourceDiscoveryDedupGroupSchema = z
@@ -76,12 +84,6 @@ export const SourceDiscoveryDedupGroupSchema = z
   })
   .strict();
 export type SourceDiscoveryDedupGroup = z.infer<typeof SourceDiscoveryDedupGroupSchema>;
-
-type DedupKey = {
-  keyKind: SourceDiscoveryDedupKeyKind;
-  keyValue: string;
-  keyScope: string | null;
-};
 
 function normalizedKeyValue(key: DedupKey): string {
   const value = key.keyValue.trim();
