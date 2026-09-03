@@ -134,11 +134,11 @@ describe('M02 source execution end-to-end evidence boundary', () => {
 
     const missingProvenance = result();
     missingProvenance.candidates[0]!.sourceReferenceIds = [];
-    expect(validateSourceResultAgainstAdmission({ result: missingProvenance, request: input.request, capability: input.capability, policy: input.policy, admission }).valid).toBe(false);
+    expect(() => validateSourceResultAgainstAdmission({ result: missingProvenance, request: input.request, capability: input.capability, policy: input.policy, admission })).toThrow();
 
     const canonicalClaim = result();
-    canonicalClaim.candidates[0]!.candidateState = 'verified' as never;
-    expect(validateSourceResultAgainstAdmission({ result: canonicalClaim, request: input.request, capability: input.capability, policy: input.policy, admission }).valid).toBe(false);
+    (canonicalClaim.candidates[0] as unknown as { candidateState: string }).candidateState = 'verified';
+    expect(() => validateSourceResultAgainstAdmission({ result: canonicalClaim, request: input.request, capability: input.capability, policy: input.policy, admission })).toThrow();
   });
 
   it('blocks requests whose declared budget exceeds policy quota', () => {
@@ -146,6 +146,6 @@ describe('M02 source execution end-to-end evidence boundary', () => {
     input.request.budget.maxRequests = 6;
     const admission = evaluateConnectorAdmission(input);
     expect(admission.decision).toBe('blocked');
-    expect(admission.reasonCodes.length).toBeGreaterThan(0);
+    expect(admission.reasonCodes).toContain('source_budget_exceeds_policy');
   });
 });
