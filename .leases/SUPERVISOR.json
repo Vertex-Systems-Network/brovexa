@@ -5,11 +5,11 @@
   "slot_id": "SUPERVISOR",
   "agent_id": "SUPERVISOR",
   "agent_instance_id": "supervisor-chatgpt-20260903T031901+0500-6d7f1a9c",
-  "work_packet_id": "SUP-E18-INTEGRATION-CONTROL",
+  "work_packet_id": "SUP-QUEUE-MIGRATION-AWARE-VERIFIER",
   "lease_id": "lease-supervisor-20260903-6d7f1a9c-4c28",
   "synced_main_sha": "dc278460a0661a163b15bc7b31761de1b4ad8f0d",
   "sync_epoch": 18,
   "acquired_branch_head_sha": "3e0c3bb3d0a5a9b9e5ff31969208146a71a33148",
   "acquired_at": "2026-09-03T03:19:01+05:00",
-  "renewed_at": "2026-09-04T00:36:00+05:00"
+  "renewed_at": "2026-09-04T00:46:00+05:00"
 }
