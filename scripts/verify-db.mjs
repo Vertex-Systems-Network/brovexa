@@ -263,10 +263,13 @@ async function createLegacyReadinessPlaceholders(tableNames) {
       created.push(tableName);
     }
   } catch (error) {
-    for (const tableName of [...created].reverse()) {
-      await compatibilityPool.query(`DROP TABLE IF EXISTS ${quotedIdentifier(tableName)} CASCADE`);
+    try {
+      for (const tableName of [...created].reverse()) {
+        await compatibilityPool.query(`DROP TABLE IF EXISTS ${quotedIdentifier(tableName)} CASCADE`);
+      }
+    } finally {
+      await compatibilityPool.end();
     }
-    await compatibilityPool.end();
     throw error;
   }
 
@@ -279,6 +282,16 @@ async function createLegacyReadinessPlaceholders(tableNames) {
       await compatibilityPool.end();
     }
   };
+}
+
+async function restoreQuarantinedMigrations(quarantineDir, futureMigrationFiles) {
+  try {
+    for (const entry of futureMigrationFiles) {
+      await rename(resolve(quarantineDir, entry.name), resolve(migrationsDir, entry.name));
+    }
+  } finally {
+    await rm(quarantineDir, { recursive: true, force: true });
+  }
 }
 
 async function runLegacyPersistenceVerifierSuite() {
@@ -304,11 +317,11 @@ async function runLegacyPersistenceVerifierSuite() {
     removeReadinessPlaceholders = await createLegacyReadinessPlaceholders(futureTableNames);
     await runLegacyPersistenceVerifiers();
   } finally {
-    await removeReadinessPlaceholders();
-    for (const entry of futureMigrationFiles) {
-      await rename(resolve(quarantineDir, entry.name), resolve(migrationsDir, entry.name));
+    try {
+      await removeReadinessPlaceholders();
+    } finally {
+      await restoreQuarantinedMigrations(quarantineDir, futureMigrationFiles);
     }
-    await rm(quarantineDir, { recursive: true, force: true });
   }
 }
 
