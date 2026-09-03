@@ -3,6 +3,7 @@ import { SourceCandidateSchema } from './source';
 
 const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/);
 const DedupValueSchema = z.string().trim().min(1).max(2048);
+const DedupScopeSchema = z.string().regex(/^(source|connector)\.[a-z0-9_.-]+$/);
 
 export const sourceDiscoveryDedupKeyKindValues = [
   'source_external_ref',
@@ -14,22 +15,54 @@ export const sourceDiscoveryDedupKeyKindValues = [
 export const SourceDiscoveryDedupKeyKindSchema = z.enum(sourceDiscoveryDedupKeyKindValues);
 export type SourceDiscoveryDedupKeyKind = z.infer<typeof SourceDiscoveryDedupKeyKindSchema>;
 
-export const SourceDiscoveryDedupEvidenceSchema = z
+const SourceDiscoveryDedupKeySchema = z
   .object({
-    candidateId: IdentifierSchema,
     keyKind: SourceDiscoveryDedupKeyKindSchema,
     keyValue: DedupValueSchema,
-    sourceReferenceIds: z.array(IdentifierSchema).min(1).max(64),
+    keyScope: DedupScopeSchema.nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((key, ctx) => {
+    const scoped = key.keyKind === 'source_external_ref' || key.keyKind === 'provider_fingerprint';
+    if (scoped && key.keyScope === null) {
+      ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} requires a source or connector scope.` });
+    }
+    if (!scoped && key.keyScope !== null) {
+      ctx.addIssue({ code: 'custom', path: ['keyScope'], message: `${key.keyKind} must not declare a provider scope.` });
+    }
+    if (key.keyKind === 'website_origin') {
+      let url: URL;
+      try {
+        url = new URL(key.keyValue);
+      } catch {
+        ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must be a valid HTTP(S) origin.' });
+        return;
+      }
+      if (
+        (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+        !url.hostname ||
+        url.username ||
+        url.password ||
+        url.pathname !== '/' ||
+        url.search ||
+        url.hash
+      ) {
+        ctx.addIssue({ code: 'custom', path: ['keyValue'], message: 'website_origin must contain only a credential-free HTTP(S) origin.' });
+      }
+    }
+  });
+
+export const SourceDiscoveryDedupEvidenceSchema = SourceDiscoveryDedupKeySchema.and(
+  z
+    .object({
+      candidateId: IdentifierSchema,
+      sourceReferenceIds: z.array(IdentifierSchema).min(1).max(64),
+    })
+    .strict(),
+);
 export type SourceDiscoveryDedupEvidence = z.infer<typeof SourceDiscoveryDedupEvidenceSchema>;
 
-export const SourceDiscoveryDedupMatchedKeySchema = z
-  .object({
-    keyKind: SourceDiscoveryDedupKeyKindSchema,
-    keyValue: DedupValueSchema,
-  })
-  .strict();
+export const SourceDiscoveryDedupMatchedKeySchema = SourceDiscoveryDedupKeySchema;
 export type SourceDiscoveryDedupMatchedKey = z.infer<typeof SourceDiscoveryDedupMatchedKeySchema>;
 
 export const SourceDiscoveryDedupGroupSchema = z
@@ -44,8 +77,21 @@ export const SourceDiscoveryDedupGroupSchema = z
   .strict();
 export type SourceDiscoveryDedupGroup = z.infer<typeof SourceDiscoveryDedupGroupSchema>;
 
-function keyIdentity(key: { keyKind: SourceDiscoveryDedupKeyKind; keyValue: string }): string {
-  return `${key.keyKind}\u0000${key.keyValue.trim().toLocaleLowerCase('en-US')}`;
+type DedupKey = {
+  keyKind: SourceDiscoveryDedupKeyKind;
+  keyValue: string;
+  keyScope: string | null;
+};
+
+function normalizedKeyValue(key: DedupKey): string {
+  const value = key.keyValue.trim();
+  if (key.keyKind === 'website_origin') return new URL(value).origin;
+  if (key.keyKind === 'normalized_name_location') return value.toLocaleLowerCase('en-US');
+  return value;
+}
+
+function keyIdentity(key: DedupKey): string {
+  return `${key.keyKind}\u0000${key.keyScope ?? ''}\u0000${normalizedKeyValue(key)}`;
 }
 
 function addIssue(ctx: z.RefinementCtx, path: (string | number)[], message: string): void {
