@@ -83,8 +83,9 @@ function parsePayload(body: Uint8Array, limit: number): TestDiscoveryCandidate[]
     if (typeof value.externalRef !== 'string' || value.externalRef.trim().length === 0 || value.externalRef.length > 256) {
       throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_REF_INVALID');
     }
-    if (seen.has(value.externalRef)) throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_DUPLICATE');
-    seen.add(value.externalRef);
+    const externalRef = value.externalRef.trim();
+    if (seen.has(externalRef)) throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_DUPLICATE');
+    seen.add(externalRef);
     if (typeof value.name !== 'string' || value.name.trim().length === 0 || value.name.length > 512) {
       throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_NAME_INVALID');
     }
@@ -97,7 +98,7 @@ function parsePayload(body: Uint8Array, limit: number): TestDiscoveryCandidate[]
               throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID');
             })();
     return {
-      externalRef: value.externalRef,
+      externalRef,
       name: value.name.trim(),
       website,
     };

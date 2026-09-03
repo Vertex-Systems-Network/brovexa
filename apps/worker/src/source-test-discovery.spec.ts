@@ -26,7 +26,7 @@ describe('executeInjectedTestDiscovery', () => {
   it('builds a deterministic geography+niche URL and normalizes injected candidates', async () => {
     const exchange = vi.fn(async () =>
       response([
-        { externalRef: 'business.1', name: ' Example Dental ', website: 'https://EXAMPLE.com:443/' },
+        { externalRef: ' business.1 ', name: ' Example Dental ', website: 'https://EXAMPLE.com:443/' },
         { externalRef: 'business.2', name: 'Second Dental', website: null },
       ]),
     );
@@ -66,15 +66,17 @@ describe('executeInjectedTestDiscovery', () => {
     expect(exchange).not.toHaveBeenCalled();
   });
 
-  it('rejects duplicate candidates and unsafe or invalid websites', async () => {
+  it('rejects duplicate candidates after external-ref normalization', async () => {
     await expect(
       executeInjectedTestDiscovery(
         { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
         admission,
-        async () => response([{ externalRef: 'business.1', name: 'A' }, { externalRef: 'business.1', name: 'B' }]),
+        async () => response([{ externalRef: 'business.1', name: 'A' }, { externalRef: ' business.1 ', name: 'B' }]),
       ),
     ).rejects.toMatchObject({ code: 'TEST_DISCOVERY_CANDIDATE_DUPLICATE' });
+  });
 
+  it('rejects unsafe or invalid websites', async () => {
     await expect(
       executeInjectedTestDiscovery(
         { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
