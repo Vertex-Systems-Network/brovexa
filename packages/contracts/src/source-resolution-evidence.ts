@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { URL } from 'node:url';
 import { z } from 'zod';
-import { SourceTransportAddressClassSchema } from './source-transport';
+import { SourceTransportAddressClassSchema } from './source-transport-address';
 
 const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/);
 const DateTimeSchema = z.string().datetime();
@@ -13,7 +13,7 @@ function normalizedHost(value: string): string {
   return host.endsWith('.') ? host.slice(0, -1) : host;
 }
 
-function canonicalAddressKey(address: string, family: 4 | 6): string {
+export function sourceResolutionAddressKey(address: string, family: 4 | 6): string {
   const normalizedAddress = address.trim().toLowerCase();
   if (normalizedAddress.includes('%') || family === 4 || isIP(normalizedAddress) !== 6) {
     return `${family}:${normalizedAddress}`;
@@ -82,7 +82,7 @@ export const SourceTransportResolutionEvidenceSchema = z
       });
     }
 
-    const keys = resolution.addresses.map((address) => canonicalAddressKey(address.address, address.family));
+    const keys = resolution.addresses.map((address) => sourceResolutionAddressKey(address.address, address.family));
     if (new Set(keys).size !== keys.length) {
       ctx.addIssue({
         code: 'custom',
