@@ -44,7 +44,7 @@ describe('executeInjectedTestDiscovery', () => {
     expect(exchange).toHaveBeenCalledOnce();
   });
 
-  it('fails closed before transport for malformed query inputs', async () => {
+  it('fails closed before transport for malformed query or endpoint inputs', async () => {
     const exchange = vi.fn(async () => response([]));
     await expect(
       executeInjectedTestDiscovery(
@@ -59,10 +59,14 @@ describe('executeInjectedTestDiscovery', () => {
         exchange,
       ),
     ).rejects.toMatchObject({ code: 'TEST_DISCOVERY_COUNTRY_INVALID' });
+    expect(() => buildTestDiscoveryUrl('file:///tmp/discover', query)).toThrowError('TEST_DISCOVERY_ENDPOINT_INVALID');
+    expect(() => buildTestDiscoveryUrl('https://user:secret@example.test/discover', query)).toThrowError(
+      'TEST_DISCOVERY_ENDPOINT_INVALID',
+    );
     expect(exchange).not.toHaveBeenCalled();
   });
 
-  it('rejects duplicate candidates and invalid websites', async () => {
+  it('rejects duplicate candidates and unsafe or invalid websites', async () => {
     await expect(
       executeInjectedTestDiscovery(
         { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
@@ -76,6 +80,22 @@ describe('executeInjectedTestDiscovery', () => {
         { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
         admission,
         async () => response([{ externalRef: 'business.1', name: 'A', website: 'not-a-url' }]),
+      ),
+    ).rejects.toMatchObject({ code: 'TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID' });
+
+    await expect(
+      executeInjectedTestDiscovery(
+        { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
+        admission,
+        async () => response([{ externalRef: 'business.1', name: 'A', website: 'ftp://example.com/file' }]),
+      ),
+    ).rejects.toMatchObject({ code: 'TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID' });
+
+    await expect(
+      executeInjectedTestDiscovery(
+        { transportRequestId: admission.transportRequestId, endpoint, query, maxResponseBytes: 4096, timeoutMs: 1000 },
+        admission,
+        async () => response([{ externalRef: 'business.1', name: 'A', website: 'https://user:secret@example.com/' }]),
       ),
     ).rejects.toMatchObject({ code: 'TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID' });
   });

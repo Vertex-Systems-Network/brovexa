@@ -32,6 +32,19 @@ export class TestDiscoveryError extends Error {
   }
 }
 
+function httpUrl(rawUrl: string, errorCode: string): URL {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new TestDiscoveryError(errorCode);
+  }
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.hostname || url.username || url.password) {
+    throw new TestDiscoveryError(errorCode);
+  }
+  return url;
+}
+
 function discoveryUrl(endpoint: string, query: TestDiscoveryQuery): string {
   if (!/^[A-Z]{2}$/.test(query.countryCode)) throw new TestDiscoveryError('TEST_DISCOVERY_COUNTRY_INVALID');
   if (query.locality.trim().length === 0 || query.locality.length > 160) {
@@ -41,12 +54,7 @@ function discoveryUrl(endpoint: string, query: TestDiscoveryQuery): string {
   if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 1000) {
     throw new TestDiscoveryError('TEST_DISCOVERY_LIMIT_INVALID');
   }
-  let url: URL;
-  try {
-    url = new URL(endpoint);
-  } catch {
-    throw new TestDiscoveryError('TEST_DISCOVERY_ENDPOINT_INVALID');
-  }
+  const url = httpUrl(endpoint, 'TEST_DISCOVERY_ENDPOINT_INVALID');
   url.searchParams.set('country', query.countryCode);
   url.searchParams.set('limit', String(query.limit));
   url.searchParams.set('locality', query.locality.trim());
@@ -80,18 +88,18 @@ function parsePayload(body: Uint8Array, limit: number): TestDiscoveryCandidate[]
     if (typeof value.name !== 'string' || value.name.trim().length === 0 || value.name.length > 512) {
       throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_NAME_INVALID');
     }
-    if (value.website !== null && value.website !== undefined) {
-      if (typeof value.website !== 'string') throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID');
-      try {
-        new URL(value.website);
-      } catch {
-        throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID');
-      }
-    }
+    const website =
+      value.website === null || value.website === undefined
+        ? null
+        : typeof value.website === 'string'
+          ? httpUrl(value.website, 'TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID').href
+          : (() => {
+              throw new TestDiscoveryError('TEST_DISCOVERY_CANDIDATE_WEBSITE_INVALID');
+            })();
     return {
       externalRef: value.externalRef,
       name: value.name.trim(),
-      website: typeof value.website === 'string' ? new URL(value.website).href : null,
+      website,
     };
   });
 }
