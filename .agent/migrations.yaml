@@ -2,7 +2,7 @@ version: 1
 policy: serialized-reservation
 
 latest_integrated_migration: "0009_connector_execution_safety"
-next_unreserved_number: "0010"
+next_unreserved_number: "0011"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -19,4 +19,10 @@ reservation_statuses:
   - RELEASED
   - CANCELLED
 
-reservations: []
+reservations:
+  - number: "0010"
+    name: source_transport_audit_persistence
+    task_id: M02-TRANSPORT-AUDIT-DURABLE-PERSISTENCE
+    branch: agent/database-persistence
+    owner: M02-DATABASE-TRANSPORT-AUDIT-PERSISTENCE
+    status: RESERVED
