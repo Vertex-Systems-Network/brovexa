@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readdir, rename, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   applyPendingMigrations,
@@ -223,6 +223,64 @@ try {
   await pool.end();
 }
 
+function extractCreatedTableNames(sqlText) {
+  const tableNames = new Set();
+  const createTablePattern = /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:(?:"?public"?)\.)?"?([a-z_][a-z0-9_]*)"?\s*\(/gi;
+  for (const match of sqlText.matchAll(createTablePattern)) {
+    tableNames.add(match[1]);
+  }
+  return [...tableNames];
+}
+
+function quotedIdentifier(identifier) {
+  assert.match(identifier, /^[a-z_][a-z0-9_]*$/, `Unsafe PostgreSQL identifier: ${identifier}`);
+  return `"${identifier}"`;
+}
+
+async function futureCreatedTableNames(futureMigrationFiles) {
+  const names = new Set();
+  for (const entry of futureMigrationFiles) {
+    if (!entry.name.endsWith('.up.sql')) continue;
+    const sqlText = await readFile(resolve(migrationsDir, entry.name), 'utf8');
+    for (const tableName of extractCreatedTableNames(sqlText)) names.add(tableName);
+  }
+  return [...names].sort();
+}
+
+async function createLegacyReadinessPlaceholders(tableNames) {
+  if (tableNames.length === 0) return async () => {};
+
+  const compatibilityPool = createPgPool({ connectionString, max: 2 });
+  const created = [];
+  try {
+    for (const tableName of tableNames) {
+      const qualifiedName = `public.${tableName}`;
+      const existing = await compatibilityPool.query('SELECT to_regclass($1)::text AS relation', [qualifiedName]);
+      if (existing.rows[0]?.relation) continue;
+      await compatibilityPool.query(
+        `CREATE TABLE ${quotedIdentifier(tableName)} (__legacy_verifier_placeholder boolean NOT NULL DEFAULT true)`,
+      );
+      created.push(tableName);
+    }
+  } catch (error) {
+    for (const tableName of [...created].reverse()) {
+      await compatibilityPool.query(`DROP TABLE IF EXISTS ${quotedIdentifier(tableName)} CASCADE`);
+    }
+    await compatibilityPool.end();
+    throw error;
+  }
+
+  return async () => {
+    try {
+      for (const tableName of [...created].reverse()) {
+        await compatibilityPool.query(`DROP TABLE IF EXISTS ${quotedIdentifier(tableName)} CASCADE`);
+      }
+    } finally {
+      await compatibilityPool.end();
+    }
+  };
+}
+
 async function runLegacyPersistenceVerifierSuite() {
   const migrationEntries = await readdir(migrationsDir, { withFileTypes: true });
   const futureMigrationFiles = migrationEntries.filter((entry) => {
@@ -236,13 +294,17 @@ async function runLegacyPersistenceVerifierSuite() {
     return;
   }
 
+  const futureTableNames = await futureCreatedTableNames(futureMigrationFiles);
   const quarantineDir = await mkdtemp(resolve(migrationsDir, '.legacy-verification-'));
+  let removeReadinessPlaceholders = async () => {};
   try {
     for (const entry of futureMigrationFiles) {
       await rename(resolve(migrationsDir, entry.name), resolve(quarantineDir, entry.name));
     }
+    removeReadinessPlaceholders = await createLegacyReadinessPlaceholders(futureTableNames);
     await runLegacyPersistenceVerifiers();
   } finally {
+    await removeReadinessPlaceholders();
     for (const entry of futureMigrationFiles) {
       await rename(resolve(quarantineDir, entry.name), resolve(migrationsDir, entry.name));
     }
