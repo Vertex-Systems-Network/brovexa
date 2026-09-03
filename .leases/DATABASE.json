@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/database-persistence",
+  "slot_id": "DATABASE",
+  "agent_id": "M02-DATABASE-TRANSPORT-AUDIT-PERSISTENCE",
+  "agent_instance_id": "m02-database-e10-8f3a61c2",
+  "work_packet_id": "M02-TRANSPORT-AUDIT-DURABLE-PERSISTENCE",
+  "lease_id": "lease-database-e10-8f3a61c2-74bd",
+  "synced_main_sha": "1fe1378fc1b4aa5f5c462dc17b8ac1dea1a9e6d3",
+  "sync_epoch": 10,
+  "acquired_branch_head_sha": "a89d517a9cede41d04bda7727abb52d951e42632",
+  "acquired_at": "2026-09-03T18:24:00+05:00",
+  "renewed_at": "2026-09-03T18:24:00+05:00"
+}
