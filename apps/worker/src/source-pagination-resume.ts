@@ -25,6 +25,7 @@ export interface SourcePaginationPageEvidence {
   requestedCursor?: string;
   requestedPage?: number;
   nextCursor?: string;
+  hasMore?: boolean;
   usage: SourcePaginationResumeUsage;
   coverage: SourcePaginationResumeCoverage;
   returnedRecords: number;
@@ -95,6 +96,9 @@ export function applySourcePaginationPage(
   }
 
   if (state.mode === 'cursor') {
+    if (page.hasMore !== undefined) {
+      throw new SourcePaginationResumeError('SOURCE_PAGINATION_CURSOR_CONTINUATION_INVALID');
+    }
     validateCursorToken(state.nextCursor);
     validateCursorToken(page.requestedCursor);
     validateCursorToken(page.nextCursor);
@@ -112,11 +116,15 @@ export function applySourcePaginationPage(
       state.nextPage < 1 ||
       !Number.isSafeInteger(page.requestedPage) ||
       (page.requestedPage ?? 0) < 1 ||
+      typeof page.hasMore !== 'boolean' ||
       page.requestedCursor !== undefined ||
       page.nextCursor !== undefined ||
       page.requestedPage !== state.nextPage
     ) {
       throw new SourcePaginationResumeError('SOURCE_PAGINATION_PAGE_DISCONTINUITY');
+    }
+    if (page.coverage === 'complete' && page.hasMore) {
+      throw new SourcePaginationResumeError('SOURCE_PAGINATION_PAGE_CONTINUATION_INVALID');
     }
   }
 
@@ -132,7 +140,10 @@ export function applySourcePaginationPage(
     page.returnedRecords,
     'SOURCE_PAGINATION_RETURNED_RECORDS_OVERFLOW',
   );
-  const terminal = page.coverage === 'complete' || (state.mode === 'cursor' && page.nextCursor === undefined);
+  const terminal =
+    page.coverage === 'complete' ||
+    (state.mode === 'cursor' && page.nextCursor === undefined) ||
+    (state.mode === 'page' && page.hasMore === false);
   const nextPage =
     terminal || state.mode === 'cursor'
       ? null

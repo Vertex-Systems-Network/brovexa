@@ -31,10 +31,11 @@ describe('source pagination resume reducer', () => {
     expect(sourcePaginationResumeToken(second)).toBeNull();
   });
 
-  it('advances numeric pages by exactly one', () => {
+  it('advances numeric pages by exactly one and accepts explicit provider exhaustion', () => {
     const first = applySourcePaginationPage(createSourcePaginationResumeState('page'), {
       pageIndex: 0,
       requestedPage: 1,
+      hasMore: true,
       usage,
       coverage: 'partial',
       returnedRecords: 1,
@@ -44,11 +45,12 @@ describe('source pagination resume reducer', () => {
       applySourcePaginationPage(first, {
         pageIndex: 1,
         requestedPage: 2,
+        hasMore: false,
         usage,
-        coverage: 'complete',
+        coverage: 'partial',
         returnedRecords: 1,
-      }).terminal,
-    ).toBe(true);
+      }),
+    ).toMatchObject({ terminal: true, coverage: 'partial', nextPage: null });
   });
 
   it('rejects cursor gaps, cycles and page-index discontinuity', () => {
@@ -118,6 +120,29 @@ describe('source pagination resume reducer', () => {
     ).toThrowError('SOURCE_PAGINATION_CURSOR_INVALID');
   });
 
+  it('requires explicit page continuation evidence and rejects complete coverage with more pages', () => {
+    expect(() =>
+      applySourcePaginationPage(createSourcePaginationResumeState('page'), {
+        pageIndex: 0,
+        requestedPage: 1,
+        usage,
+        coverage: 'partial',
+        returnedRecords: 1,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_PAGE_DISCONTINUITY');
+
+    expect(() =>
+      applySourcePaginationPage(createSourcePaginationResumeState('page'), {
+        pageIndex: 0,
+        requestedPage: 1,
+        hasMore: true,
+        usage,
+        coverage: 'complete',
+        returnedRecords: 1,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_PAGE_CONTINUATION_INVALID');
+  });
+
   it('refuses unsafe page arithmetic and invalid page-index state', () => {
     const maxPageState = {
       ...createSourcePaginationResumeState('page'),
@@ -128,6 +153,7 @@ describe('source pagination resume reducer', () => {
       applySourcePaginationPage(maxPageState, {
         pageIndex: Number.MAX_SAFE_INTEGER,
         requestedPage: Number.MAX_SAFE_INTEGER,
+        hasMore: true,
         usage,
         coverage: 'partial',
         returnedRecords: 0,
@@ -163,6 +189,7 @@ describe('source pagination resume reducer', () => {
     const terminal = applySourcePaginationPage(createSourcePaginationResumeState('page'), {
       pageIndex: 0,
       requestedPage: 1,
+      hasMore: false,
       usage,
       coverage: 'complete',
       returnedRecords: 0,
@@ -171,6 +198,7 @@ describe('source pagination resume reducer', () => {
       applySourcePaginationPage(terminal, {
         pageIndex: 1,
         requestedPage: 2,
+        hasMore: false,
         usage,
         coverage: 'complete',
         returnedRecords: 0,
