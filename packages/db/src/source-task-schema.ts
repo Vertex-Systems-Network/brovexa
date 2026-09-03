@@ -70,6 +70,13 @@ export const sourceTasks = pgTable(
     uniqueIndex('source_tasks_id_workspace_unique').on(table.id, table.workspaceId),
     uniqueIndex('source_tasks_workspace_snapshot_unique').on(table.workspaceId, table.admissionSnapshotId),
     uniqueIndex('source_tasks_workspace_work_unique').on(table.workspaceId, table.workUnitId),
+    uniqueIndex('source_tasks_transport_audit_identity_unique').on(
+      table.id,
+      table.workspaceId,
+      table.requestId,
+      table.connectorKey,
+      table.connectorVersion,
+    ),
     index('source_tasks_workspace_research_job_idx').on(table.workspaceId, table.researchJobId, table.createdAt, table.id),
     check('source_tasks_id_check', sql`length(btrim(${table.id})) > 0`),
     check('source_tasks_job_id_check', sql`length(btrim(${table.researchJobId})) > 0`),
