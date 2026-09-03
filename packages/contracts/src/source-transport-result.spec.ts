@@ -1,3 +1,4 @@
+import { URL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { SourceTransportResponseReceiptSchema } from './source-transport-result';
 
@@ -144,74 +145,67 @@ describe('SourceTransportResponseReceiptSchema', () => {
   });
 
   it('rejects raw response payload/header material through strict receipt shapes', () => {
-    expectInvalid({ ...oneHopReceipt(), rawBody: 'secret-response-body' });
-    expectInvalid({ ...oneHopReceipt(), final: { ...oneHopReceipt().final, rawHeaders: { authorization: 'secret' } } });
+    const base = oneHopReceipt();
+    expectInvalid({ ...base, rawBody: 'secret-response-body' });
+    expectInvalid({ ...base, final: { ...base.final, rawHeaders: { authorization: 'secret' } } });
   });
 
   it('rejects blocked admissions and missing per-hop admission evidence', () => {
-    const blocked = oneHopReceipt();
-    blocked.hopAdmissions[0] = {
-      ...blocked.hopAdmissions[0],
-      decision: 'blocked',
-      reasonCodes: ['transport_host_not_allowed'],
-    };
-    expectInvalid(blocked);
-
-    expectInvalid({ ...oneHopReceipt(), hopAdmissions: [] });
+    const base = oneHopReceipt();
+    const firstAdmission = base.hopAdmissions[0]!;
+    expectInvalid({
+      ...base,
+      hopAdmissions: [
+        {
+          ...firstAdmission,
+          decision: 'blocked' as const,
+          reasonCodes: ['transport_host_not_allowed'],
+        },
+      ],
+    });
+    expectInvalid({ ...base, hopAdmissions: [] });
   });
 
   it('rejects hop admission request, URL and transport identity drift', () => {
-    const requestDrift = oneHopReceipt();
-    requestDrift.hopAdmissions[0] = { ...requestDrift.hopAdmissions[0], transportRequestId: 'transport-request-other' };
-    expectInvalid(requestDrift);
-
-    const urlDrift = oneHopReceipt();
-    urlDrift.hopAdmissions[0] = { ...urlDrift.hopAdmissions[0], canonicalUrl: 'https://example.com/other' };
-    expectInvalid(urlDrift);
-
-    expectInvalid({ ...oneHopReceipt(), connectorVersion: '9.9.9' });
+    const base = oneHopReceipt();
+    const firstAdmission = base.hopAdmissions[0]!;
+    expectInvalid({
+      ...base,
+      hopAdmissions: [{ ...firstAdmission, transportRequestId: 'transport-request-other' }],
+    });
+    expectInvalid({
+      ...base,
+      hopAdmissions: [{ ...firstAdmission, canonicalUrl: 'https://example.com/other' }],
+    });
+    expectInvalid({ ...base, connectorVersion: '9.9.9' });
   });
 
   it('rejects final response identity changes and admitted budget widening', () => {
-    const requestDrift = oneHopReceipt();
-    requestDrift.final.transportRequestId = 'transport-request-other';
-    expectInvalid(requestDrift);
-
-    const urlDrift = oneHopReceipt();
-    urlDrift.final.url = 'https://example.com/other';
-    expectInvalid(urlDrift);
-
-    const byteWidening = oneHopReceipt();
-    byteWidening.final.responseBytes = 1025;
-    expectInvalid(byteWidening);
-
-    const timeoutWidening = oneHopReceipt();
-    timeoutWidening.final.elapsedMs = 501;
-    expectInvalid(timeoutWidening);
+    const base = oneHopReceipt();
+    expectInvalid({ ...base, final: { ...base.final, transportRequestId: 'transport-request-other' } });
+    expectInvalid({ ...base, final: { ...base.final, url: 'https://example.com/other' } });
+    expectInvalid({ ...base, final: { ...base.final, responseBytes: 1025 } });
+    expectInvalid({ ...base, final: { ...base.final, elapsedMs: 501 } });
   });
 
   it('rejects response timestamps before terminal admission and redirect terminal statuses', () => {
-    const timeDrift = oneHopReceipt();
-    timeDrift.final.receivedAt = '2026-09-03T00:00:01.900Z';
-    expectInvalid(timeDrift);
-
-    const redirectTerminal = oneHopReceipt();
-    redirectTerminal.final.status = 302;
-    expectInvalid(redirectTerminal);
+    const base = oneHopReceipt();
+    expectInvalid({ ...base, final: { ...base.final, receivedAt: '2026-09-03T00:00:01.900Z' } });
+    expectInvalid({ ...base, final: { ...base.final, status: 302 } });
   });
 
   it('requires an allow admission for every valid redirect hop', () => {
-    expect(SourceTransportResponseReceiptSchema.safeParse(twoHopReceipt()).success).toBe(true);
+    const base = twoHopReceipt();
+    expect(SourceTransportResponseReceiptSchema.safeParse(base).success).toBe(true);
+    expectInvalid({ ...base, hopAdmissions: base.hopAdmissions.slice(0, 1) });
 
-    const missingAdmission = twoHopReceipt();
-    missingAdmission.hopAdmissions.pop();
-    expectInvalid(missingAdmission);
-
-    const staleSecondAdmission = twoHopReceipt();
-    staleSecondAdmission.hopAdmissions[1] = {
-      ...staleSecondAdmission.hopAdmissions[1],
-      evaluatedAt: '2026-09-03T00:00:03.500Z',
-    };
-    expectInvalid(staleSecondAdmission);
+    const secondAdmission = base.hopAdmissions[1]!;
+    expectInvalid({
+      ...base,
+      hopAdmissions: [
+        base.hopAdmissions[0]!,
+        { ...secondAdmission, evaluatedAt: '2026-09-03T00:00:03.500Z' },
+      ],
+    });
   });
 });
