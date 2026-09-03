@@ -37,3 +37,6 @@ export * from './source-registry-persistence';
 export * from './source-schema';
 export * from './source-task-persistence';
 export * from './source-task-schema';
+export * from './source-transport-audit-persistence';
+export * from './source-transport-audit-record';
+export * from './source-transport-audit-schema';
