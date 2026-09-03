@@ -15,11 +15,17 @@ function normalizedHost(value: string): string {
 
 function canonicalAddressKey(address: string, family: 4 | 6): string {
   const normalizedAddress = address.trim().toLowerCase();
-  if (family === 4 || isIP(normalizedAddress) !== 6) return `${family}:${normalizedAddress}`;
+  if (normalizedAddress.includes('%') || family === 4 || isIP(normalizedAddress) !== 6) {
+    return `${family}:${normalizedAddress}`;
+  }
 
-  const hostname = new URL(`http://[${normalizedAddress}]/`).hostname.toLowerCase();
-  const canonicalIpv6 = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
-  return `6:${canonicalIpv6}`;
+  try {
+    const hostname = new URL(`http://[${normalizedAddress}]/`).hostname.toLowerCase();
+    const canonicalIpv6 = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname;
+    return `6:${canonicalIpv6}`;
+  } catch {
+    return `6:${normalizedAddress}`;
+  }
 }
 
 export const SourceResolvedAddressEvidenceSchema = z
