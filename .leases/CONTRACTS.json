@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/contracts-policy",
+  "slot_id": "CONTRACTS",
+  "agent_id": "M02-CONTRACTS-CANDIDATE-DEDUP",
+  "agent_instance_id": "m02-contracts-e26-6f2c9d31",
+  "work_packet_id": "M02-DISCOVERY-CANDIDATE-DEDUP-CONTRACT",
+  "lease_id": "lease-contracts-e26-6f2c9d31-a418",
+  "synced_main_sha": "16e73939606f1051ba1e4ddecc24de47f9647782",
+  "sync_epoch": 26,
+  "acquired_branch_head_sha": "16e73939606f1051ba1e4ddecc24de47f9647782",
+  "acquired_at": "2026-09-04T03:06:00+05:00",
+  "renewed_at": "2026-09-04T03:06:00+05:00"
+}
