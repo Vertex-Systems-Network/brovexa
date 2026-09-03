@@ -1,6 +1,11 @@
 import { URL } from 'node:url';
 import { z } from 'zod';
 import { SourceRequestEnvelopeSchema } from './source';
+import { SourceResolvedAddressEvidenceSchema, sourceResolutionAddressKey } from './source-resolution-evidence';
+import { SourceTransportAddressClassSchema } from './source-transport-address';
+
+export { SourceTransportAddressClassSchema, sourceTransportAddressClassValues } from './source-transport-address';
+export type { SourceTransportAddressClass } from './source-transport-address';
 
 const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/);
 const VersionSchema = z.string().trim().min(1).max(64);
@@ -68,21 +73,6 @@ export type SourceTransportNetworkMode = z.infer<typeof SourceTransportNetworkMo
 export const sourceTransportMethodValues = ['GET', 'HEAD', 'POST'] as const;
 export const SourceTransportMethodSchema = z.enum(sourceTransportMethodValues);
 export type SourceTransportMethod = z.infer<typeof SourceTransportMethodSchema>;
-
-export const sourceTransportAddressClassValues = [
-  'public',
-  'private',
-  'loopback',
-  'link_local',
-  'metadata',
-  'multicast',
-  'unspecified',
-  'documentation',
-  'reserved',
-  'invalid',
-] as const;
-export const SourceTransportAddressClassSchema = z.enum(sourceTransportAddressClassValues);
-export type SourceTransportAddressClass = z.infer<typeof SourceTransportAddressClassSchema>;
 
 export const SourceTransportPolicySchema = z
   .object({
@@ -213,23 +203,26 @@ export const SourceTransportResolutionSchema = z
     url: UrlSchema,
     hostname: HostnameSchema,
     resolvedAt: DateTimeSchema,
-    addresses: z
-      .array(
-        z.object({
-          address: z.string().trim().min(2).max(64),
-          family: z.union([z.literal(4), z.literal(6)]),
-          classification: SourceTransportAddressClassSchema,
-        }),
-      )
-      .max(32),
+    addresses: z.array(SourceResolvedAddressEvidenceSchema).max(32),
   })
   .superRefine((resolution, ctx) => {
-    addDuplicateIssue(
-      resolution.addresses.map((address) => `${address.family}:${address.address.toLowerCase()}`),
-      ctx,
-      ['addresses'],
-      'resolved addresses must be unique.',
-    );
+    const parsed = new URL(resolution.url);
+    if (normalizedHost(parsed.hostname) !== normalizedHost(resolution.hostname)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['hostname'],
+        message: 'Resolution hostname must match the canonical URL hostname.',
+      });
+    }
+
+    const keys = resolution.addresses.map((address) => sourceResolutionAddressKey(address.address, address.family));
+    if (new Set(keys).size !== keys.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['addresses'],
+        message: 'resolved addresses must be unique.',
+      });
+    }
   });
 export type SourceTransportResolution = z.infer<typeof SourceTransportResolutionSchema>;
 
