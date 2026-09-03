@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   applyPendingMigrations,
@@ -33,6 +34,10 @@ if (process.env.BROVEXA_DB_TEST_ALLOW_RESET !== 'true') {
 const pool = createPgPool({ connectionString: databaseUrl, max: 6 });
 const connection = parseQueueRedisUrl(queueRedisUrl);
 const migrationsDir = resolve('packages/db/migrations');
+const expectedMigrations = (await readdir(migrationsDir, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && /^\d{4}_.+\.up\.sql$/.test(entry.name))
+  .map((entry) => entry.name.slice(0, -'.up.sql'.length))
+  .sort();
 const correlationIdsSeen = new Set();
 
 async function waitFor(label, predicate, timeoutMs = 10_000) {
@@ -45,6 +50,7 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
@@ -84,18 +90,7 @@ try {
   assert.ok(databaseName?.endsWith('_test'), `Refusing destructive verification against database: ${databaseName}`);
 
   await resetDatabase();
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
-    '0000_workspace_foundation',
-    '0001_job_execution_foundation',
-    '0002_identity_authorization_foundation',
-    '0003_agent_runtime_core',
-    '0004_memory_evaluation_core',
-    '0005_agent_memory_lifecycle',
-    '0006_agent_execution_plan',
-    '0007_source_registry_foundation',
-    '0008_source_task_preflight',
-    '0009_connector_execution_safety',
-  ]);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), expectedMigrations);
 
   const workspace = await pool.query(
     `INSERT INTO workspaces (slug, display_name) VALUES ('queue-verification', 'Queue Verification') RETURNING id`,
