@@ -1,23 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { SourceDiscoveryDedupBatchSchema } from './source-discovery-dedup';
+import {
+  SourceDiscoveryDedupBatchSchema,
+  type SourceDiscoveryDedupBatch,
+} from './source-discovery-dedup';
 
-function candidate(candidateId: string, sourceReferenceId: string) {
+function candidate(
+  candidateId: string,
+  sourceReferenceId: string,
+): SourceDiscoveryDedupBatch['candidates'][number] {
   return {
     candidateId,
-    objectType: 'business' as const,
-    candidateState: 'unverified' as const,
+    objectType: 'business',
+    candidateState: 'unverified',
     fields: { name: candidateId },
     fieldNames: ['name'],
-    dataClassifications: ['PUBLIC_BUSINESS'] as const,
-    storageClass: 'NORMALIZED_FACT' as const,
+    dataClassifications: ['PUBLIC_BUSINESS'],
+    storageClass: 'NORMALIZED_FACT',
     sourceReferenceIds: [sourceReferenceId],
     observedAt: '2026-09-04T00:00:00.000Z',
   };
 }
 
-function batch() {
+function batch(): SourceDiscoveryDedupBatch {
   return {
-    version: '1.0.0' as const,
+    version: '1.0.0',
     batchId: 'dedup-batch-1',
     workspaceId: 'workspace-1',
     researchJobId: 'research-job-1',
@@ -25,13 +31,13 @@ function batch() {
     evidence: [
       {
         candidateId: 'candidate-1',
-        keyKind: 'website_origin' as const,
+        keyKind: 'website_origin',
         keyValue: 'https://example.com',
         sourceReferenceIds: ['reference-1'],
       },
       {
         candidateId: 'candidate-2',
-        keyKind: 'website_origin' as const,
+        keyKind: 'website_origin',
         keyValue: 'HTTPS://EXAMPLE.COM',
         sourceReferenceIds: ['reference-2'],
       },
@@ -40,10 +46,10 @@ function batch() {
       {
         groupId: 'group-1',
         candidateIds: ['candidate-1', 'candidate-2'],
-        decision: 'duplicate' as const,
-        matchedKeys: [{ keyKind: 'website_origin' as const, keyValue: 'https://example.com' }],
+        decision: 'duplicate',
+        matchedKeys: [{ keyKind: 'website_origin', keyValue: 'https://example.com' }],
         reasonCodes: ['dedup.website_origin_match'],
-        canonicalizationState: 'unverified_candidates_only' as const,
+        canonicalizationState: 'unverified_candidates_only',
       },
     ],
     evaluatedAt: '2026-09-04T00:01:00.000Z',
@@ -59,48 +65,46 @@ describe('SourceDiscoveryDedupBatchSchema', () => {
   });
 
   it('rejects evidence for unknown candidates or undeclared source references', () => {
-    expect(
-      SourceDiscoveryDedupBatchSchema.safeParse({
-        ...batch(),
-        evidence: [{ ...batch().evidence[0], candidateId: 'candidate-missing' }],
-      }).success,
-    ).toBe(false);
+    const unknownCandidate = batch();
+    unknownCandidate.evidence = [{ ...unknownCandidate.evidence[0]!, candidateId: 'candidate-missing' }];
+    expect(SourceDiscoveryDedupBatchSchema.safeParse(unknownCandidate).success).toBe(false);
 
-    expect(
-      SourceDiscoveryDedupBatchSchema.safeParse({
-        ...batch(),
-        evidence: [{ ...batch().evidence[0], sourceReferenceIds: ['reference-other'] }, batch().evidence[1]],
-      }).success,
-    ).toBe(false);
+    const undeclaredReference = batch();
+    undeclaredReference.evidence[0] = {
+      ...undeclaredReference.evidence[0]!,
+      sourceReferenceIds: ['reference-other'],
+    };
+    expect(SourceDiscoveryDedupBatchSchema.safeParse(undeclaredReference).success).toBe(false);
   });
 
   it('rejects groups whose declared matched key is not evidenced by every candidate', () => {
     const value = batch();
-    value.evidence[1] = { ...value.evidence[1], keyValue: 'https://other.example' };
+    value.evidence[1] = { ...value.evidence[1]!, keyValue: 'https://other.example' };
     expect(SourceDiscoveryDedupBatchSchema.safeParse(value).success).toBe(false);
   });
 
   it('allows normalized name/location evidence only as possible-duplicate evidence', () => {
-    const value = batch();
-    value.evidence = value.evidence.map((item) => ({
+    const hardDuplicate = batch();
+    hardDuplicate.evidence = hardDuplicate.evidence.map((item) => ({
       ...item,
-      keyKind: 'normalized_name_location' as const,
+      keyKind: 'normalized_name_location',
       keyValue: 'example dental|istanbul',
     }));
-    value.groups[0] = {
-      ...value.groups[0]!,
-      matchedKeys: [{ keyKind: 'normalized_name_location' as const, keyValue: 'example dental|istanbul' }],
+    hardDuplicate.groups[0] = {
+      ...hardDuplicate.groups[0]!,
+      matchedKeys: [{ keyKind: 'normalized_name_location', keyValue: 'example dental|istanbul' }],
     };
-    expect(SourceDiscoveryDedupBatchSchema.safeParse(value).success).toBe(false);
+    expect(SourceDiscoveryDedupBatchSchema.safeParse(hardDuplicate).success).toBe(false);
 
-    value.groups[0] = { ...value.groups[0]!, decision: 'possible_duplicate' as const };
-    expect(SourceDiscoveryDedupBatchSchema.safeParse(value).success).toBe(true);
+    const possibleDuplicate = structuredClone(hardDuplicate);
+    possibleDuplicate.groups[0] = { ...possibleDuplicate.groups[0]!, decision: 'possible_duplicate' };
+    expect(SourceDiscoveryDedupBatchSchema.safeParse(possibleDuplicate).success).toBe(true);
   });
 
   it('rejects duplicate evidence and overlapping dedup groups', () => {
-    const value = batch();
-    value.evidence.push({ ...value.evidence[0]! });
-    expect(SourceDiscoveryDedupBatchSchema.safeParse(value).success).toBe(false);
+    const duplicateEvidence = batch();
+    duplicateEvidence.evidence.push({ ...duplicateEvidence.evidence[0]! });
+    expect(SourceDiscoveryDedupBatchSchema.safeParse(duplicateEvidence).success).toBe(false);
 
     const overlap = batch();
     overlap.groups.push({ ...overlap.groups[0]!, groupId: 'group-2' });
