@@ -7,9 +7,9 @@
   "agent_instance_id": "m02-contracts-result-e12-62c4a8d1",
   "work_packet_id": "M02-TRANSPORT-RESULT-RECEIPT-CONTRACTS",
   "lease_id": "lease-contracts-result-e12-62c4a8d1-9f27",
-  "synced_main_sha": "4339ba890498a6abd3656431e648a9842d6eb362",
-  "sync_epoch": 12,
+  "synced_main_sha": "d6556b1433428c4e68ac5a0a44b874c9f8b99b94",
+  "sync_epoch": 13,
   "acquired_branch_head_sha": "a182f295c6ca69133722351c9e78a330fc87c9c4",
   "acquired_at": "2026-09-03T20:20:00+05:00",
-  "renewed_at": "2026-09-03T20:22:00+05:00"
+  "renewed_at": "2026-09-03T20:27:00+05:00"
 }
