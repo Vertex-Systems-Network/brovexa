@@ -31,4 +31,4 @@ reservations:
     task_id: M02-DISCOVERY-CHECKPOINT-PERSISTENCE
     branch: agent/database-persistence
     owner: M02-DATABASE-DISCOVERY-CHECKPOINT
-    status: RESERVED
+    status: IMPLEMENTED
