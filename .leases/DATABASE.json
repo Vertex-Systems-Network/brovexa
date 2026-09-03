@@ -7,9 +7,9 @@
   "agent_instance_id": "m02-database-e25-63a8f1c4",
   "work_packet_id": "M02-DISCOVERY-CHECKPOINT-PERSISTENCE",
   "lease_id": "lease-database-e25-63a8f1c4-b772",
-  "synced_main_sha": "85a6cdc786b61b8424bac9e5d831ebfa2b3a16a8",
-  "sync_epoch": 25,
+  "synced_main_sha": "16e73939606f1051ba1e4ddecc24de47f9647782",
+  "sync_epoch": 26,
   "acquired_branch_head_sha": "85a6cdc786b61b8424bac9e5d831ebfa2b3a16a8",
   "acquired_at": "2026-09-04T02:27:00+05:00",
-  "renewed_at": "2026-09-04T02:27:00+05:00"
+  "renewed_at": "2026-09-04T02:47:00+05:00"
 }
