@@ -102,8 +102,11 @@ function validateInput(input: SaveSourceDiscoveryCheckpointInput): void {
   if (typeof input.workspaceId !== 'string' || input.workspaceId.length === 0) throw inputError('workspaceId is required.');
   if (input.mode !== 'cursor' && input.mode !== 'page') throw inputError('mode must be cursor or page.');
   assertSafeInteger(input.pageIndex, 'pageIndex');
-  if (input.nextCursor !== null && (typeof input.nextCursor !== 'string' || input.nextCursor.length > 4096)) {
-    throw inputError('nextCursor must be null or at most 4096 characters.');
+  if (
+    input.nextCursor !== null &&
+    (typeof input.nextCursor !== 'string' || input.nextCursor.trim().length === 0 || input.nextCursor.length > 4096)
+  ) {
+    throw inputError('nextCursor must be null or a non-empty value of at most 4096 characters.');
   }
   if (input.nextPage !== null) assertSafeInteger(input.nextPage, 'nextPage', true);
   if (input.mode === 'cursor' && input.nextPage !== null) throw inputError('cursor checkpoints cannot declare nextPage.');
@@ -116,6 +119,9 @@ function validateInput(input: SaveSourceDiscoveryCheckpointInput): void {
   }
   if (!input.terminal && input.mode === 'page' && input.nextPage === null) {
     throw inputError('non-terminal page checkpoints require nextPage.');
+  }
+  if (input.coverageState === 'complete' && !input.terminal) {
+    throw inputError('complete coverage requires a terminal checkpoint.');
   }
   for (const [field, value] of Object.entries(input.cumulativeUsage)) assertSafeInteger(value, `cumulativeUsage.${field}`);
   if (!['complete', 'partial', 'unknown'].includes(input.coverageState)) throw inputError('coverageState is invalid.');
@@ -206,12 +212,25 @@ export async function saveSourceDiscoveryCheckpoint(
   } else {
     const updated = await pool.query<CheckpointRow>(
       `UPDATE source_discovery_checkpoints
-       SET id = $1, mode = $4, page_index = $5, next_cursor = $6, next_page = $7,
+       SET page_index = $5, next_cursor = $6, next_page = $7,
            cumulative_requests = $8, cumulative_pages = $9, cumulative_bytes = $10,
            cumulative_currency_micros = $11, cumulative_runtime_ms = $12,
            coverage_state = $13, returned_records = $14, terminal = $15, observed_at = $16,
            version = version + 1, updated_at = now()
-       WHERE workspace_id = $2::uuid AND source_task_id = $3 AND version = $17
+       WHERE id = $1
+         AND workspace_id = $2::uuid
+         AND source_task_id = $3
+         AND mode = $4
+         AND version = $17
+         AND terminal = false
+         AND page_index <= $5
+         AND cumulative_requests <= $8
+         AND cumulative_pages <= $9
+         AND cumulative_bytes <= $10
+         AND cumulative_currency_micros <= $11
+         AND cumulative_runtime_ms <= $12
+         AND returned_records <= $14
+         AND observed_at <= $16
        RETURNING ${returningColumns}`,
       [...values, input.expectedVersion],
     );
@@ -221,7 +240,7 @@ export async function saveSourceDiscoveryCheckpoint(
 
   throw new SourceDiscoveryCheckpointPersistenceError(
     'SOURCE_DISCOVERY_CHECKPOINT_CONFLICT',
-    `Checkpoint for source task ${input.sourceTaskId} changed or already exists; reload before retrying.`,
+    `Checkpoint for source task ${input.sourceTaskId} changed, regressed or already exists; reload before retrying.`,
   );
 }
 
