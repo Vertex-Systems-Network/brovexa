@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   AuthorizationError,
@@ -28,6 +29,14 @@ if (process.env.BROVEXA_DB_TEST_ALLOW_RESET !== 'true') {
 
 const migrationsDir = resolve('packages/db/migrations');
 const pool = createPgPool({ connectionString, max: 6 });
+const expectedMigrations = (await readdir(migrationsDir, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && /^\d{4}_.+\.up\.sql$/.test(entry.name))
+  .map((entry) => entry.name.slice(0, -'.up.sql'.length))
+  .sort();
+const identityBoundaryMigration = '0002_identity_authorization_foundation';
+const identityBoundaryIndex = expectedMigrations.indexOf(identityBoundaryMigration);
+assert.ok(identityBoundaryIndex >= 0, `Expected identity boundary migration ${identityBoundaryMigration}.`);
+const identityMigrationTail = expectedMigrations.slice(identityBoundaryIndex);
 
 function findPostgresError(error) {
   let current = error;
@@ -58,6 +67,7 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
@@ -106,18 +116,7 @@ try {
   assert.ok(databaseName?.endsWith('_test'), `Refusing destructive verification against database: ${databaseName}`);
 
   await resetTestDatabase();
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
-    '0000_workspace_foundation',
-    '0001_job_execution_foundation',
-    '0002_identity_authorization_foundation',
-    '0003_agent_runtime_core',
-    '0004_memory_evaluation_core',
-    '0005_agent_memory_lifecycle',
-    '0006_agent_execution_plan',
-    '0007_source_registry_foundation',
-    '0008_source_task_preflight',
-    '0009_connector_execution_safety',
-  ]);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), expectedMigrations);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
   assert.deepEqual(authClientKindValues, ['web', 'desktop', 'extension', 'api']);
@@ -316,14 +315,9 @@ try {
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.assigned'));
   assert.ok(audit.rows.some((event) => event.action === 'workspace.role.removed'));
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0009_connector_execution_safety');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0008_source_task_preflight');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0005_agent_memory_lifecycle');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0004_memory_evaluation_core');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_runtime_core');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
+  for (const migrationId of [...identityMigrationTail].reverse()) {
+    assert.equal(await rollbackLatestMigration(pool, migrationsDir), migrationId);
+  }
   assert.equal((await probeDatabase(pool)).schemaReady, false);
   const afterRollback = await pool.query(`
     SELECT
@@ -359,16 +353,7 @@ try {
   assert.equal(afterRollback.rows[0]?.source_task_usage_events, null);
   assert.equal(afterRollback.rows[0]?.connector_health_snapshots, null);
 
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [
-    '0002_identity_authorization_foundation',
-    '0003_agent_runtime_core',
-    '0004_memory_evaluation_core',
-    '0005_agent_memory_lifecycle',
-    '0006_agent_execution_plan',
-    '0007_source_registry_foundation',
-    '0008_source_task_preflight',
-    '0009_connector_execution_safety',
-  ]);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), identityMigrationTail);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
   console.log('Brovexa tenant isolation / RBAC / provider-neutral identity integration verification passed.');
