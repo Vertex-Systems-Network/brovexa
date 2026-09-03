@@ -1,7 +1,7 @@
 version: 1
 policy: serialized-reservation
 
-latest_integrated_migration: "0009_connector_execution_safety"
+latest_integrated_migration: "0010_source_transport_audit_persistence"
 next_unreserved_number: "0011"
 
 rules:
@@ -25,4 +25,4 @@ reservations:
     task_id: M02-TRANSPORT-AUDIT-DURABLE-PERSISTENCE
     branch: agent/database-persistence
     owner: M02-DATABASE-TRANSPORT-AUDIT-PERSISTENCE
-    status: IMPLEMENTED
+    status: INTEGRATED
