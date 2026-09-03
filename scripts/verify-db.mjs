@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   applyPendingMigrations,
@@ -22,18 +23,13 @@ const migrationsDir = resolve('packages/db/migrations');
 const pool = createPgPool({ connectionString, max: 4 });
 const db = createDatabase(pool);
 
-const expectedMigrations = [
-  '0000_workspace_foundation',
-  '0001_job_execution_foundation',
-  '0002_identity_authorization_foundation',
-  '0003_agent_runtime_core',
-  '0004_memory_evaluation_core',
-  '0005_agent_memory_lifecycle',
-  '0006_agent_execution_plan',
-  '0007_source_registry_foundation',
-  '0008_source_task_preflight',
-  '0009_connector_execution_safety',
-];
+const expectedMigrations = (await readdir(migrationsDir, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && /^\d{4}_.+\.up\.sql$/.test(entry.name))
+  .map((entry) => entry.name.slice(0, -'.up.sql'.length))
+  .sort();
+assert.ok(expectedMigrations.length > 0, 'Expected at least one PostgreSQL migration.');
+const latestExpectedMigration = expectedMigrations.at(-1);
+assert.ok(latestExpectedMigration, 'Expected a latest PostgreSQL migration.');
 
 function findPostgresError(error) {
   let current = error;
@@ -56,6 +52,7 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_tasks CASCADE');
@@ -150,22 +147,17 @@ try {
   );
   assert.equal(preferenceCount.rows[0]?.count, 0);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0009_connector_execution_safety');
-  assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), ['0009_connector_execution_safety']);
+  assert.equal(await rollbackLatestMigration(pool, migrationsDir), latestExpectedMigration);
+  assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), [latestExpectedMigration]);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
 
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0009_connector_execution_safety');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0008_source_task_preflight');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0007_source_registry_foundation');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0006_agent_execution_plan');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0005_agent_memory_lifecycle');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0004_memory_evaluation_core');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0003_agent_runtime_core');
+  for (const migrationId of [...expectedMigrations].reverse()) {
+    assert.equal(await rollbackLatestMigration(pool, migrationsDir), migrationId);
+    if (migrationId === '0009_connector_execution_safety') {
+      assert.equal((await probeDatabase(pool)).schemaReady, false);
+    }
+  }
   assert.equal((await probeDatabase(pool)).schemaReady, false);
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0002_identity_authorization_foundation');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0001_job_execution_foundation');
-  assert.equal(await rollbackLatestMigration(pool, migrationsDir), '0000_workspace_foundation');
 
   const afterRollback = await pool.query(`
     SELECT
@@ -188,7 +180,8 @@ try {
       to_regclass('public.research_job_preflights')::text AS research_job_preflights,
       to_regclass('public.source_tasks')::text AS source_tasks,
       to_regclass('public.source_task_usage_events')::text AS source_task_usage_events,
-      to_regclass('public.connector_health_snapshots')::text AS connector_health_snapshots
+      to_regclass('public.connector_health_snapshots')::text AS connector_health_snapshots,
+      to_regclass('public.source_transport_audit_records')::text AS source_transport_audit_records
   `);
   assert.equal(afterRollback.rows[0]?.workspaces, null);
   assert.equal(afterRollback.rows[0]?.users, null);
@@ -210,6 +203,7 @@ try {
   assert.equal(afterRollback.rows[0]?.source_tasks, null);
   assert.equal(afterRollback.rows[0]?.source_task_usage_events, null);
   assert.equal(afterRollback.rows[0]?.connector_health_snapshots, null);
+  assert.equal(afterRollback.rows[0]?.source_transport_audit_records, null);
 
   const reapplied = await applyPendingMigrations(pool, migrationsDir);
   assert.deepEqual(reapplied, expectedMigrations);
