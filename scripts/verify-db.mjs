@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, rename, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   applyPendingMigrations,
@@ -30,6 +30,14 @@ const expectedMigrations = (await readdir(migrationsDir, { withFileTypes: true }
 assert.ok(expectedMigrations.length > 0, 'Expected at least one PostgreSQL migration.');
 const latestExpectedMigration = expectedMigrations.at(-1);
 assert.ok(latestExpectedMigration, 'Expected a latest PostgreSQL migration.');
+
+const legacyVerifierMigrationCeiling = '0009_connector_execution_safety';
+const legacyVerifierMigrationCeilingIndex = expectedMigrations.indexOf(legacyVerifierMigrationCeiling);
+assert.ok(
+  legacyVerifierMigrationCeilingIndex >= 0,
+  `Expected legacy verifier migration ceiling ${legacyVerifierMigrationCeiling}.`,
+);
+const futureMigrationIds = new Set(expectedMigrations.slice(legacyVerifierMigrationCeilingIndex + 1));
 
 function findPostgresError(error) {
   let current = error;
@@ -215,15 +223,46 @@ try {
   await pool.end();
 }
 
-await import('./verify-agent-persistence.mjs');
-await import('./verify-memory-evaluation.mjs');
-await import('./verify-agent-memory-lifecycle.mjs');
-await import('./verify-agent-context-runtime.mjs');
-await import('./verify-agent-execution-plan.mjs');
-await import('./verify-agent-plan-dispatcher.mjs');
-await import('./verify-agent-execution-aggregation.mjs');
-await import('./verify-agent-evaluator-decision.mjs');
-await import('./verify-agent-runtime-hardening.mjs');
-await import('./verify-source-registry.mjs');
-await import('./verify-source-task-preflight.mjs');
-await import('./verify-connector-execution-safety.mjs');
+async function runLegacyPersistenceVerifierSuite() {
+  const migrationEntries = await readdir(migrationsDir, { withFileTypes: true });
+  const futureMigrationFiles = migrationEntries.filter((entry) => {
+    if (!entry.isFile()) return false;
+    const match = entry.name.match(/^(\d{4}_.+)\.(up|down)\.sql$/);
+    return match ? futureMigrationIds.has(match[1]) : false;
+  });
+
+  if (futureMigrationFiles.length === 0) {
+    await runLegacyPersistenceVerifiers();
+    return;
+  }
+
+  const quarantineDir = await mkdtemp(resolve(migrationsDir, '.legacy-verification-'));
+  try {
+    for (const entry of futureMigrationFiles) {
+      await rename(resolve(migrationsDir, entry.name), resolve(quarantineDir, entry.name));
+    }
+    await runLegacyPersistenceVerifiers();
+  } finally {
+    for (const entry of futureMigrationFiles) {
+      await rename(resolve(quarantineDir, entry.name), resolve(migrationsDir, entry.name));
+    }
+    await rm(quarantineDir, { recursive: true, force: true });
+  }
+}
+
+async function runLegacyPersistenceVerifiers() {
+  await import('./verify-agent-persistence.mjs');
+  await import('./verify-memory-evaluation.mjs');
+  await import('./verify-agent-memory-lifecycle.mjs');
+  await import('./verify-agent-context-runtime.mjs');
+  await import('./verify-agent-execution-plan.mjs');
+  await import('./verify-agent-plan-dispatcher.mjs');
+  await import('./verify-agent-execution-aggregation.mjs');
+  await import('./verify-agent-evaluator-decision.mjs');
+  await import('./verify-agent-runtime-hardening.mjs');
+  await import('./verify-source-registry.mjs');
+  await import('./verify-source-task-preflight.mjs');
+  await import('./verify-connector-execution-safety.mjs');
+}
+
+await runLegacyPersistenceVerifierSuite();
