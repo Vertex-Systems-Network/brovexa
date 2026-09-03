@@ -89,6 +89,76 @@ describe('source pagination resume reducer', () => {
     ).toThrowError('SOURCE_PAGINATION_PAGE_INDEX_DISCONTINUITY');
   });
 
+  it('rejects blank cursor continuation tokens before they become resumable state', () => {
+    expect(() =>
+      applySourcePaginationPage(createSourcePaginationResumeState('cursor'), {
+        pageIndex: 0,
+        nextCursor: '   ',
+        usage,
+        coverage: 'partial',
+        returnedRecords: 1,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_CURSOR_INVALID');
+
+    const first = applySourcePaginationPage(createSourcePaginationResumeState('cursor'), {
+      pageIndex: 0,
+      nextCursor: 'cursor-2',
+      usage,
+      coverage: 'partial',
+      returnedRecords: 1,
+    });
+    expect(() =>
+      applySourcePaginationPage(first, {
+        pageIndex: 1,
+        requestedCursor: '   ',
+        usage,
+        coverage: 'complete',
+        returnedRecords: 0,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_CURSOR_INVALID');
+  });
+
+  it('refuses unsafe page arithmetic and invalid page-index state', () => {
+    const maxPageState = {
+      ...createSourcePaginationResumeState('page'),
+      pageIndex: Number.MAX_SAFE_INTEGER - 1,
+      nextPage: Number.MAX_SAFE_INTEGER,
+    };
+    expect(() =>
+      applySourcePaginationPage(maxPageState, {
+        pageIndex: Number.MAX_SAFE_INTEGER,
+        requestedPage: Number.MAX_SAFE_INTEGER,
+        usage,
+        coverage: 'partial',
+        returnedRecords: 0,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_PAGE_OVERFLOW');
+
+    const unsafeIndexState = {
+      ...createSourcePaginationResumeState('cursor'),
+      pageIndex: Number.MAX_SAFE_INTEGER,
+    };
+    expect(() =>
+      applySourcePaginationPage(unsafeIndexState, {
+        pageIndex: Number.MAX_SAFE_INTEGER + 1,
+        usage,
+        coverage: 'complete',
+        returnedRecords: 0,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_PAGE_INDEX_DISCONTINUITY');
+  });
+
+  it('rejects invalid runtime coverage evidence', () => {
+    expect(() =>
+      applySourcePaginationPage(createSourcePaginationResumeState('cursor'), {
+        pageIndex: 0,
+        usage,
+        coverage: 'unsupported' as never,
+        returnedRecords: 0,
+      }),
+    ).toThrowError('SOURCE_PAGINATION_COVERAGE_INVALID');
+  });
+
   it('refuses to advance a terminal checkpoint or overflow safe counters', () => {
     const terminal = applySourcePaginationPage(createSourcePaginationResumeState('page'), {
       pageIndex: 0,
