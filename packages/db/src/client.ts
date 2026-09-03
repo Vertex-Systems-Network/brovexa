@@ -5,8 +5,16 @@ import * as connectorHealthSchema from './connector-health-schema';
 import * as coreSchema from './schema';
 import * as sourceSchema from './source-schema';
 import * as sourceTaskSchema from './source-task-schema';
+import * as sourceTransportAuditSchema from './source-transport-audit-schema';
 
-const schema = { ...coreSchema, ...agentSchema, ...sourceSchema, ...sourceTaskSchema, ...connectorHealthSchema };
+const schema = {
+  ...coreSchema,
+  ...agentSchema,
+  ...sourceSchema,
+  ...sourceTaskSchema,
+  ...connectorHealthSchema,
+  ...sourceTransportAuditSchema,
+};
 
 export type BrovexaDatabase = NodePgDatabase<typeof schema>;
 
@@ -84,6 +92,7 @@ export async function probeDatabase(pool: Pool): Promise<DatabaseProbe> {
         AND to_regclass('public.source_tasks') IS NOT NULL
         AND to_regclass('public.source_task_usage_events') IS NOT NULL
         AND to_regclass('public.connector_health_snapshots') IS NOT NULL
+        AND to_regclass('public.source_transport_audit_records') IS NOT NULL
         AS schema_ready
   `);
 
