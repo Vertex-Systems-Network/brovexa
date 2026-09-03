@@ -60,6 +60,21 @@ function field(block, key, source) {
   return parseScalar(match[1]);
 }
 
+function migrationReservations(content) {
+  return [...content.matchAll(/^  - number: "(\d{4})"\n((?:    .*(?:\n|$))*)/gm)].map((match) => {
+    const number = match[1];
+    const block = match[2];
+    return {
+      number,
+      name: field(block, 'name', '.agent/migrations.yaml'),
+      taskId: field(block, 'task_id', '.agent/migrations.yaml'),
+      branch: field(block, 'branch', '.agent/migrations.yaml'),
+      owner: field(block, 'owner', '.agent/migrations.yaml'),
+      status: field(block, 'status', '.agent/migrations.yaml'),
+    };
+  });
+}
+
 for (const path of requiredFiles) {
   await read(path);
 }
@@ -205,7 +220,7 @@ requireText(prTemplate, 'Sync epoch:', '.github/PULL_REQUEST_TEMPLATE.md');
 requireText(prTemplate, 'Agent Instruction Drift Check completed:', '.github/PULL_REQUEST_TEMPLATE.md');
 
 requireMatch(workstreams, /target_agents:\s*6\b/, '.agent/workstreams.yaml', 'default target_agents must remain 6 unless governance docs are deliberately revised.');
-requireMatch(workstreams, /soft_max_agents:\s*8\b/, '.agent/workstreams.yaml', 'soft_max_agents must remain 8 unless supported by metrics-backed governance.');
+requireMatch(workstreams, /soft_max_agents:\s*8\b/, '.agent/workstreams.yaml', 'default soft_max_agents must remain 8 unless supported by metrics-backed governance.');
 requireText(workstreams, 'PAUSED_FOR_SYNC', '.agent/workstreams.yaml');
 requireText(workstreams, 'synced_main_sha', '.agent/workstreams.yaml');
 requireText(workstreams, 'sync_epoch', '.agent/workstreams.yaml');
@@ -325,17 +340,92 @@ if (migrationFiles.length === 0) {
   throw new Error('No PostgreSQL up migrations found for migration coordination verification.');
 }
 
-const latestMigrationFile = migrationFiles.at(-1);
-const latestMigrationId = latestMigrationFile.slice(0, -'.up.sql'.length);
-const latestNumber = Number(latestMigrationId.slice(0, 4));
-const expectedNext = String(latestNumber + 1).padStart(4, '0');
+const migrationIds = migrationFiles.map((file) => file.slice(0, -'.up.sql'.length));
+const migrationNumbers = migrationIds.map((id) => Number(id.slice(0, 4)));
+const integratedMatch = migrations.match(/^latest_integrated_migration: "([^"\n]+)"$/m);
+if (!integratedMatch) throw new Error('.agent/migrations.yaml is missing latest_integrated_migration.');
+const integratedId = integratedMatch[1];
+const integratedNumber = Number(integratedId.slice(0, 4));
+if (!/^\d{4}_.+/.test(integratedId) || !migrationIds.includes(integratedId)) {
+  throw new Error(`.agent/migrations.yaml latest_integrated_migration ${integratedId} must reference an existing migration file.`);
+}
 
-requireText(migrations, `latest_integrated_migration: "${latestMigrationId}"`, '.agent/migrations.yaml');
-requireText(migrations, `next_unreserved_number: "${expectedNext}"`, '.agent/migrations.yaml');
-
-const reservationNumbers = [...migrations.matchAll(/^\s{2}"?(\d{4})"?:/gm)].map((match) => match[1]);
+const reservations = migrationReservations(migrations);
+const reservationNumbers = reservations.map((reservation) => reservation.number);
 if (new Set(reservationNumbers).size !== reservationNumbers.length) {
   throw new Error('.agent/migrations.yaml contains duplicate migration reservation numbers.');
 }
+
+const allowedReservationStatuses = new Set(['RESERVED', 'IMPLEMENTED', 'INTEGRATED', 'RELEASED', 'CANCELLED']);
+for (const reservation of reservations) {
+  if (!allowedReservationStatuses.has(reservation.status)) {
+    throw new Error(`Migration ${reservation.number} has unsupported reservation status ${reservation.status}.`);
+  }
+  if (
+    typeof reservation.name !== 'string' || reservation.name.length === 0 ||
+    typeof reservation.taskId !== 'string' || reservation.taskId.length === 0 ||
+    typeof reservation.branch !== 'string' || reservation.branch.length === 0 ||
+    typeof reservation.owner !== 'string' || reservation.owner.length === 0
+  ) {
+    throw new Error(`Migration ${reservation.number} reservation must declare name, task_id, branch and owner.`);
+  }
+
+  const number = Number(reservation.number);
+  const migrationId = migrationIds.find((id) => Number(id.slice(0, 4)) === number);
+  const expectedId = `${reservation.number}_${reservation.name}`;
+
+  if (reservation.status === 'RESERVED') {
+    if (number <= integratedNumber) {
+      throw new Error(`Reserved migration ${reservation.number} must be newer than integrated watermark ${integratedId}.`);
+    }
+    if (migrationId) {
+      throw new Error(`Reserved migration ${reservation.number} already has a migration file; mark it IMPLEMENTED before verification.`);
+    }
+  }
+
+  if (reservation.status === 'IMPLEMENTED') {
+    if (number <= integratedNumber) {
+      throw new Error(`Implemented migration ${reservation.number} must be newer than integrated watermark ${integratedId}.`);
+    }
+    if (!migrationId) {
+      throw new Error(`Implemented migration ${reservation.number} must have an up migration file.`);
+    }
+    if (migrationId !== expectedId) {
+      throw new Error(`Implemented migration ${reservation.number} name must match file ${migrationId}.`);
+    }
+  }
+
+  if (reservation.status === 'INTEGRATED') {
+    if (!migrationId) throw new Error(`Integrated migration reservation ${reservation.number} must have a migration file.`);
+    if (number > integratedNumber) {
+      throw new Error(`Integrated reservation ${reservation.number} cannot be newer than integrated watermark ${integratedId}.`);
+    }
+  }
+}
+
+for (let index = 1; index < migrationNumbers.length; index += 1) {
+  if (migrationNumbers[index] !== migrationNumbers[index - 1] + 1) {
+    throw new Error(`PostgreSQL migration numbers must remain contiguous; found ${migrationNumbers[index - 1]} then ${migrationNumbers[index]}.`);
+  }
+}
+
+for (const migrationId of migrationIds) {
+  const number = Number(migrationId.slice(0, 4));
+  if (number <= integratedNumber) continue;
+  const reservation = reservations.find((entry) => Number(entry.number) === number);
+  if (!reservation || reservation.status !== 'IMPLEMENTED') {
+    throw new Error(`Unintegrated migration ${migrationId} requires a matching IMPLEMENTED reservation.`);
+  }
+}
+
+const occupiedNumbers = [
+  ...migrationNumbers,
+  ...reservations
+    .filter((reservation) => reservation.status === 'RESERVED' || reservation.status === 'IMPLEMENTED')
+    .map((reservation) => Number(reservation.number)),
+];
+const highestOccupiedNumber = Math.max(...occupiedNumbers);
+const expectedNext = String(highestOccupiedNumber + 1).padStart(4, '0');
+requireText(migrations, `next_unreserved_number: "${expectedNext}"`, '.agent/migrations.yaml');
 
 console.log('Brovexa parallel-agent governance verification passed.');
