@@ -45,39 +45,15 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
-  for (const table of [
-    'source_transport_audit_records',
-    'connector_health_snapshots',
-    'source_task_usage_events',
-    'source_tasks',
-    'research_job_preflights',
-    'source_admission_snapshots',
-    'connector_definitions',
-    'connector_policies',
-    'source_capabilities',
-    'agent_execution_plans',
-    'memory_record_lifecycle_events',
-    'agent_run_transitions',
-    'agent_eval_results',
-    'memory_records',
-    'agent_runs',
-    'agent_context_receipts',
-    'agent_definitions',
-    'authorization_audit_events',
-    'workspace_membership_roles',
-    'workspace_role_permissions',
-    'workspace_roles',
-    'permissions',
-    'workspace_memberships',
-    'users',
-    'job_effects',
-    'job_checkpoints',
-    'job_work_units',
-    'job_runs',
-    'workspace_preferences',
-    'workspaces',
-  ]) {
-    await pool.query(`DROP TABLE IF EXISTS ${table} CASCADE`);
+  const tables = await pool.query(
+    `SELECT tablename
+     FROM pg_tables
+     WHERE schemaname = 'public'
+     ORDER BY tablename`,
+  );
+  for (const { tablename } of tables.rows) {
+    const quotedTable = `"${String(tablename).replaceAll('"', '""')}"`;
+    await pool.query(`DROP TABLE IF EXISTS ${quotedTable} CASCADE`);
   }
   await pool.query('DROP SCHEMA IF EXISTS brovexa_internal CASCADE');
 }
