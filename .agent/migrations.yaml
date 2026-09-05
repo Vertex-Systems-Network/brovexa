@@ -2,7 +2,7 @@ version: 1
 policy: serialized-reservation
 
 latest_integrated_migration: "0010_source_transport_audit_persistence"
-next_unreserved_number: "0011"
+next_unreserved_number: "0012"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -26,3 +26,9 @@ reservations:
     branch: agent/database-persistence
     owner: M02-DATABASE-TRANSPORT-AUDIT-PERSISTENCE
     status: INTEGRATED
+  - number: "0011"
+    name: discovery_checkpoint_persistence
+    task_id: M02-DISCOVERY-CHECKPOINT-PERSISTENCE
+    branch: agent/database-persistence
+    owner: M02-DATABASE-DISCOVERY-CHECKPOINT
+    status: IMPLEMENTED
