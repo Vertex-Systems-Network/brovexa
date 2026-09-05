@@ -33,6 +33,7 @@ export * from './lifecycle-persistence';
 export * from './memory-eval-persistence';
 export * from './migrations';
 export * from './schema';
+export * from './source-discovery-checkpoint-persistence';
 export * from './source-registry-persistence';
 export * from './source-schema';
 export * from './source-task-persistence';
