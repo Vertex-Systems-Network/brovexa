@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import {
   SourceDiscoveryDedupBatchSchema,
   type SourceDiscoveryDedupBatch,
-  type SourceDiscoveryDedupEvidence,
   type SourceDiscoveryDedupGroup,
   type SourceDiscoveryDedupMatchedKey,
 } from './source-discovery-dedup';
