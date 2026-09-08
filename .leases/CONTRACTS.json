@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/contracts-policy",
+  "slot_id": "CONTRACTS",
+  "agent_id": "CHATGPT-CONTRACTS-SESSION",
+  "agent_instance_id": "chatgpt-d96562d9-e1a6-4af6-a950-775479e6ab75",
+  "work_packet_id": "M02-CONTRACTS-DETERMINISTIC-DEDUP-EVALUATOR",
+  "lease_id": "lease-1fe4487d-91c4-450d-a776-397b14eeb6ee",
+  "synced_main_sha": "e2c311c42d40ce910b3c92b1d17a1e0edf11e6eb",
+  "sync_epoch": 33,
+  "acquired_branch_head_sha": "7a5ca13ab223d67d27234821bc052dfd8615cce3",
+  "acquired_at": "2026-09-08T00:36:30Z",
+  "renewed_at": "2026-09-08T00:36:30Z"
+}
