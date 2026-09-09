@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "supervisor/integration-control",
+  "slot_id": "SUPERVISOR",
+  "agent_id": "SUPERVISOR",
+  "agent_instance_id": "supervisor-chatgpt-20260910T044412+0500-a91e7c34",
+  "work_packet_id": "SUP-E33-RECOVERY-INTEGRATION-CONTROL",
+  "lease_id": "lease-supervisor-20260910-a91e7c34-5f62",
+  "synced_main_sha": "e2c311c42d40ce910b3c92b1d17a1e0edf11e6eb",
+  "sync_epoch": 33,
+  "acquired_branch_head_sha": "bdf0df5230be874826b4b5167ae6d0c588c59bba",
+  "acquired_at": "2026-09-10T04:44:12+05:00",
+  "renewed_at": "2026-09-10T04:44:12+05:00"
+}
