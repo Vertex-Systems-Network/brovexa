@@ -2,13 +2,27 @@
 
 Status: **ACTIVE SUPERVISOR PLAN**
 
-Updated: 2026-09-02
+Updated: 2026-09-10
 
 ## Purpose
 
 This plan defines standing branches/modules/slots and integration order. It complements `AGENTS.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/NEW_AGENT_ONBOARDING.md`, `docs/AGENT_BRANCH_LEASES.md`, and `.agent/` manifests.
 
 The Main-repository agent is the **Supervisor**. Supervisor owns onboarding, issue #53 logical slot assignment, dependency-safe review/merge, issue #50 synchronization broadcasts, and integration. Supervisor is not exempt from live-instance leases.
+
+## Persistent GitHub Supervisor control plane
+
+The repository also carries `.github/workflows/persistent-supervisor.yml` as the always-available deterministic Supervisor control plane. Once integrated on the default branch it runs on relevant pull-request/comment/CI events and a five-minute GitHub Actions heartbeat, so coordination observation does not depend on a chat session or an external reminder scheduler.
+
+The persistent control plane:
+
+- reads live `main`, issue #53 slot state, issue #50 synchronization broadcasts, open PRs, completion signals and exact-head CI evidence;
+- detects synchronization drift and publishes a `persistent-supervisor` commit status on the live default-branch head;
+- maintains one durable `[Supervisor] Persistent Control Plane Status` issue instead of producing heartbeat comment spam;
+- marks a PR `READY_FOR_SUPERVISOR_REVIEW` only when a fresh head-bound `Work Done and Submitted` signal and successful exact-head `CI` run are both present;
+- never treats that triage mark as approval and never bypasses slot ownership, live-instance leases, dependency/migration/shared-path review, FULL GATE, unresolved review checks, expected-head merge protection, or the existing rule that completion does not authorize automatic merge.
+
+GitHub Actions scheduled execution is a repository heartbeat, not a continuously running process. Event triggers provide immediate reactions to repository activity; the five-minute schedule supplies recovery/reconciliation checks when no event fires. The Action is deterministic governance automation, not an autonomous product-feature author, and requires no production/provider credentials.
 
 ## Immediate branch bootstrap
 
