@@ -1,144 +1,178 @@
 # Brovexa AI-Native Multi-Agent Plan
 
-Status: **ACTIVE SUPERVISOR PLAN**
+Status: **ACTIVE**
 
-Updated: 2026-09-10
+This plan is the versioned source for Brovexa standing parallel capacity and Supervisor-controlled execution. Live occupancy is not stored here. The authoritative live slot registry is GitHub issue #53, and synchronization truth is the latest valid Supervisor broadcast comment in GitHub issue #50.
 
-## Purpose
+## Current execution objective
 
-This plan defines standing branches/modules/slots and integration order. It complements `AGENTS.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/NEW_AGENT_ONBOARDING.md`, `docs/AGENT_BRANCH_LEASES.md`, and `.agent/` manifests.
+Milestone M02 remains active. The safe implementation direction is provider-neutral source transport and network-safety certification: deterministic destination classification, injected test-only resolution/transport, redirect-hop revalidation, bounded execution, persistence/audit evidence, observability, and adversarial verification.
 
-The Main-repository agent is the **Supervisor**. Supervisor owns onboarding, issue #53 logical slot assignment, dependency-safe review/merge, issue #50 synchronization broadcasts, and integration. Supervisor is not exempt from live-instance leases.
+The cycle must preserve `networkAccess: 'none'` for real provider traffic. It must not enable production provider HTTP, credentials, unrestricted discovery/acquisition, paid sends, or any external provider activation.
 
-## Persistent GitHub Supervisor control plane
+## Capacity model
 
-The repository also carries `.github/workflows/persistent-supervisor.yml` as the always-available deterministic Supervisor control plane. Once integrated on the default branch it runs on relevant pull-request/comment/CI events and a five-minute GitHub Actions heartbeat, so coordination observation does not depend on a chat session or an external reminder scheduler.
+Generic repository concurrency remains:
 
-The persistent control plane:
+- target agents: 6;
+- soft maximum: 8;
+- scaling beyond the soft maximum requires deliberate Supervisor governance and reviewed evidence.
 
-- reads live `main`, issue #53 slot state, issue #50 synchronization broadcasts, open PRs, completion signals and exact-head CI evidence;
-- detects synchronization drift and publishes a `persistent-supervisor` commit status on the live default-branch head;
-- maintains one durable `[Supervisor] Persistent Control Plane Status` issue instead of producing heartbeat comment spam;
-- marks a PR `READY_FOR_SUPERVISOR_REVIEW` only when a fresh head-bound `Work Done and Submitted` signal and successful exact-head `CI` run are both present;
-- never treats that triage mark as approval and never bypasses slot ownership, live-instance leases, dependency/migration/shared-path review, FULL GATE, unresolved review checks, expected-head merge protection, or the existing rule that completion does not authorize automatic merge.
+For the explicitly requested M02 provider-neutral network-safety cycle, five additional standing branches were created from exact current `main` before this governance mutation. The cycle may therefore use:
 
-GitHub Actions scheduled execution is a repository heartbeat, not a continuously running process. Event triggers provide immediate reactions to repository activity; the five-minute schedule supplies recovery/reconciliation checks when no event fires. The Action is deterministic governance automation, not an autonomous product-feature author, and requires no production/provider credentials.
+- 10 assignable worker slots;
+- 1 Supervisor integration slot;
+- 11 intended live writers in this explicit cycle;
+- hard cap: 12 total live writers.
 
-## Immediate branch bootstrap
-
-New capacity is branch-first: create all required standing branches before adding slots/assignments. A new agent never creates capacity on arrival.
-
-Historical bootstrap baseline: `890618e28c5e300496389051b1b3d9c32880adf7`. Live state comes from issue #50/#53 and `coordination/leases`, not this historical SHA.
-
-| Slot ID | Role / module | Branch | Default ownership | Merge strategy |
-|---|---|---|---|---|
-| `SUPERVISOR` | Integration Control / Architecture | `supervisor/integration-control` | shared/integration files | Exact-head FULL GATE then expected-head merge |
-| `CONTRACTS` | Contracts / Policy | `agent/contracts-policy` | `packages/contracts/**` | Before dependent persistence/runtime contracts |
-| `DATABASE` | Database / Persistence | `agent/database-persistence` | `packages/db/**` | After required contract; migration reservation required |
-| `RUNTIME` | Worker / Runtime | `agent/worker-runtime` | `apps/worker/**`, `packages/queue/**` | After required contract/persistence dependencies |
-| `MODULE` | Module / Connector Infrastructure | `agent/module-infrastructure` | bounded work-packet paths | Dependency-DAG order |
-| `VERIFY` | Verification / Security | `agent/verification-security` | bounded verifier/test paths | Independent adversarial verification |
-
-Every task still requires bounded scope, dependencies, current live slot ownership, and an exact-instance lease.
-
-## New Agent Onboarding and Live Slot Registry
-
-Every new agent starts from exact current `main`. It may not mutate a standing module branch before assignment and lease acquisition.
+This is a bounded cycle authorization, not an automatic new-agent expansion rule. New-agent arrival still cannot invent branches or slots. If issue #53 has no assignable `OPEN` slot, the Supervisor response remains exactly **Go Home Come Back Next Time**.
 
 ### Standing slot definitions
 
-Static source: `.agent/slots.yaml`.
-
-| Slot | Module branch | Assignable to new agent |
-|---|---|---:|
+| Slot | Standing branch | Assignable to new agent |
+|---|---|---|
 | `SUPERVISOR` | `supervisor/integration-control` | No |
 | `CONTRACTS` | `agent/contracts-policy` | Yes |
 | `DATABASE` | `agent/database-persistence` | Yes |
 | `RUNTIME` | `agent/worker-runtime` | Yes |
 | `MODULE` | `agent/module-infrastructure` | Yes |
 | `VERIFY` | `agent/verification-security` | Yes |
+| `NETWORK` | `agent/network-resolution` | Yes |
+| `TRANSPORT` | `agent/transport-sandbox` | Yes |
+| `REDIRECT` | `agent/redirect-revalidation` | Yes |
+| `OBSERVE` | `agent/source-observability` | Yes |
+| `ADVERSARY` | `agent/adversarial-network-security` | Yes |
 
-This document and `.agent/slots.yaml` intentionally do not store temporary occupancy or live leases.
+`.agent/slots.yaml` is the machine-readable static definition registry. GitHub issue #53 is the live `OPEN` / `OCCUPIED` registry. Versioned docs never impersonate live occupancy.
 
-### Canonical live authorities
+## M02 workstream decomposition
 
-- latest valid Supervisor broadcast comment on issue **#50** = integrated `main` SHA + `sync_epoch`;
-- GitHub issue **#53** = logical `OPEN` / `OCCUPIED` slot state + assigned agent;
-- Git branch **`coordination/leases`** = exact live runtime/session allowed to mutate each occupied slot, via `.leases/<SLOT_ID>.json`.
+The explicit ten-worker cycle is decomposed so each worker receives one bounded work packet, one standing branch and one PR. Live work packets must narrow write scopes to avoid same-path parallel mutation even where role defaults overlap.
 
-Full lease rules: `docs/AGENT_BRANCH_LEASES.md`.
+1. **CONTRACTS — source transport policy contracts**
+   - destination/resolution evidence contracts;
+   - compatibility and fail-closed policy interfaces;
+   - no runtime network activation.
 
-### Supervisor onboarding transaction
+2. **DATABASE — transport audit persistence**
+   - persistence proof for resolver/redirect/audit evidence;
+   - no unreserved migration creation;
+   - migration numbering remains serialized by Supervisor governance.
 
-1. New agent reads exact current `main` and canonical instructions.
-2. Supervisor reads latest issue #50 and `.agent/slots.yaml`.
-3. Supervisor re-reads issue #53 immediately before assignment.
-4. Select only statically assignable live `OPEN` slot; sync its idle branch to current main.
-5. Update issue #53 `OPEN → OCCUPIED` with agent/start/main/epoch/revision and re-read to confirm.
-6. Generate unique `agent_instance_id` and `lease_id`.
-7. Atomically create `.leases/<SLOT_ID>.json` on `coordination/leases`.
-8. Existing lease means STOP: do not overwrite/take over and do not mutate the branch.
-9. Only after both issue #53 ownership and exact-instance lease are valid may work begin.
+3. **RUNTIME — source execution integration**
+   - integrate injected provider-neutral primitives into bounded source execution;
+   - real provider network remains disabled.
 
-If no assignable live slot is `OPEN`, respond exactly:
+4. **MODULE — source resolution adapter**
+   - bounded module-level adapter seams and dependency injection;
+   - no shared-file edits without Supervisor integration.
 
-**Go Home Come Back Next Time**
+5. **VERIFY — independent security verification**
+   - verifier/evaluation surface for network destination and transport invariants;
+   - must not weaken existing tests or source-policy controls.
 
-No slot/branch/task/work packet/feature edit/agent PR is created for that arrival.
+6. **NETWORK — deterministic IPv4/IPv6 classification**
+   - private, loopback, link-local, metadata, multicast, unspecified, documentation/reserved and mapped-address handling;
+   - mixed-answer evidence must fail closed.
 
-### Release
+7. **TRANSPORT — injected test-only transport sandbox**
+   - deterministic response/failure injection;
+   - hop/time/byte budget behavior;
+   - no production network path.
 
-Release requires no active/unmerged work, compare-and-swap deletion of the current live lease, idle branch synchronization to current main, issue #53 update to `OPEN`/`WAITING`, revision increment, and registry re-read.
+8. **REDIRECT — redirect-hop revalidation**
+   - revalidate destination evidence at every redirect hop;
+   - reject unsafe/rebound/mixed destinations;
+   - enforce redirect budgets.
 
-Temporary assignment/release and lease acquire/renew/release are live coordination transactions and do not require governance PRs when policy/definitions are unchanged.
+9. **OBSERVE — source transport observability**
+   - bounded-cardinality transport metrics and normalized failure reasons;
+   - tenant-safe, credential-safe, payload-safe telemetry.
 
-## Synchronization
+10. **ADVERSARY — hostile network/security matrix**
+    - encoded/confusable hosts, IPv4-mapped IPv6, rebinding, metadata/loopback/link-local/multicast/reserved targets and mixed DNS answers;
+    - test-only evidence; never real hostile network access.
 
-Issue #50 is the live synchronization ledger. On a newer epoch an active holder pauses edits, synchronizes current main non-destructively, reruns minimum verification, renews the same lease via current blob SHA with new `synced_main_sha`/`sync_epoch`, then resumes.
+The Supervisor owns shared integration, migrations registry, coordination manifests, workflow changes, exact-head review, merge order and post-merge synchronization.
 
-Canonical post-merge alert:
+## Mandatory new-agent sequence
+
+Every new agent always starts from exact current `main` and reads `AGENTS.md`, `README.md`, `docs/PROJECT_PLAN.md`, `docs/CHECKPOINT.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, this plan, `docs/NEW_AGENT_ONBOARDING.md`, `docs/AGENT_BRANCH_LEASES.md`, `.agent/slots.yaml`, issue #50 and issue #53.
+
+Before feature mutation:
+
+1. Supervisor re-reads issue #53.
+2. Supervisor selects an assignable `OPEN` slot.
+3. Standing branch must contain exact current `main` and latest sync epoch.
+4. Supervisor updates issue #53 with assigned agent, status, start status, main SHA and epoch, incrementing registry revision.
+5. Supervisor re-reads issue #53 and confirms assignment.
+6. The exact runtime/session instance atomically creates `.leases/<SLOT_ID>.json` on `coordination/leases`.
+7. Only after both logical assignment and active lease exist may branch mutation begin.
+
+One occupied slot may have only one live mutating agent instance. Same logical agent identity does not permit multiple simultaneous runtime instances.
+
+## Completion and review
+
+A worker PR remains in progress until its bounded work packet is complete, its handoff is complete, it is synchronized to the latest Supervisor epoch, its active lease matches the current PR head, and required exact-head verification is green.
+
+The exact canonical worker completion signal is:
+
+`Work Done and Submitted`
+
+It must be a top-level PR comment whose body is exactly that phrase. Any commit pushed after `Work Done and Submitted` invalidates the prior signal and requires a new signal after the new head is ready.
+
+A completion signal requests review; it never authorizes merge by itself.
+
+## Supervisor integration protocol
+
+The Main-repository Supervisor uses FIFO with dependency priority and serializes overlapping merges. Before merge it must:
+
+- review the exact current PR head;
+- verify issue #53 slot ownership and `coordination/leases` lease identity;
+- verify current `main` ancestry / synchronization;
+- verify dependency, migration and shared-path state;
+- require the repository FULL GATE on the exact head;
+- merge only with expected-head protection;
+- never force-push or bypass required controls.
+
+After each accepted merge, the Supervisor reads resulting `main`, increments the synchronization epoch, updates the live slot registry baseline, renews/synchronizes active leases and broadcasts the exact alert:
 
 **New changes have been merged — please merge these changes into your branch first, then resume your own work.**
 
-Force-push/history rewrite is not the default synchronization mechanism.
+The authoritative synchronization state is the latest valid Supervisor broadcast comment in issue #50.
 
-## Dependency and merge strategy
+## Persistent GitHub Supervisor
 
-Default ordering when all layers are required:
+`.github/workflows/persistent-supervisor.yml` is the deterministic GitHub-native observer/triage plane. It runs on a five-minute heartbeat plus relevant PR/issue/workflow events and maintains `[Supervisor] Persistent Control Plane Status`.
 
-1. contracts/policy;
-2. persistence/migration;
-3. bounded module infrastructure;
-4. worker/runtime;
-5. independent verification changes;
-6. Supervisor shared/integration reconciliation.
+It checks:
 
-Independent branches may merge earlier when dependency/interface/migration/ownership/shared-file/lease collisions are absent. Completion never overrides dependency order.
+- live `main` and issue #50/#53 synchronization drift;
+- all eleven standing slots defined above;
+- standing-branch ancestry;
+- occupied-slot lease integrity;
+- open-slot stray leases;
+- fresh trusted completion signals and exact-head CI;
+- native default-branch protection state;
+- heartbeat freshness.
 
-## Completion signal
+It never auto-merges, force-pushes, moves refs, releases/takes over leases, changes branch protection, weakens FULL GATE, or mutates product/governance files.
 
-Finished work announces exactly:
+Native GitHub protection for `main` remains an external repository setting and is tracked separately. Repository compensating checks do not pretend that external protection is enabled.
 
-**Work Done and Submitted**
+## Security boundary
 
-For non-Supervisor agents this is a top-level PR comment whose body is exactly that phrase. It means ready for review, not approval.
+The M02 ten-worker cycle is expressly provider-neutral. None of these slots may independently:
 
-The signal is head-bound: current PR head must equal handoff exact head and the latest signal must postdate that head. Any later commit invalidates the signal.
+- enable real provider network traffic;
+- enable production DNS/HTTP transport;
+- add production credentials/tokens/secrets;
+- weaken SSRF/private-network protections;
+- bypass tenant/source-policy/authorization gates;
+- claim unmeasured or unverified production readiness.
 
-A valid submission additionally requires issue #53 logical ownership, matching active lease (`agent_instance_id`, `lease_id`, work packet, branch, sync state), dependency/verification evidence, instruction-drift completion, and current issue #50 epoch.
+The safe direction is deterministic classification plus injected test-only transport/resolution evidence. Any later real provider transport activation requires a separate reviewed security/product work packet and explicit governance change.
 
-## Supervisor review / interrupt
+## Agent Instruction Drift Check
 
-On a valid completion signal Supervisor pauses its own work, reviews exact head, signal freshness, issue #53 ownership, active lease, dependencies, migrations/shared files, reviews/security/evidence, requires exact-head gates, then either requests changes or expected-head merges. After merge it re-reads main, increments issue #50 epoch, broadcasts, then resumes.
-
-Multiple submissions are FIFO subject to dependency priority; overlapping merges are serialized.
-
-## Main integration integrity
-
-Direct pushes to `main` are prohibited. Normal flow is PR → exact-head FULL GATE → expected-head merge. Hosted CI also runs on `push` to main and verifies merged-PR provenance.
-
-Native GitHub branch protection remains required as the preventive external repository setting; issue #54 tracks it until enabled.
-
-## Instruction drift
-
-Changes to branches, slot definitions, issue #53, `coordination/leases`, `docs/AGENT_BRANCH_LEASES.md`, onboarding, Supervisor behavior, completion freshness, synchronization, merge order, CI/integration integrity, or agent handoff requirements must update `AGENTS.md`, `README.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/NEW_AGENT_ONBOARDING.md`, relevant `.agent/` manifests and executable governance in the same change set.
+Any change to standing slot definitions, capacity semantics, synchronization rules, completion-signal freshness, lease semantics, integration policy or future-agent instructions must update the applicable human and machine control surfaces in the same governance change and pass `verify:parallel` plus atomic lease governance verification.
