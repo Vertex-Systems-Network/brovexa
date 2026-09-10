@@ -219,8 +219,13 @@ requireText(prTemplate, 'Synced main SHA:', '.github/PULL_REQUEST_TEMPLATE.md');
 requireText(prTemplate, 'Sync epoch:', '.github/PULL_REQUEST_TEMPLATE.md');
 requireText(prTemplate, 'Agent Instruction Drift Check completed:', '.github/PULL_REQUEST_TEMPLATE.md');
 
-requireMatch(workstreams, /target_agents:\s*6\b/, '.agent/workstreams.yaml', 'default target_agents must remain 6 unless governance docs are deliberately revised.');
-requireMatch(workstreams, /soft_max_agents:\s*8\b/, '.agent/workstreams.yaml', 'default soft_max_agents must remain 8 unless supported by metrics-backed governance.');
+requireMatch(workstreams, /target_agents:\s*6\b/, '.agent/workstreams.yaml', 'generic target_agents must remain 6 unless the generic policy is deliberately revised.');
+requireMatch(workstreams, /soft_max_agents:\s*8\b/, '.agent/workstreams.yaml', 'generic soft_max_agents must remain 8 unless the generic policy is deliberately revised.');
+requireMatch(workstreams, /worker_target:\s*10\b/, '.agent/workstreams.yaml', 'explicit M02 cycle must authorize exactly ten worker slots.');
+requireMatch(workstreams, /total_writer_target:\s*11\b/, '.agent/workstreams.yaml', 'explicit M02 cycle must remain ten workers plus one Supervisor.');
+requireMatch(workstreams, /hard_cap_writers:\s*12\b/, '.agent/workstreams.yaml', 'explicit cycle hard cap must remain twelve total live writers.');
+requireText(workstreams, 'real_provider_network_activation: false', '.agent/workstreams.yaml');
+requireText(workstreams, 'production_credentials: false', '.agent/workstreams.yaml');
 requireText(workstreams, 'PAUSED_FOR_SYNC', '.agent/workstreams.yaml');
 requireText(workstreams, 'synced_main_sha', '.agent/workstreams.yaml');
 requireText(workstreams, 'sync_epoch', '.agent/workstreams.yaml');
@@ -235,6 +240,11 @@ const requiredStandingBranches = [
   'agent/worker-runtime',
   'agent/module-infrastructure',
   'agent/verification-security',
+  'agent/network-resolution',
+  'agent/transport-sandbox',
+  'agent/redirect-revalidation',
+  'agent/source-observability',
+  'agent/adversarial-network-security',
 ];
 
 for (const branch of requiredStandingBranches) {
@@ -301,6 +311,22 @@ for (const match of slotMatches) {
   if (planAssignable !== assignable) throw new Error(`AI-Native Plan slot ${slotId} assignable flag differs from .agent/slots.yaml.`);
 }
 
+for (const requiredLeasePath of [
+  '.leases/SUPERVISOR.json',
+  '.leases/CONTRACTS.json',
+  '.leases/DATABASE.json',
+  '.leases/RUNTIME.json',
+  '.leases/MODULE.json',
+  '.leases/VERIFY.json',
+  '.leases/NETWORK.json',
+  '.leases/TRANSPORT.json',
+  '.leases/REDIRECT.json',
+  '.leases/OBSERVE.json',
+  '.leases/ADVERSARY.json',
+]) {
+  requireText(await read('docs/AGENT_BRANCH_LEASES.md'), requiredLeasePath, 'docs/AGENT_BRANCH_LEASES.md');
+}
+
 requireText(ownership, 'policy: default-deny-outside-assigned-write-scope', '.agent/ownership.yaml');
 requireText(ownership, 'supervisor_of_main: true', '.agent/ownership.yaml');
 requireText(ownership, '- docs/NEW_AGENT_ONBOARDING.md', '.agent/ownership.yaml');
@@ -309,6 +335,9 @@ requireText(ownership, 'serialize_slot_assignments', '.agent/ownership.yaml');
 requireText(ownership, 'reject_new_agent_when_no_open_slot', '.agent/ownership.yaml');
 requireText(ownership, 'review_incoming_agent_pull_requests', '.agent/ownership.yaml');
 requireText(ownership, 'broadcast_all_active_agents_after_merge', '.agent/ownership.yaml');
+for (const role of ['network_resolution', 'transport_sandbox', 'redirect_revalidation', 'source_observability', 'adversarial_network_security']) {
+  requireText(ownership, `  ${role}:`, '.agent/ownership.yaml');
+}
 requireText(sharedFiles, '- AGENTS.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- README.md', '.agent/shared-files.yaml');
 requireText(sharedFiles, '- docs/AI_NATIVE_PLAN.md', '.agent/shared-files.yaml');
