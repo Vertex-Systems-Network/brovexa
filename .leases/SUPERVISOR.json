@@ -5,11 +5,11 @@
   "slot_id": "SUPERVISOR",
   "agent_id": "SUPERVISOR",
   "agent_instance_id": "supervisor-chatgpt-20260910T044412+0500-a91e7c34",
-  "work_packet_id": "SUP-SECURITY-CONTROL-PLANE-HARDENING",
+  "work_packet_id": "SUP-M02-TEN-WORKER-CAPACITY-EXPANSION",
   "lease_id": "lease-supervisor-20260910-a91e7c34-5f62",
   "synced_main_sha": "a453863d85e64cf85ad4f755f0a9be32eed77e61",
   "sync_epoch": 36,
   "acquired_branch_head_sha": "bdf0df5230be874826b4b5167ae6d0c588c59bba",
   "acquired_at": "2026-09-10T04:44:12+05:00",
-  "renewed_at": "2026-09-10T21:15:30+05:00"
+  "renewed_at": "2026-09-11T02:09:30+05:00"
 }
