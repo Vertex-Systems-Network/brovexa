@@ -17,9 +17,8 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: write
+  pull-requests: read
   actions: read
-  checks: read
   statuses: write
 
 concurrency:
@@ -29,7 +28,10 @@ concurrency:
 jobs:
   supervisor-heartbeat:
     name: supervisor-heartbeat
-    if: ${{ github.event_name != 'issues' || github.event.issue.number != 101 }}
+    if: >-
+      ${{ (github.event_name != 'issues' || github.event.issue.title != '[Supervisor] Persistent Control Plane Status') &&
+          (github.event_name != 'issue_comment' || contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -46,6 +48,7 @@ jobs:
             const now = nowDate.toISOString();
             const validUntil = new Date(nowDate.getTime() + heartbeatBudgetMinutes * 60_000).toISOString();
             const expectedSlots = ['SUPERVISOR', 'CONTRACTS', 'DATABASE', 'RUNTIME', 'MODULE', 'VERIFY'];
+            const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
             const { data: repository } = await github.rest.repos.get({ owner, repo });
             const { data: mainRef } = await github.rest.git.getRef({
@@ -167,10 +170,12 @@ jobs:
 
             const reviewReady = [];
             const staleSignals = [];
+            const untrustedSignals = [];
             const waitingForCi = [];
 
             for (const pr of pulls) {
               if (pr.draft) continue;
+              if (pr.head.repo?.full_name !== repository.full_name) continue;
 
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
@@ -178,7 +183,11 @@ jobs:
                 issue_number: pr.number,
                 per_page: 100,
               });
-              const signals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
+              const exactSignals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
+              const signals = exactSignals.filter((comment) => trustedAssociations.has(comment.author_association));
+              if (exactSignals.length > signals.length) {
+                untrustedSignals.push(`#${pr.number}`);
+              }
               if (!signals.length) continue;
 
               const latestSignal = signals.at(-1);
@@ -190,7 +199,33 @@ jobs:
               const headTime = new Date(headCommit.commit.committer?.date || headCommit.commit.author?.date || 0).getTime();
               const signalTime = new Date(latestSignal.created_at).getTime();
               if (!(signalTime >= headTime)) {
-                staleSignals.push(`#${pr.number}`);
+                staleSignals.push(`#${pr.number}:stale-head`);
+                continue;
+              }
+
+              const prBody = pr.body || '';
+              const declaredSlot = prBody.match(/Assigned slot ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredInstance = prBody.match(/Agent instance ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredLeaseId = prBody.match(/Lease ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredBranch = prBody.match(/Branch:\s*`([^`]+)`/i)?.[1] || null;
+              const slotRow = declaredSlot ? slots.get(declaredSlot) : null;
+              const activeLease = declaredSlot ? leaseFiles.get(declaredSlot) : null;
+              const liveLeaseMatches = Boolean(
+                slotRow
+                && slotRow.status === 'OCCUPIED'
+                && activeLease
+                && !activeLease.__parseError
+                && activeLease.state === 'ACTIVE'
+                && activeLease.slot_id === declaredSlot
+                && activeLease.branch === pr.head.ref
+                && activeLease.branch === declaredBranch
+                && activeLease.agent_instance_id === declaredInstance
+                && activeLease.lease_id === declaredLeaseId
+                && activeLease.synced_main_sha === slotRow.assignedMain
+                && Number(activeLease.sync_epoch) === slotRow.epoch
+              );
+              if (!liveLeaseMatches) {
+                staleSignals.push(`#${pr.number}:lease-slot-drift`);
                 continue;
               }
 
@@ -218,7 +253,7 @@ jobs:
                   owner,
                   repo,
                   issue_number: pr.number,
-                  body: `${marker}\nPersistent Supervisor detected a fresh head-bound completion signal and successful exact-head CI for \`${pr.head.sha}\`.\n\n**READY_FOR_SUPERVISOR_REVIEW** — this is a deterministic triage signal only. It is not approval and does not authorize automatic merge; lease, slot, dependency, migration/shared-path, review-thread and expected-head checks remain mandatory.`,
+                  body: `${marker}\nPersistent Supervisor detected a trusted fresh head-bound completion signal, a currently matching live lease/slot, and successful exact-head CI for \`${pr.head.sha}\`.\n\n**READY_FOR_SUPERVISOR_REVIEW** — this is a deterministic triage signal only. It is not approval and does not authorize automatic merge; dependency, migration/shared-path, review-thread and expected-head checks remain mandatory.`,
                 });
               }
             }
@@ -240,6 +275,9 @@ jobs:
             }
             if (previousHeartbeatGapMinutes !== null && previousHeartbeatGapMinutes > heartbeatBudgetMinutes) {
               drift.push(`previous heartbeat gap ${previousHeartbeatGapMinutes}m exceeded ${heartbeatBudgetMinutes}m freshness budget`);
+            }
+            if (untrustedSignals.length) {
+              drift.push(`untrusted completion signal(s) ignored on ${untrustedSignals.join(', ')}`);
             }
 
             for (const slotId of expectedSlots) {
@@ -334,6 +372,7 @@ jobs:
               `- ready for Supervisor review: ${list(reviewReady)}`,
               `- fresh completion signal waiting for CI: ${list(waitingForCi)}`,
               `- stale completion signal: ${list(staleSignals)}`,
+              `- untrusted completion signal ignored: ${list(untrustedSignals)}`,
               '',
               '## Drift / security findings',
               drift.length ? drift.map((item) => `- ${item}`).join('\n') : '- none detected',
@@ -380,5 +419,6 @@ jobs:
                 [{ data: 'Review ready', header: true }, list(reviewReady)],
                 [{ data: 'Waiting CI', header: true }, list(waitingForCi)],
                 [{ data: 'Stale signals', header: true }, list(staleSignals)],
+                [{ data: 'Untrusted signals', header: true }, list(untrustedSignals)],
               ])
               .write();
