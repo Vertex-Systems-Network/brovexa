@@ -8,6 +8,8 @@ on:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, closed]
   issue_comment:
     types: [created]
+  issues:
+    types: [edited]
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -15,9 +17,8 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: write
+  pull-requests: read
   actions: read
-  checks: read
   statuses: write
 
 concurrency:
@@ -27,6 +28,10 @@ concurrency:
 jobs:
   supervisor-heartbeat:
     name: supervisor-heartbeat
+    if: >-
+      ${{ (github.event_name != 'issues' || github.event.issue.title != '[Supervisor] Persistent Control Plane Status') &&
+          (github.event_name != 'issue_comment' || contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -37,8 +42,13 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const statusTitle = '[Supervisor] Persistent Control Plane Status';
+            const heartbeatBudgetMinutes = 15;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const now = new Date().toISOString();
+            const nowDate = new Date();
+            const now = nowDate.toISOString();
+            const validUntil = new Date(nowDate.getTime() + heartbeatBudgetMinutes * 60_000).toISOString();
+            const expectedSlots = ['SUPERVISOR', 'CONTRACTS', 'DATABASE', 'RUNTIME', 'MODULE', 'VERIFY'];
+            const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
             const { data: repository } = await github.rest.repos.get({ owner, repo });
             const { data: mainRef } = await github.rest.git.getRef({
@@ -47,6 +57,28 @@ jobs:
               ref: `heads/${repository.default_branch}`,
             });
             const liveMain = mainRef.object.sha;
+            const { data: defaultBranch } = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: repository.default_branch,
+            });
+            const mainProtected = Boolean(defaultBranch.protected);
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'all',
+              per_page: 100,
+            });
+            let statusIssue = issues.find((issue) => !issue.pull_request && issue.title === statusTitle);
+            const previousHeartbeat = statusIssue?.body?.match(/Last heartbeat:\s*`([^`]+)`/i)?.[1] || null;
+            let previousHeartbeatGapMinutes = null;
+            if (previousHeartbeat) {
+              const previousMs = new Date(previousHeartbeat).getTime();
+              if (Number.isFinite(previousMs)) {
+                previousHeartbeatGapMinutes = Math.max(0, Math.round((nowDate.getTime() - previousMs) / 60_000));
+              }
+            }
 
             const { data: slotRegistry } = await github.rest.issues.get({
               owner,
@@ -56,6 +88,25 @@ jobs:
             const registryBody = slotRegistry.body || '';
             const registryMain = registryBody.match(/Live main baseline:\s*`([0-9a-f]{40})`/i)?.[1] || null;
             const registryEpoch = Number(registryBody.match(/Sync epoch:\s*`?(\d+)`?/i)?.[1] || 0);
+
+            const slots = new Map();
+            for (const line of registryBody.split('\n')) {
+              if (!line.trim().startsWith('|')) continue;
+              const cells = line
+                .split('|')
+                .slice(1, -1)
+                .map((cell) => cell.trim().replace(/^`|`$/g, ''));
+              if (cells.length < 7 || !expectedSlots.includes(cells[0])) continue;
+              slots.set(cells[0], {
+                slot: cells[0],
+                branch: cells[1],
+                status: cells[2],
+                assignedAgent: cells[3],
+                startStatus: cells[4],
+                assignedMain: cells[5],
+                epoch: Number(cells[6]),
+              });
+            }
 
             const broadcastComments = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -77,6 +128,38 @@ jobs:
               }
             }
 
+            const leaseFiles = new Map();
+            try {
+              const { data: leaseListing } = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: '.leases',
+                ref: 'coordination/leases',
+              });
+              if (Array.isArray(leaseListing)) {
+                for (const item of leaseListing) {
+                  const slot = String(item.name || '').replace(/\.json$/i, '');
+                  if (!expectedSlots.includes(slot)) continue;
+                  const { data: leaseFile } = await github.rest.repos.getContent({
+                    owner,
+                    repo,
+                    path: `.leases/${slot}.json`,
+                    ref: 'coordination/leases',
+                  });
+                  if (!Array.isArray(leaseFile) && typeof leaseFile.content === 'string') {
+                    const decoded = Buffer.from(leaseFile.content.replace(/\n/g, ''), 'base64').toString('utf8');
+                    try {
+                      leaseFiles.set(slot, JSON.parse(decoded));
+                    } catch {
+                      leaseFiles.set(slot, { __parseError: true });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              core.warning(`Could not inspect coordination leases: ${error.message}`);
+            }
+
             const pulls = await github.paginate(github.rest.pulls.list, {
               owner,
               repo,
@@ -87,10 +170,12 @@ jobs:
 
             const reviewReady = [];
             const staleSignals = [];
+            const untrustedSignals = [];
             const waitingForCi = [];
 
             for (const pr of pulls) {
               if (pr.draft) continue;
+              if (pr.head.repo?.full_name !== repository.full_name) continue;
 
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
@@ -98,7 +183,11 @@ jobs:
                 issue_number: pr.number,
                 per_page: 100,
               });
-              const signals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
+              const exactSignals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
+              const signals = exactSignals.filter((comment) => trustedAssociations.has(comment.author_association));
+              if (exactSignals.length > signals.length) {
+                untrustedSignals.push(`#${pr.number}`);
+              }
               if (!signals.length) continue;
 
               const latestSignal = signals.at(-1);
@@ -110,7 +199,33 @@ jobs:
               const headTime = new Date(headCommit.commit.committer?.date || headCommit.commit.author?.date || 0).getTime();
               const signalTime = new Date(latestSignal.created_at).getTime();
               if (!(signalTime >= headTime)) {
-                staleSignals.push(`#${pr.number}`);
+                staleSignals.push(`#${pr.number}:stale-head`);
+                continue;
+              }
+
+              const prBody = pr.body || '';
+              const declaredSlot = prBody.match(/Assigned slot ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredInstance = prBody.match(/Agent instance ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredLeaseId = prBody.match(/Lease ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredBranch = prBody.match(/Branch:\s*`([^`]+)`/i)?.[1] || null;
+              const slotRow = declaredSlot ? slots.get(declaredSlot) : null;
+              const activeLease = declaredSlot ? leaseFiles.get(declaredSlot) : null;
+              const liveLeaseMatches = Boolean(
+                slotRow
+                && slotRow.status === 'OCCUPIED'
+                && activeLease
+                && !activeLease.__parseError
+                && activeLease.state === 'ACTIVE'
+                && activeLease.slot_id === declaredSlot
+                && activeLease.branch === pr.head.ref
+                && activeLease.branch === declaredBranch
+                && activeLease.agent_instance_id === declaredInstance
+                && activeLease.lease_id === declaredLeaseId
+                && activeLease.synced_main_sha === slotRow.assignedMain
+                && Number(activeLease.sync_epoch) === slotRow.epoch
+              );
+              if (!liveLeaseMatches) {
+                staleSignals.push(`#${pr.number}:lease-slot-drift`);
                 continue;
               }
 
@@ -138,12 +253,17 @@ jobs:
                   owner,
                   repo,
                   issue_number: pr.number,
-                  body: `${marker}\nPersistent Supervisor detected a fresh head-bound completion signal and successful exact-head CI for \`${pr.head.sha}\`.\n\n**READY_FOR_SUPERVISOR_REVIEW** — this is a deterministic triage signal only. It is not approval and does not authorize automatic merge; lease, slot, dependency, migration/shared-path, review-thread and expected-head checks remain mandatory.`,
+                  body: `${marker}\nPersistent Supervisor detected a trusted fresh head-bound completion signal, a currently matching live lease/slot, and successful exact-head CI for \`${pr.head.sha}\`.\n\n**READY_FOR_SUPERVISOR_REVIEW** — this is a deterministic triage signal only. It is not approval and does not authorize automatic merge; dependency, migration/shared-path, review-thread and expected-head checks remain mandatory.`,
                 });
               }
             }
 
             const drift = [];
+            const slotObservations = [];
+
+            if (!mainProtected) {
+              drift.push(`native GitHub protection is disabled for ${repository.default_branch}`);
+            }
             if (registryMain && registryMain !== liveMain) {
               drift.push(`issue #53 main baseline ${registryMain} != live main ${liveMain}`);
             }
@@ -153,6 +273,75 @@ jobs:
             if (broadcastMain && registryMain && broadcastMain !== registryMain) {
               drift.push(`issue #50 main ${broadcastMain} != issue #53 main ${registryMain}`);
             }
+            if (previousHeartbeatGapMinutes !== null && previousHeartbeatGapMinutes > heartbeatBudgetMinutes) {
+              drift.push(`previous heartbeat gap ${previousHeartbeatGapMinutes}m exceeded ${heartbeatBudgetMinutes}m freshness budget`);
+            }
+            if (untrustedSignals.length) {
+              drift.push(`untrusted completion signal(s) ignored on ${untrustedSignals.join(', ')}`);
+            }
+
+            for (const slotId of expectedSlots) {
+              const row = slots.get(slotId);
+              if (!row) {
+                drift.push(`${slotId} is missing from issue #53 registry`);
+                continue;
+              }
+
+              let branchHead = null;
+              let branchContainsMain = false;
+              try {
+                const { data: branch } = await github.rest.repos.getBranch({
+                  owner,
+                  repo,
+                  branch: row.branch,
+                });
+                branchHead = branch.commit.sha;
+                const { data: comparison } = await github.rest.repos.compareCommits({
+                  owner,
+                  repo,
+                  base: liveMain,
+                  head: branchHead,
+                });
+                branchContainsMain = ['ahead', 'identical'].includes(comparison.status);
+              } catch (error) {
+                drift.push(`${slotId} branch ${row.branch} could not be verified: ${error.message}`);
+              }
+
+              const lease = leaseFiles.get(slotId) || null;
+              if (row.status === 'OPEN') {
+                if (lease) {
+                  drift.push(`${slotId} is OPEN but an active lease file still exists`);
+                }
+                if (row.assignedMain !== liveMain || row.epoch !== registryEpoch) {
+                  drift.push(`${slotId} OPEN baseline is stale (${row.assignedMain || 'unparsed'} / epoch ${row.epoch || 'unparsed'})`);
+                }
+                if (branchHead && !branchContainsMain) {
+                  drift.push(`${slotId} OPEN standing branch ${row.branch} does not contain live main ${liveMain}`);
+                }
+              } else if (row.status === 'OCCUPIED') {
+                if (!lease) {
+                  drift.push(`${slotId} is OCCUPIED but has no active lease`);
+                } else if (lease.__parseError) {
+                  drift.push(`${slotId} lease JSON is invalid`);
+                } else {
+                  if (lease.state !== 'ACTIVE') drift.push(`${slotId} lease state is ${lease.state || 'missing'}, expected ACTIVE`);
+                  if (lease.slot_id !== slotId) drift.push(`${slotId} lease slot_id mismatch`);
+                  if (lease.branch !== row.branch) drift.push(`${slotId} lease branch ${lease.branch || 'missing'} != registry ${row.branch}`);
+                  if (lease.synced_main_sha !== row.assignedMain) drift.push(`${slotId} lease main ${lease.synced_main_sha || 'missing'} != registry ${row.assignedMain}`);
+                  if (Number(lease.sync_epoch) !== row.epoch) drift.push(`${slotId} lease epoch ${lease.sync_epoch ?? 'missing'} != registry ${row.epoch}`);
+                }
+                if (row.assignedMain !== liveMain || row.epoch !== registryEpoch) {
+                  drift.push(`${slotId} occupied slot has not synchronized to current main/epoch`);
+                }
+                if (branchHead && !branchContainsMain) {
+                  drift.push(`${slotId} occupied branch ${row.branch} does not contain live main ${liveMain}`);
+                }
+              } else {
+                drift.push(`${slotId} has unsupported registry status ${row.status || 'missing'}`);
+              }
+
+              slotObservations.push(`${slotId}:${row.status}@${row.epoch || '?'} lease=${lease ? 'yes' : 'no'} branch=${branchContainsMain ? 'synced' : 'stale'}`);
+            }
 
             const state = drift.length ? 'DEGRADED' : 'HEALTHY';
             const list = (items) => items.length ? items.join(', ') : 'none';
@@ -161,34 +350,36 @@ jobs:
               '',
               `State: **${state}**`,
               `Last heartbeat: \`${now}\``,
+              `Health valid until: \`${validUntil}\``,
               `Workflow run: ${runUrl}`,
               '',
-              '## Canonical coordination snapshot',
+              `> Freshness rule: if current time is later than \`${validUntil}\`, treat this status as **STALE / DEGRADED** even if the displayed state above says HEALTHY. GitHub scheduled workflows are best-effort and are not a real-time daemon.`,
+              '',
+              '## Security and coordination snapshot',
               `- live \`${repository.default_branch}\`: \`${liveMain}\``,
+              `- native main protection: ${mainProtected ? 'enabled' : 'DISABLED'}`,
               `- issue #53 baseline: \`${registryMain || 'unparsed'}\``,
               `- issue #53 sync epoch: \`${registryEpoch || 'unparsed'}\``,
               `- latest issue #50 sync epoch: \`${broadcastEpoch || 'unparsed'}\``,
               `- latest issue #50 main: \`${broadcastMain || 'unparsed'}\``,
+              `- previous heartbeat gap: ${previousHeartbeatGapMinutes === null ? 'unknown' : `${previousHeartbeatGapMinutes}m`}`,
+              '',
+              '## Slot integrity',
+              slotObservations.length ? slotObservations.map((item) => `- ${item}`).join('\n') : '- no slot rows parsed',
               '',
               '## Open work queue',
               `- open PRs to \`${repository.default_branch}\`: ${pulls.length}`,
               `- ready for Supervisor review: ${list(reviewReady)}`,
               `- fresh completion signal waiting for CI: ${list(waitingForCi)}`,
               `- stale completion signal: ${list(staleSignals)}`,
+              `- untrusted completion signal ignored: ${list(untrustedSignals)}`,
               '',
-              '## Drift',
+              '## Drift / security findings',
               drift.length ? drift.map((item) => `- ${item}`).join('\n') : '- none detected',
               '',
-              'This issue is maintained by GitHub Actions. The Action observes and triages existing repository governance; it does not weaken leases, slot ownership, FULL GATE, dependency ordering, expected-head merge protection, or the rule that `Work Done and Submitted` is not automatic merge authorization.',
+              'This issue is maintained by GitHub Actions. The Action observes and triages existing repository governance; it does not auto-release leases, overwrite slot ownership, weaken FULL GATE, bypass branch protection, auto-merge, or silently take over another agent instance.',
             ].join('\n');
 
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner,
-              repo,
-              state: 'all',
-              per_page: 100,
-            });
-            let statusIssue = issues.find((issue) => !issue.pull_request && issue.title === statusTitle);
             if (!statusIssue) {
               const created = await github.rest.issues.create({
                 owner,
@@ -213,7 +404,7 @@ jobs:
               sha: liveMain,
               state: drift.length ? 'failure' : 'success',
               context: 'persistent-supervisor',
-              description: drift.length ? 'Supervisor coordination drift detected' : 'Supervisor control plane healthy',
+              description: drift.length ? 'Supervisor security/coordination drift detected' : 'Supervisor control plane healthy',
               target_url: runUrl,
             });
 
@@ -222,9 +413,12 @@ jobs:
               .addTable([
                 [{ data: 'State', header: true }, state],
                 [{ data: 'Live main', header: true }, liveMain],
+                [{ data: 'Native protection', header: true }, mainProtected ? 'enabled' : 'DISABLED'],
                 [{ data: 'Sync epoch', header: true }, String(registryEpoch || broadcastEpoch || 'unknown')],
+                [{ data: 'Heartbeat gap', header: true }, previousHeartbeatGapMinutes === null ? 'unknown' : `${previousHeartbeatGapMinutes}m`],
                 [{ data: 'Review ready', header: true }, list(reviewReady)],
                 [{ data: 'Waiting CI', header: true }, list(waitingForCi)],
                 [{ data: 'Stale signals', header: true }, list(staleSignals)],
+                [{ data: 'Untrusted signals', header: true }, list(untrustedSignals)],
               ])
               .write();
