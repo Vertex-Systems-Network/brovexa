@@ -2,7 +2,7 @@
 
 Status: **ACTIVE ENGINEERING GOVERNANCE**
 
-Updated: 2026-09-02
+Updated: 2026-09-11
 
 ## Objective
 
@@ -96,6 +96,16 @@ The rejection has no work side effects:
 
 A new arrival never expands capacity on demand. Additional module slots/branches must be planned, bootstrapped, and merged as governance changes before issue #53 may expose them.
 
+## Explicit M02 ten-worker cycle
+
+The generic repository target remains six agents with a soft maximum of eight. The current M02 provider-neutral network-safety cycle is a deliberate, preplanned exception authorized through a governance change after five additional standing branches were created from exact current `main` before slot definitions changed.
+
+For this cycle only, issue #53 may expose ten assignable worker slots plus the non-assignable Supervisor slot defined in `.agent/slots.yaml`. The intended cycle size is ten workers plus one Supervisor and the hard cap is twelve total live writers.
+
+The five added slots are `NETWORK`, `TRANSPORT`, `REDIRECT`, `OBSERVE`, and `ADVERSARY`. They do not appear automatically because an agent arrived; they exist only because the branches and governance definitions were deliberately bootstrapped first.
+
+This cycle does not authorize real provider DNS/HTTP, production credentials, unrestricted acquisition, or any other widening of product behavior. M02 worker packets stay provider-neutral and test/injected-transport based until a later separately reviewed activation change.
+
 ## Slot release transaction
 
 A slot may return to `OPEN` only when the Supervisor confirms:
@@ -148,6 +158,7 @@ Before accepting work or completion from an agent, Supervisor verifies:
 - standing branch mappings that disagree with slot definitions;
 - missing head-change invalidation for completion signals;
 - missing atomic lease-governance references or PR lease verification;
-- missing main-push integration-provenance guard.
+- missing main-push integration-provenance guard;
+- missing or inconsistent explicit M02 ten-worker slot definitions and hard-cap safety boundaries.
 
 The verifier intentionally does not freeze temporary live issue #53 occupancy or live lease content into `main`; those remain runtime coordination state.

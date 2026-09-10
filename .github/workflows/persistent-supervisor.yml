@@ -47,7 +47,10 @@ jobs:
             const nowDate = new Date();
             const now = nowDate.toISOString();
             const validUntil = new Date(nowDate.getTime() + heartbeatBudgetMinutes * 60_000).toISOString();
-            const expectedSlots = ['SUPERVISOR', 'CONTRACTS', 'DATABASE', 'RUNTIME', 'MODULE', 'VERIFY'];
+            const expectedSlots = [
+              'SUPERVISOR', 'CONTRACTS', 'DATABASE', 'RUNTIME', 'MODULE', 'VERIFY',
+              'NETWORK', 'TRANSPORT', 'REDIRECT', 'OBSERVE', 'ADVERSARY',
+            ];
             const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
             const { data: repository } = await github.rest.repos.get({ owner, repo });
