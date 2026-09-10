@@ -4,7 +4,7 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 ## Development progress
 
-Updated: **2026-09-02**
+Updated: **2026-09-11**
 
 **Current verified state:** M00 planning/readiness, M01 Platform Foundation, and the planned provider-neutral M01A AI Agent Runtime & Memory OS foundation are complete. **M02 — Business Discovery & Source Connectors is ACTIVE with five bounded implementation slices FULL-GATE verified and integrated.** Production provider/network transport and production source credentials/connectors remain separately gated.
 
@@ -60,7 +60,7 @@ Canonical coordination model:
 
 The Main-repository agent is the **Supervisor**. It owns onboarding, dependency-safe integration, migration/shared-file coordination, expected-head merges, synchronization broadcasts, and its own bounded Supervisor work. The Supervisor is not exempt from atomic branch leases.
 
-Default parallel operating target is **6 agents**, with a soft maximum of **8** while conflict/rework/CI metrics remain healthy.
+Generic parallel operating target remains **6 agents**, with a soft maximum of **8** while conflict/rework/CI metrics remain healthy. The current M02 provider-neutral network-safety cycle is an explicitly planned exception with **10 worker slots + 1 Supervisor** and a **hard cap of 12 total live writers**. The extra branches were created from current `main` before their slot definitions were added; new-agent arrival still never expands capacity on demand.
 
 Standing branches:
 
@@ -70,6 +70,13 @@ Standing branches:
 - `agent/worker-runtime`
 - `agent/module-infrastructure`
 - `agent/verification-security`
+- `agent/network-resolution`
+- `agent/transport-sandbox`
+- `agent/redirect-revalidation`
+- `agent/source-observability`
+- `agent/adversarial-network-security`
+
+The five expanded M02 lanes are provider-neutral only. They do not enable real provider DNS/HTTP, production credentials, unrestricted acquisition, or any production network path.
 
 Default isolation rule:
 
