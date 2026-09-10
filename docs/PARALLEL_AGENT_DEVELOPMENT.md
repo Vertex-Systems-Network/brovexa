@@ -2,7 +2,7 @@
 
 Status: **ACTIVE ENGINEERING GOVERNANCE**
 
-Updated: 2026-09-02
+Updated: 2026-09-11
 
 ## Purpose
 
@@ -67,7 +67,7 @@ Slot release requires no active/unmerged work, safe release of the live instance
 
 ## Default capacity
 
-Default target: **6 concurrent agents**.
+Generic default target: **6 concurrent agents**.
 
 1. Supervisor / Integration Architecture
 2. Contracts / Policy
@@ -76,7 +76,21 @@ Default target: **6 concurrent agents**.
 5. Module / Connector Infrastructure
 6. Verification / Security
 
-Scale to **8** only when boundaries and throughput metrics remain healthy. Arrival itself never expands capacity.
+Generic scale to **8** only when boundaries and throughput metrics remain healthy. Arrival itself never expands capacity.
+
+### Explicit M02 ten-worker capacity
+
+The active M02 provider-neutral network-safety wave is a deliberate branch-first exception above the generic soft maximum. Before slot definitions were changed, five new standing branches were created from exact current `main`:
+
+- `agent/network-resolution`
+- `agent/transport-sandbox`
+- `agent/redirect-revalidation`
+- `agent/source-observability`
+- `agent/adversarial-network-security`
+
+Together with the five original assignable worker lanes, this permits **10 concurrent workers plus one Supervisor** for this explicit cycle. The hard cap is **12 total live writers**.
+
+This exception does not turn arrivals into capacity changes. It does not enable production DNS/HTTP, provider credentials, unrestricted acquisition, or real provider traffic. It is limited to deterministic provider-neutral network-safety, test transport/resolution, persistence, observability and adversarial verification work described by `docs/AI_NATIVE_PLAN.md`.
 
 ## Core isolation rules
 
@@ -125,12 +139,17 @@ Typical ownership:
 
 - contracts/policy: `packages/contracts/**`;
 - DB/persistence: `packages/db/**`;
-- runtime/worker: `apps/worker/**`, `packages/queue/**`;
+- runtime/worker: bounded `apps/worker/**` / `packages/queue/**` packet paths;
 - module specialist: explicit packet paths;
 - verification: bounded tests/verifiers;
+- network resolution: deterministic classifier/resolution packet paths;
+- test transport: injected test-only transport packet paths;
+- redirect revalidation: redirect-hop validation packet paths;
+- observability: bounded source-transport telemetry packet paths;
+- adversarial network security: dedicated hostile-input test packet paths;
 - Supervisor/shared: root manifests, central exports, CI, lockfiles, aggregate verifiers, governance/checkpoint docs.
 
-Feature agents submit shared-file requests instead of racing the Supervisor/another agent.
+Feature agents submit shared-file requests instead of racing the Supervisor/another agent. Where broad role defaults overlap, live work packets must narrow them to disjoint exact paths before parallel mutation.
 
 ## Contract-first parallelism
 
@@ -206,7 +225,7 @@ This is defense in depth. GitHub branch protection/ruleset remains the external 
 
 ## Verification independence
 
-Implementation agents prove expected behavior; verification/security agents try to break it. Relevant adversarial checks include invalid transitions, replay/idempotency, concurrency/stale state, duplicate live writers, tenant leakage, authorization/policy/budget bypass, append-only mutation, migration rollback, malformed input, dependency drift, network/credential bypass, queue failure/recovery, and provenance integrity.
+Implementation agents prove expected behavior; verification/security agents try to break it. Relevant adversarial checks include invalid transitions, replay/idempotency, concurrency/stale state, duplicate live writers, tenant leakage, authorization/policy/budget bypass, append-only mutation, migration rollback, malformed input, dependency drift, network/credential bypass, queue failure/recovery, provenance integrity, IPv4/IPv6 private/reserved destinations, mixed resolution answers, redirect rebinding, and telemetry leakage.
 
 Tests/invariants are not weakened merely to obtain green CI.
 
@@ -214,7 +233,7 @@ Tests/invariants are not weakened merely to obtain green CI.
 
 `pnpm run verify:parallel`
 
-This runs versioned parallel-governance checks plus static branch-lease governance checks. Hosted PR CI additionally runs `scripts/verify-pr-agent-lease.mjs` against the live lease branch before FULL GATE work proceeds.
+This runs versioned parallel-governance checks plus static atomic-lease governance checks. Hosted PR CI additionally runs `scripts/verify-pr-agent-lease.mjs` against the live lease branch before FULL GATE work proceeds.
 
 The versioned verifier intentionally does not freeze temporary issue #53 occupancy or live lease records into Git.
 
@@ -264,7 +283,7 @@ Every handoff includes task ID, agent/role/status, agent instance ID, assigned s
 
 Supervisor monitors task lead time, dependency wait, CI queue/run time, merge-conflict/rework rate, shared-file collisions, rejected/double onboarding attempts, lease-acquisition collisions, stale leases/recoveries, stale-epoch submissions, sync conflicts, stale completion signals, and defect escapes.
 
-Increase concurrency only while these remain healthy.
+Increase generic concurrency only while these remain healthy. The explicit M02 ten-worker exception remains separately hard-capped and reviewable even if its short-term throughput is healthy.
 
 ## Safety boundaries
 
