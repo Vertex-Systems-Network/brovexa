@@ -42,6 +42,15 @@ live_start_statuses:
   - WORKING
   - PAUSED_FOR_SYNC
 
+capacity:
+  generic_target_agents: 6
+  generic_soft_max_agents: 8
+  m02_explicit_cycle_worker_slots: 10
+  m02_explicit_cycle_total_writers: 11
+  hard_cap_writers: 12
+  expansion_requires_precreated_branches: true
+  arrival_must_not_expand_capacity: true
+
 rules:
   - This file defines standing slot identities and branches; it does not store live occupancy.
   - A new agent always initializes from the exact current main SHA before the Supervisor checks capacity.
@@ -53,6 +62,7 @@ rules:
   - One slot may have only one live assigned agent; onboarding decisions are serialized by the Supervisor.
   - If all assignable live slots are OCCUPIED the Supervisor responds exactly with the rejection phrase and stops onboarding without creating work.
   - New-agent arrival does not create extra capacity or a new module branch. Extra slots must be planned and bootstrapped in a governance change before they can appear in issue #53.
+  - The M02 ten-worker cycle is a deliberate preplanned exception above the generic soft maximum; it does not change the generic default and never permits more than twelve total live writers.
   - Releasing a slot is an explicit Supervisor live-registry transaction after the assigned agent has no active work packet or unmerged branch work for that slot.
   - Live assignment/release does not require a repository governance PR when standing slot definitions and rules are unchanged.
 
@@ -80,4 +90,24 @@ slots:
   - slot_id: VERIFY
     module: verification_security
     branch: agent/verification-security
+    assignable_to_new_agent: true
+  - slot_id: NETWORK
+    module: network_resolution
+    branch: agent/network-resolution
+    assignable_to_new_agent: true
+  - slot_id: TRANSPORT
+    module: transport_sandbox
+    branch: agent/transport-sandbox
+    assignable_to_new_agent: true
+  - slot_id: REDIRECT
+    module: redirect_revalidation
+    branch: agent/redirect-revalidation
+    assignable_to_new_agent: true
+  - slot_id: OBSERVE
+    module: source_observability
+    branch: agent/source-observability
+    assignable_to_new_agent: true
+  - slot_id: ADVERSARY
+    module: adversarial_network_security
+    branch: agent/adversarial-network-security
     assignable_to_new_agent: true

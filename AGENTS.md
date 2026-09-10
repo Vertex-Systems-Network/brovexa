@@ -74,7 +74,7 @@ The Supervisor must not weaken repository gates to accelerate integration and is
 
 ## Module branches
 
-Standing module branches for the current six-agent model are:
+The preplanned standing branch pool is:
 
 - Supervisor / Integration Control: `supervisor/integration-control`
 - Contracts / Policy: `agent/contracts-policy`
@@ -82,6 +82,13 @@ Standing module branches for the current six-agent model are:
 - Worker / Runtime: `agent/worker-runtime`
 - Module / Connector Infrastructure: `agent/module-infrastructure`
 - Verification / Security: `agent/verification-security`
+- Network / Resolution: `agent/network-resolution`
+- Test-only Transport Sandbox: `agent/transport-sandbox`
+- Redirect Revalidation: `agent/redirect-revalidation`
+- Source Observability: `agent/source-observability`
+- Adversarial Network Security: `agent/adversarial-network-security`
+
+The five expanded worker branches were created from exact current `main` before their slot definitions were introduced. They exist for the bounded M02 provider-neutral network-safety cycle and do not authorize on-demand future capacity expansion.
 
 These branches are coordination lanes, not permission to invent work. Every task requires bounded scope, dependencies, verification, valid live slot assignment, and a valid live instance lease.
 
@@ -220,7 +227,7 @@ It is also run by hosted CI. Do not bypass/weaken it merely to obtain green CI.
 
 ## Default parallel capacity
 
-Use six concurrent agents when enough independent work exists:
+Generic repository operation uses six concurrent agents when enough independent work exists:
 
 1. Supervisor / Integration Architecture
 2. Contracts / Policy Agent
@@ -229,7 +236,9 @@ Use six concurrent agents when enough independent work exists:
 5. Module / Connector Infrastructure Agent
 6. Verification / Security Agent
 
-Scale to eight only when ownership/dependencies are clear and metrics remain healthy. A new arrival does not itself trigger capacity expansion.
+Generic scaling to eight is allowed only when ownership/dependencies are clear and metrics remain healthy. A new arrival does not itself trigger capacity expansion.
+
+**Explicit M02 exception:** the current provider-neutral network-safety cycle was deliberately expanded branch-first to ten worker slots plus one Supervisor, with a hard cap of twelve total live writers. This exception is defined in `docs/AI_NATIVE_PLAN.md` / `.agent/slots.yaml`, is not the generic default, and does not enable real provider network access or credentials.
 
 ## Integration discipline
 

@@ -1,4 +1,4 @@
-version: 3
+version: 4
 policy: supervisor-reviewed-integration
 
 supervisor:
@@ -7,6 +7,15 @@ supervisor:
   work_branch: supervisor/integration-control
   role: integration_architecture
   state_model: interrupt-review-merge-broadcast-resume
+
+capacity:
+  generic_target_agents: 6
+  generic_soft_max_agents: 8
+  explicit_m02_worker_target: 10
+  explicit_m02_total_writer_target: 11
+  hard_cap_writers: 12
+  explicit_cycle_requires_precreated_standing_branches: true
+  explicit_cycle_real_provider_network_activation: false
 
 new_agent_onboarding:
   required_start_branch: main

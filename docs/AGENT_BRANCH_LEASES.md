@@ -30,8 +30,13 @@ Each slot has exactly one possible active lock path:
 - `.leases/RUNTIME.json`
 - `.leases/MODULE.json`
 - `.leases/VERIFY.json`
+- `.leases/NETWORK.json`
+- `.leases/TRANSPORT.json`
+- `.leases/REDIRECT.json`
+- `.leases/OBSERVE.json`
+- `.leases/ADVERSARY.json`
 
-A lease file exists only while a live instance owns the right to mutate that slot's work branch.
+The five expanded paths are preplanned standing capacity for the explicit M02 provider-neutral network-safety cycle. Their existence does not authorize real DNS, HTTP/provider transport, credentials, unrestricted acquisition, or more than the bounded live-writer cap defined by the AI-Native plan.
 
 ## Atomic acquisition
 
