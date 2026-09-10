@@ -1,0 +1,230 @@
+name: Persistent Supervisor Control Plane
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft, closed]
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+  statuses: write
+
+concurrency:
+  group: persistent-supervisor-control-plane
+  cancel-in-progress: false
+
+jobs:
+  supervisor-heartbeat:
+    name: supervisor-heartbeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect repository and maintain Supervisor control state
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const statusTitle = '[Supervisor] Persistent Control Plane Status';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const now = new Date().toISOString();
+
+            const { data: repository } = await github.rest.repos.get({ owner, repo });
+            const { data: mainRef } = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${repository.default_branch}`,
+            });
+            const liveMain = mainRef.object.sha;
+
+            const { data: slotRegistry } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: 53,
+            });
+            const registryBody = slotRegistry.body || '';
+            const registryMain = registryBody.match(/Live main baseline:\s*`([0-9a-f]{40})`/i)?.[1] || null;
+            const registryEpoch = Number(registryBody.match(/Sync epoch:\s*`?(\d+)`?/i)?.[1] || 0);
+
+            const broadcastComments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: 50,
+              per_page: 100,
+            });
+            let broadcastEpoch = 0;
+            let broadcastMain = null;
+            for (const comment of broadcastComments) {
+              const body = comment.body || '';
+              const epoch = Number(body.match(/Sync epoch:\s*`?(\d+)`?/i)?.[1] || 0);
+              if (epoch >= broadcastEpoch) {
+                const sha = body.match(/(?:Resulting main SHA|Resulting main|Live main):\s*`([0-9a-f]{40})`/i)?.[1] || null;
+                if (epoch > 0) {
+                  broadcastEpoch = epoch;
+                  broadcastMain = sha || broadcastMain;
+                }
+              }
+            }
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              base: repository.default_branch,
+              per_page: 100,
+            });
+
+            const reviewReady = [];
+            const staleSignals = [];
+            const waitingForCi = [];
+
+            for (const pr of pulls) {
+              if (pr.draft) continue;
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pr.number,
+                per_page: 100,
+              });
+              const signals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
+              if (!signals.length) continue;
+
+              const latestSignal = signals.at(-1);
+              const { data: headCommit } = await github.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: pr.head.sha,
+              });
+              const headTime = new Date(headCommit.commit.committer?.date || headCommit.commit.author?.date || 0).getTime();
+              const signalTime = new Date(latestSignal.created_at).getTime();
+              if (!(signalTime >= headTime)) {
+                staleSignals.push(`#${pr.number}`);
+                continue;
+              }
+
+              const workflowRuns = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+                owner,
+                repo,
+                head_sha: pr.head.sha,
+                event: 'pull_request',
+                per_page: 100,
+              });
+              const ciRun = workflowRuns
+                .filter((run) => run.name === 'CI' && run.head_sha === pr.head.sha)
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+              if (!ciRun || ciRun.status !== 'completed' || ciRun.conclusion !== 'success') {
+                waitingForCi.push(`#${pr.number}`);
+                continue;
+              }
+
+              reviewReady.push(`#${pr.number}`);
+              const marker = `<!-- persistent-supervisor:review-ready:${pr.head.sha} -->`;
+              const alreadyMarked = comments.some((comment) => (comment.body || '').includes(marker));
+              if (!alreadyMarked) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: `${marker}\nPersistent Supervisor detected a fresh head-bound completion signal and successful exact-head CI for \`${pr.head.sha}\`.\n\n**READY_FOR_SUPERVISOR_REVIEW** — this is a deterministic triage signal only. It is not approval and does not authorize automatic merge; lease, slot, dependency, migration/shared-path, review-thread and expected-head checks remain mandatory.`,
+                });
+              }
+            }
+
+            const drift = [];
+            if (registryMain && registryMain !== liveMain) {
+              drift.push(`issue #53 main baseline ${registryMain} != live main ${liveMain}`);
+            }
+            if (broadcastEpoch && registryEpoch && broadcastEpoch !== registryEpoch) {
+              drift.push(`issue #50 epoch ${broadcastEpoch} != issue #53 epoch ${registryEpoch}`);
+            }
+            if (broadcastMain && registryMain && broadcastMain !== registryMain) {
+              drift.push(`issue #50 main ${broadcastMain} != issue #53 main ${registryMain}`);
+            }
+
+            const state = drift.length ? 'DEGRADED' : 'HEALTHY';
+            const list = (items) => items.length ? items.join(', ') : 'none';
+            const body = [
+              '# Persistent Supervisor Control Plane',
+              '',
+              `State: **${state}**`,
+              `Last heartbeat: \`${now}\``,
+              `Workflow run: ${runUrl}`,
+              '',
+              '## Canonical coordination snapshot',
+              `- live \`${repository.default_branch}\`: \`${liveMain}\``,
+              `- issue #53 baseline: \`${registryMain || 'unparsed'}\``,
+              `- issue #53 sync epoch: \`${registryEpoch || 'unparsed'}\``,
+              `- latest issue #50 sync epoch: \`${broadcastEpoch || 'unparsed'}\``,
+              `- latest issue #50 main: \`${broadcastMain || 'unparsed'}\``,
+              '',
+              '## Open work queue',
+              `- open PRs to \`${repository.default_branch}\`: ${pulls.length}`,
+              `- ready for Supervisor review: ${list(reviewReady)}`,
+              `- fresh completion signal waiting for CI: ${list(waitingForCi)}`,
+              `- stale completion signal: ${list(staleSignals)}`,
+              '',
+              '## Drift',
+              drift.length ? drift.map((item) => `- ${item}`).join('\n') : '- none detected',
+              '',
+              'This issue is maintained by GitHub Actions. The Action observes and triages existing repository governance; it does not weaken leases, slot ownership, FULL GATE, dependency ordering, expected-head merge protection, or the rule that `Work Done and Submitted` is not automatic merge authorization.',
+            ].join('\n');
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'all',
+              per_page: 100,
+            });
+            let statusIssue = issues.find((issue) => !issue.pull_request && issue.title === statusTitle);
+            if (!statusIssue) {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title: statusTitle,
+                body,
+              });
+              statusIssue = created.data;
+            } else {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: statusIssue.number,
+                state: 'open',
+                body,
+              });
+            }
+
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: liveMain,
+              state: drift.length ? 'failure' : 'success',
+              context: 'persistent-supervisor',
+              description: drift.length ? 'Supervisor coordination drift detected' : 'Supervisor control plane healthy',
+              target_url: runUrl,
+            });
+
+            core.summary
+              .addHeading('Persistent Supervisor')
+              .addTable([
+                [{ data: 'State', header: true }, state],
+                [{ data: 'Live main', header: true }, liveMain],
+                [{ data: 'Sync epoch', header: true }, String(registryEpoch || broadcastEpoch || 'unknown')],
+                [{ data: 'Review ready', header: true }, list(reviewReady)],
+                [{ data: 'Waiting CI', header: true }, list(waitingForCi)],
+                [{ data: 'Stale signals', header: true }, list(staleSignals)],
+              ])
+              .write();

@@ -2,6 +2,11 @@ packages:
   - apps/*
   - packages/*
 
+# Pin the reviewed Multer security fix across the NestJS platform-express graph.
+# Keep this exact so future releases require a separate dependency review.
+overrides:
+  multer: 2.3.0
+
 # pnpm 11 defaults minimumReleaseAge to 1440 minutes. zod@4.5.4 is an
 # explicitly reviewed, exact-version bootstrap exception; do not broaden this
 # to the whole package or a wildcard without a separate dependency review.
