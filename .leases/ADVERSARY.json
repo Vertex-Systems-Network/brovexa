@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/adversarial-network-security",
+  "slot_id": "ADVERSARY",
+  "agent_id": "AGENT-ADVERSARY",
+  "agent_instance_id": "adversary-m02-20260911T031114+0500-a0d0",
+  "work_packet_id": "M02-NET-010",
+  "lease_id": "lease-adversary-20260911-a0d0",
+  "synced_main_sha": "787a81dcd27dd83c1c4184cc9f619d455f290ad9",
+  "sync_epoch": 37,
+  "acquired_branch_head_sha": "787a81dcd27dd83c1c4184cc9f619d455f290ad9",
+  "acquired_at": "2026-09-11T03:11:14+05:00",
+  "renewed_at": "2026-09-11T03:11:14+05:00"
+}
