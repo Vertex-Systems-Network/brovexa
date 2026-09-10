@@ -5,6 +5,16 @@ default_concurrency:
   soft_max_agents: 8
   scale_beyond_soft_max_requires_metrics_review: true
 
+explicit_cycle_capacity:
+  cycle: M02_PROVIDER_NEUTRAL_NETWORK_SAFETY
+  worker_target: 10
+  total_writer_target: 11
+  hard_cap_writers: 12
+  authorization: owner-requested-supervisor-governance-change
+  branch_first_bootstrap_completed: true
+  real_provider_network_activation: false
+  production_credentials: false
+
 recommended_roles:
   - integration_architecture
   - contracts_policy
@@ -12,6 +22,11 @@ recommended_roles:
   - worker_runtime
   - module_specialist
   - verification_security
+  - network_resolution
+  - transport_sandbox
+  - redirect_revalidation
+  - source_observability
+  - adversarial_network_security
 
 states:
   - PLANNED
@@ -35,6 +50,8 @@ claim_rules:
   - A workstream behind the latest Supervisor synchronization epoch must enter PAUSED_FOR_SYNC before new feature work or completion submission.
   - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN live slot through GitHub issue #53.
   - A logically assigned agent cannot mutate its branch until its unique runtime instance atomically acquires the slot lease on coordination/leases.
+  - The explicit M02 ten-worker cycle may use ten worker slots only after its branch-first governance expansion is merged and live issue #53 is reconciled.
+  - The explicit cycle never authorizes real provider HTTP, production credentials, unrestricted acquisition, or more than twelve total live writers.
 
 standing_branches:
   - slot_id: SUPERVISOR
@@ -67,6 +84,31 @@ standing_branches:
     role: verification_security
     module: verification_security
     branch: agent/verification-security
+  - slot_id: NETWORK
+    agent_id: AGENT-NETWORK
+    role: network_resolution
+    module: network_resolution
+    branch: agent/network-resolution
+  - slot_id: TRANSPORT
+    agent_id: AGENT-TRANSPORT
+    role: transport_sandbox
+    module: transport_sandbox
+    branch: agent/transport-sandbox
+  - slot_id: REDIRECT
+    agent_id: AGENT-REDIRECT
+    role: redirect_revalidation
+    module: redirect_revalidation
+    branch: agent/redirect-revalidation
+  - slot_id: OBSERVE
+    agent_id: AGENT-OBSERVE
+    role: source_observability
+    module: source_observability
+    branch: agent/source-observability
+  - slot_id: ADVERSARY
+    agent_id: AGENT-ADVERSARY
+    role: adversarial_network_security
+    module: adversarial_network_security
+    branch: agent/adversarial-network-security
 
 slot_registry:
   static_definition_path: .agent/slots.yaml
