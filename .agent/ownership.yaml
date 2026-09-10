@@ -1,4 +1,4 @@
-version: 1
+version: 2
 policy: default-deny-outside-assigned-write-scope
 
 roles:
@@ -12,9 +12,12 @@ roles:
       - docs/PARALLEL_AGENT_DEVELOPMENT.md
       - docs/AI_NATIVE_PLAN.md
       - docs/NEW_AGENT_ONBOARDING.md
+      - docs/AGENT_BRANCH_LEASES.md
       - .agent/**
       - .github/workflows/**
       - .github/PULL_REQUEST_TEMPLATE.md
+      - scripts/verify-parallel-development.mjs
+      - scripts/verify-agent-lease-governance.mjs
       - package.json
       - pnpm-lock.yaml
     responsibilities:
@@ -81,10 +84,69 @@ roles:
     constraints:
       - must_not_weaken_existing_invariants
 
+  network_resolution:
+    default_write:
+      - apps/worker/src/source-ip-classifier.ts
+      - apps/worker/src/source-ip-classifier.spec.ts
+      - apps/worker/src/source-network-resolution*.ts
+    responsibilities:
+      - deterministic_ipv4_ipv6_classification
+      - resolver_evidence_normalization
+      - mixed_answer_fail_closed_policy
+    constraints:
+      - no_real_dns_or_provider_network_activation
+
+  transport_sandbox:
+    default_write:
+      - apps/worker/src/source-test-transport.ts
+      - apps/worker/src/source-test-transport.spec.ts
+      - apps/worker/src/source-transport-sandbox*.ts
+    responsibilities:
+      - injected_test_only_transport
+      - byte_time_hop_budget_enforcement
+      - deterministic_transport_failures
+    constraints:
+      - test_only_transport
+      - production_network_access_remains_none
+
+  redirect_revalidation:
+    default_write:
+      - apps/worker/src/source-redirect-revalidation*.ts
+      - packages/contracts/src/source-transport-hop-chain.spec.ts
+    responsibilities:
+      - redirect_hop_revalidation
+      - destination_evidence_rebinding_checks
+      - redirect_budget_enforcement
+    constraints:
+      - no_shared_transport_activation
+
+  source_observability:
+    default_write:
+      - apps/api/src/source-transport-observability*.ts
+    responsibilities:
+      - bounded_transport_metrics
+      - redacted_failure_reason_telemetry
+      - tenant_safe_observability
+    constraints:
+      - no_sensitive_payload_or_credential_logging
+
+  adversarial_network_security:
+    default_write:
+      - apps/worker/src/source-network-adversarial*.ts
+      - packages/contracts/src/source-network-adversarial*.test.ts
+    responsibilities:
+      - hostile_destination_forms
+      - metadata_loopback_linklocal_multicast_tests
+      - ipv4_mapped_ipv6_and_rebinding_tests
+    constraints:
+      - must_not_weaken_existing_invariants
+      - no_real_network_access
+
 rules:
   - An explicit work packet may narrow or extend a role's paths.
   - Cross-module edits require an explicit dependency/interface request or integration-owner action.
   - Shared files remain integration-owned when parallel collision risk exists.
+  - Overlapping role defaults do not authorize simultaneous writes to the same path; live work packets must narrow scopes to disjoint exact paths before mutation.
   - Only the Supervisor may mutate onboarding slot occupancy or assign a newly arriving agent to a standing module branch.
   - The Supervisor reviews and merges incoming agent branches; completion signals are review requests, not merge authorization.
   - Ownership never overrides security, compliance, tenant, source-policy or activation gates.
