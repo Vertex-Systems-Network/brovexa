@@ -1,6 +1,32 @@
 ```
-# Next.js build outputs
+# Build artifacts
+dist/
+build/
+*.js.map
+*.d.ts
+
+# Dependencies
+node_modules/
+
+# Next.js
 .next/
-# Turbopack cache
-.turbo/
+
+# Vite
+.vite/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
 ```

@@ -4,6 +4,7 @@ export * from './agent-execution';
 export * from './ai';
 export * from './identity';
 export * from './source-adapter';
+export * from './source-adapter-module';
 export * from './source-discovery-dedup';
 export * from './source-discovery-dedup-evaluator';
 export * from './source-discovery-plan';
