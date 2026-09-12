@@ -27,14 +27,14 @@ __pycache__/
 *.swo
 *.tmp
 
-# System
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Coverage
+# Coverage reports
 coverage/
 htmlcov/
-.coverage
+*.coverage
 
 # Compressed files
 *.zip
