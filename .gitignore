@@ -1,40 +1,534 @@
-```
 # Dependencies
 node_modules/
-package-lock.json
 
-# Build artifacts
+# Test coverage and cache
+coverage/
+.nyc_output/
+.jest/
+
+# Build outputs
 dist/
 build/
-target/
+.next/
+.nuxt/
+out/
 
-# Environment
-.env
+# Environment variables
 .env.local
 .env.*
+!.env.example
 
-# Logs and temporary files
-*.log
-*.tmp
-
-# Editors
+# IDE specific
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.py~
-*.py.class
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# TypeScript/JavaScript specific
+*.tsbuildinfo
+.npm/
+.yarn/
+
+# Package manager caches
+.pnpm-store/
+.yarn/cache/
+
+# Coverage and testing
+coverage/
+.nyc_output/
+.jest/
+.test-results/
+
+# Distribution artifacts
+dist/
+build/
+public/dist/
+static/dist/
+
+# Lock files (if not already in repo)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Sensitive files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js
+.next/
+out/
+.cache/
+
+# Nuxt.js
+.nuxt/
+.output/
+.dist/
+
+# Generated files
+generated/
+.autogenerate/
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Debug
+debug/
+*.log
+
+# Local configuration
+*.local
+
+# Editor directories
+.vscode/
+.idea/
+.atom/
+.sublime/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*:*
 
 # Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnp.cjs
+.pnp.loader.mjs
 
-# Coverage
+# Bower
+bower_components/
+
+# Grunt
+.grunt
+
+# Gulp
+gulp-cache/
+
+# Jspm
+jspm_packages/
+
+# Leiningen (Clojure)
+target/
+
+# Waf
+**/node_modules/**
+**/build/**
+**/.next/**
+**/.nuxt/**
+**/dist/**
+
+# Coverage directory used by tools like istanbul
 coverage/
+
+# nyc test coverage
 .nyc_output/
-```
+
+# Mocha
+mocharc.json
+mocha.opts
+
+# Jest
+.jest/
+jest.config.js
+jest.setup.js
+jest.teardown.js
+
+# Vitest
+.vitest/
+
+# Webpack
+webpack.config.js
+webpack-stats.json
+
+# Rollup
+.rollup.cache/
+
+# Vite
+.vite/
+
+# Turborepo
+.turbo/
+
+# Prisma
+prisma/migrations/
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettierrc.js
+
+# TypeScript
+*.tsbuildinfo
+.history/
+
+# Compiled JavaScript
+jsconfig.json
+
+# Lock-Files
+.fleet/
+.fossa.yml
+.nyc_output/
+.sass-cache/
+.well-known/
+.yalc/
+.yarn-metadata.json
+.yarnrc.yml
+.yo-rc.json
+.zeit/
+.zsh_history
+.zshrc
+.zuul.yml
+0/
+1/
+2/
+3/
+4/
+5/
+6/
+7/
+8/
+9/
+@/
+~/
+~$*
+~*.db
+~*.db-journal
+~*.docx
+~*.pdf
+~*.rtf
+~*.txt
+~*.xls
+~*.xlsx
+~*.xml
+~*.zip
+~lock.*
+~~
+~~.bak
+~~.old
+~~.orig
+~~.rej
+~~.tmp
+~~.~
+~~.~lock
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.......lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock......
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+~~.~lock.*
+......

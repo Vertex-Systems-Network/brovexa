@@ -95,6 +95,9 @@ describe('REDIRECT: Redirect chain security revalidation', () => {
         const prevSecs = prevSeconds % 60;
         const prevTimeStr = `2026-09-03T00:${prevMinutes.toString().padStart(2, '0')}:${prevSecs.toString().padStart(2, '0')}.000Z`;
         
+        // For first redirect (i=1), fromUrl should be the initial hop URL (/start)
+        const fromUrl = i === 1 ? 'https://example.com/start' : `https://example.com/step${i - 1}`;
+        
         chain.hops.push(createHop(
           i,
           `https://example.com/step${i}`,
@@ -106,7 +109,7 @@ describe('REDIRECT: Redirect chain security revalidation', () => {
           `2026-09-03T00:${minutes.toString().padStart(2, '0')}:${(secs + 1).toString().padStart(2, '0')}.000Z`,
           {
             fromTransportRequestId: `transport.request.${i - 1}`,
-            fromUrl: `https://example.com/step${i - 1}`,
+            fromUrl,
             status: 302,
             location: `/step${i}`,
             observedAt: prevTimeStr,
@@ -170,7 +173,7 @@ describe('REDIRECT: Redirect chain security revalidation', () => {
         ));
       }
 
-      expect(() => SourceTransportHopChainSchema.parse(chain)).toThrow(/max 11/);
+      expect(() => SourceTransportHopChainSchema.parse(chain)).toThrow(/Too big/);
     });
   });
 
