@@ -1,32 +1,20 @@
 ```
-# Build artifacts
-dist/
-build/
-*.js.map
-*.d.ts
+# Turborepo cache
+.turbo/
 
-# Dependencies
-node_modules/
-
-# Next.js
+# Next.js build outputs
 .next/
 
-# Vite
-.vite/
+# Node modules
+node_modules/
 
-# Environment
-.env
-.env.local
-*.env.*
+# Compiled JavaScript
+dist/
+build/
 
-# Logs
-*.log
+# Vite test cache
+**/.vite/vitest/**
 
-# Temporary files
-*.tmp
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
+# TypeScript build output
+*.tsbuildinfo
 ```

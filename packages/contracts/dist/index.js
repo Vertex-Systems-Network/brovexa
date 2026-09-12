@@ -20,6 +20,7 @@ __exportStar(require("./agent-execution"), exports);
 __exportStar(require("./ai"), exports);
 __exportStar(require("./identity"), exports);
 __exportStar(require("./source-adapter"), exports);
+__exportStar(require("./source-adapter-module"), exports);
 __exportStar(require("./source-discovery-dedup"), exports);
 __exportStar(require("./source-discovery-dedup-evaluator"), exports);
 __exportStar(require("./source-discovery-plan"), exports);
