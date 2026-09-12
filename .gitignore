@@ -7,42 +7,42 @@ node_modules/
 dist/
 build/
 
-# Cache directories
+# Turborepo
 .turbo/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 
 # Logs
 *.log
-turbo-build.log
-turbo-test.log
+
+# Temporary files
+*.tmp
 
 # Environment
 .env
 .env.local
 .env.*
 
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Temporary files
-*.tmp
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 
-# Compressed files
+# OS
+.DS_Store
+Thumbs.db
+
+# Compressed
 *.zip
 *.gz
 *.tar
