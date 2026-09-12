@@ -1,0 +1,92 @@
+import { z } from 'zod';
+export declare const SourceTransportResponseReceiptSchema: z.ZodObject<{
+    version: z.ZodLiteral<"1.0.0">;
+    receiptId: z.ZodString;
+    sourceRequestId: z.ZodString;
+    sourceTaskId: z.ZodString;
+    connectorKey: z.ZodString;
+    connectorVersion: z.ZodString;
+    transportPolicyId: z.ZodString;
+    transportPolicyVersion: z.ZodString;
+    hopChain: z.ZodObject<{
+        version: z.ZodLiteral<"1.0.0">;
+        sourceRequestId: z.ZodString;
+        sourceTaskId: z.ZodString;
+        connectorKey: z.ZodString;
+        connectorVersion: z.ZodString;
+        transportPolicyId: z.ZodString;
+        transportPolicyVersion: z.ZodString;
+        revalidateEachHop: z.ZodLiteral<true>;
+        hops: z.ZodArray<z.ZodObject<{
+            hopIndex: z.ZodNumber;
+            transportRequestId: z.ZodString;
+            url: z.ZodString;
+            requestedAt: z.ZodString;
+            resolution: z.ZodObject<{
+                transportRequestId: z.ZodString;
+                url: z.ZodString;
+                hostname: z.ZodString;
+                resolvedAt: z.ZodString;
+                addresses: z.ZodArray<z.ZodObject<{
+                    address: z.ZodString;
+                    family: z.ZodUnion<readonly [z.ZodLiteral<4>, z.ZodLiteral<6>]>;
+                    classification: z.ZodEnum<{
+                        documentation: "documentation";
+                        invalid: "invalid";
+                        link_local: "link_local";
+                        loopback: "loopback";
+                        metadata: "metadata";
+                        multicast: "multicast";
+                        private: "private";
+                        public: "public";
+                        reserved: "reserved";
+                        unspecified: "unspecified";
+                    }>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>;
+            previousRedirect: z.ZodNullable<z.ZodObject<{
+                fromTransportRequestId: z.ZodString;
+                fromUrl: z.ZodString;
+                status: z.ZodNumber;
+                location: z.ZodString;
+                observedAt: z.ZodString;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    hopAdmissions: z.ZodArray<z.ZodObject<{
+        decision: z.ZodEnum<{
+            allow: "allow";
+            blocked: "blocked";
+        }>;
+        reasonCodes: z.ZodArray<z.ZodString>;
+        warnings: z.ZodArray<z.ZodString>;
+        transportPolicyId: z.ZodString;
+        transportPolicyVersion: z.ZodString;
+        connectorKey: z.ZodString;
+        connectorVersion: z.ZodString;
+        sourceRequestId: z.ZodString;
+        transportRequestId: z.ZodString;
+        canonicalUrl: z.ZodString;
+        hostname: z.ZodString;
+        port: z.ZodNullable<z.ZodNumber>;
+        maxResponseBytes: z.ZodNumber;
+        timeoutMs: z.ZodNumber;
+        evaluatedAt: z.ZodString;
+    }, z.core.$strip>>;
+    final: z.ZodObject<{
+        transportRequestId: z.ZodString;
+        url: z.ZodString;
+        status: z.ZodNumber;
+        contentType: z.ZodString;
+        responseBytes: z.ZodNumber;
+        elapsedMs: z.ZodNumber;
+        receivedAt: z.ZodString;
+        bodyDigest: z.ZodObject<{
+            algorithm: z.ZodLiteral<"sha256">;
+            value: z.ZodString;
+        }, z.core.$strict>;
+    }, z.core.$strict>;
+    bodyIncluded: z.ZodLiteral<false>;
+}, z.core.$strict>;
+export type SourceTransportResponseReceipt = z.infer<typeof SourceTransportResponseReceiptSchema>;
+export declare function parseSourceTransportResponseReceipt(rawReceipt: unknown): SourceTransportResponseReceipt;
