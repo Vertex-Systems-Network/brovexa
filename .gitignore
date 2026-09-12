@@ -1,20 +1,7 @@
 ```
-# Turborepo cache
-.turbo/
-
-# Next.js build outputs
-.next/
-
-# Node modules
+# Dependencies
 node_modules/
 
-# Compiled JavaScript
-dist/
-build/
-
-# Vite test cache
-**/.vite/vitest/**
-
-# TypeScript build output
-*.tsbuildinfo
+# Vite/Vitest cache
+**/.vite/
 ```
