@@ -1,4 +1,3 @@
-```
 # Turborepo cache and logs
 .turbo/
 **/.turbo/
@@ -13,4 +12,15 @@ node_modules/
 
 # Log files
 *.log
-```
+
+# Environment files (exclude local secrets, allow example template)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE exclusions
+.idea/
+.vscode/
+*.swp
+*.swo
