@@ -1,16 +1,68 @@
+```
+# Dependencies
 node_modules/
-.pnpm-store/
-.turbo/
-dist/
-coverage/
+
+# Build outputs
 .next/
-out/
-*.tsbuildinfo
+dist/
+build/
 
-.env
-.env.*
-!.env.example
+# Turborepo
+.turbo/
 
+# Logs
 *.log
+
+# Temporary files
+*.tmp
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Compressed
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```

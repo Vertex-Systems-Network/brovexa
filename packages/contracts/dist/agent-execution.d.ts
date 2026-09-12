@@ -1,0 +1,85 @@
+import { z } from 'zod';
+export declare const AgentExecutionStepSchema: z.ZodObject<{
+    key: z.ZodString;
+    agentKey: z.ZodString;
+    agentVersion: z.ZodString;
+    dependencies: z.ZodArray<z.ZodString>;
+    toolKeys: z.ZodArray<z.ZodString>;
+    commandKeys: z.ZodArray<z.ZodString>;
+    policyRefs: z.ZodArray<z.ZodString>;
+    canonicalRefs: z.ZodArray<z.ZodString>;
+    memoryRefs: z.ZodArray<z.ZodString>;
+    budget: z.ZodObject<{
+        maxTokens: z.ZodNumber;
+        maxSearches: z.ZodNumber;
+        maxApiCalls: z.ZodNumber;
+        maxCredits: z.ZodNumber;
+        maxCurrencyMicros: z.ZodNumber;
+        maxRuntimeMs: z.ZodNumber;
+        maxConcurrency: z.ZodNumber;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export type AgentExecutionStep = z.infer<typeof AgentExecutionStepSchema>;
+export declare const AgentExecutionWorkPayloadSchema: z.ZodObject<{
+    version: z.ZodLiteral<"1.0.0">;
+    dispatchId: z.ZodString;
+    handlerRegistryVersion: z.ZodString;
+    planId: z.ZodString;
+    planVersion: z.ZodNumber;
+    workspaceId: z.ZodString;
+    orchestratorRunId: z.ZodString;
+    contextReceiptId: z.ZodString;
+    maxParallelism: z.ZodNumber;
+    stepKey: z.ZodString;
+    agentKey: z.ZodString;
+    agentVersion: z.ZodString;
+    dependencies: z.ZodArray<z.ZodString>;
+    toolKeys: z.ZodArray<z.ZodString>;
+    commandKeys: z.ZodArray<z.ZodString>;
+    policyRefs: z.ZodArray<z.ZodString>;
+    canonicalRefs: z.ZodArray<z.ZodString>;
+    memoryRefs: z.ZodArray<z.ZodString>;
+    budget: z.ZodObject<{
+        maxTokens: z.ZodNumber;
+        maxSearches: z.ZodNumber;
+        maxApiCalls: z.ZodNumber;
+        maxCredits: z.ZodNumber;
+        maxCurrencyMicros: z.ZodNumber;
+        maxRuntimeMs: z.ZodNumber;
+        maxConcurrency: z.ZodNumber;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export type AgentExecutionWorkPayload = z.infer<typeof AgentExecutionWorkPayloadSchema>;
+export declare const AgentExecutionPlanSchema: z.ZodObject<{
+    id: z.ZodString;
+    workspaceId: z.ZodString;
+    userId: z.ZodString;
+    runId: z.ZodString;
+    contextReceiptId: z.ZodString;
+    orchestratorKey: z.ZodString;
+    orchestratorVersion: z.ZodString;
+    planVersion: z.ZodNumber;
+    maxParallelism: z.ZodNumber;
+    steps: z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        agentKey: z.ZodString;
+        agentVersion: z.ZodString;
+        dependencies: z.ZodArray<z.ZodString>;
+        toolKeys: z.ZodArray<z.ZodString>;
+        commandKeys: z.ZodArray<z.ZodString>;
+        policyRefs: z.ZodArray<z.ZodString>;
+        canonicalRefs: z.ZodArray<z.ZodString>;
+        memoryRefs: z.ZodArray<z.ZodString>;
+        budget: z.ZodObject<{
+            maxTokens: z.ZodNumber;
+            maxSearches: z.ZodNumber;
+            maxApiCalls: z.ZodNumber;
+            maxCredits: z.ZodNumber;
+            maxCurrencyMicros: z.ZodNumber;
+            maxRuntimeMs: z.ZodNumber;
+            maxConcurrency: z.ZodNumber;
+        }, z.core.$strip>;
+    }, z.core.$strip>>;
+    createdAt: z.ZodString;
+}, z.core.$strip>;
+export type AgentExecutionPlan = z.infer<typeof AgentExecutionPlanSchema>;

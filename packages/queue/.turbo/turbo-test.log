@@ -1,0 +1,11 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/workspace/packages/queue[39m
+
+ [32m✓[39m src/index.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m   Start at [22m 23:15:08
+[2m   Duration [22m 2.70s[2m (transform 239ms, setup 0ms, import 1.24s, tests 75ms, environment 0ms)[22m
+
