@@ -1,62 +1,40 @@
 ```
 # Dependencies
 node_modules/
-node_modules/
 
 # Build outputs
+.next/
 dist/
 build/
-target/
 
-# Turborepo
+# Cache directories
 .turbo/
-**/.turbo/turbo-*.log
-
-# Next.js
-.next/
-.next/static/
-.next/cache/
-.next/BUILD_ID
-.next/build-manifest.json
-.next/fallback-build-manifest.json
-.next/prerender-manifest.json
-.next/server/
-.next/trace
-.next/trace-build
-
-# Compiled JavaScript
-*.js.map
-*.mjs.map
+__pycache__/
+*.pyc
 
 # Logs
 *.log
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# Cache directories
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-.cache/
-coverage/
-htmlcov/
-.coverage
-
-# IDE
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
 
-# OS
+# System
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
