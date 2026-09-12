@@ -217,12 +217,13 @@ describe('REDIRECT: source-redirect-hop-validation', () => {
 
     it('blocks unallowed classification changes', () => {
       const prev = createRedirectHopEvidence(0, 'https://public.com');
-      const curr = createRedirectHopEvidence(1, 'http://10.0.0.1'); // private_ipv4
-      const result = validateRedirectHop(curr, prev, { ...DEFAULT_REDIRECT_CONFIG, allowPrivateTransition: true });
+      const curr = createRedirectHopEvidence(1, 'http://insecure.com'); // public_http
+      const result = validateRedirectHop(curr, prev, DEFAULT_REDIRECT_CONFIG);
       
-      // With allowPrivateTransition=true, this should pass the private check
-      // but may still fail on classification change if requireConsistentClassification=true
+      // Classification changed from public_https to public_http (downgrade)
+      // This should be flagged as classification change and blocked
       expect(result.securityFlags.isClassificationChange).toBe(true);
+      expect(result.isValid).toBe(false);
     });
   });
 

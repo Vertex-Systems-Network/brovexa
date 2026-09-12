@@ -1,0 +1,27 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/workspace/packages/contracts[39m
+
+ [32m✓[39m src/source.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 787[2mms[22m[39m
+ [32m✓[39m src/source-transport.spec.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m src/source-pagination-coverage.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 203[2mms[22m[39m
+ [32m✓[39m src/source-adapter.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 107[2mms[22m[39m
+ [32m✓[39m src/source-discovery-dedup-evaluator.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [32m✓[39m src/ai.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 191[2mms[22m[39m
+ [32m✓[39m src/source-execution-e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 275[2mms[22m[39m
+ [32m✓[39m src/source-transport-result.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32m✓[39m src/source-discovery-dedup.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m src/source-transport-security.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/source-transport-hop-chain.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m src/agent-execution.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [32m✓[39m src/source-resolution-evidence.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [32m✓[39m src/source-discovery-plan.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32m✓[39m src/source-transport-resolution-binding.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/source-network-safety.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m17 passed[39m[22m[90m (17)[39m
+[2m      Tests [22m [1m[32m138 passed[39m[22m[90m (138)[39m
+[2m   Start at [22m 12:19:56
+[2m   Duration [22m 24.21s[2m (transform 1.70s, setup 0ms, import 8.98s, tests 2.41s, environment 2ms)[22m
+

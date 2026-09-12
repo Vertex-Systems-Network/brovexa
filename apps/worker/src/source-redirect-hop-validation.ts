@@ -199,7 +199,7 @@ export function validateRedirectHop(
       }
     }
 
-    // Check for HTTP downgrade
+    // Check for HTTP downgrade (don't return early - allow multiple flags)
     const isHttps = (url: string): boolean => url.toLowerCase().startsWith('https://');
     const wasHttps = isHttps(previousEvidence.url);
     const isNowHttp = !isHttps(hopEvidence.url);
@@ -209,11 +209,14 @@ export function validateRedirectHop(
       if (!config.allowHttpDowngrade) {
         result.isValid = false;
         result.rejectionReason = 'HTTPS to HTTP downgrade blocked';
-        return result;
+        // Don't return early - allow classification change check to also run
+      } else {
+        // If downgrade is allowed, don't flag it as a security issue
+        securityFlags.isDowngrade = false;
       }
     }
 
-    // Check classification consistency
+    // Check classification consistency (runs even if downgrade detected)
     if (config.requireConsistentClassification && 
         previousEvidence.classification !== hopEvidence.classification) {
       securityFlags.isClassificationChange = true;
@@ -223,10 +226,10 @@ export function validateRedirectHop(
         t => t.from === previousEvidence.classification && t.to === hopEvidence.classification
       );
 
-      if (!isAllowedTransition) {
+      if (!isAllowedTransition && result.isValid) {
+        // Only set rejection if not already rejected by downgrade check
         result.isValid = false;
         result.rejectionReason = `Classification change from '${previousEvidence.classification}' to '${hopEvidence.classification}' not allowed`;
-        return result;
       }
     }
   }
@@ -292,9 +295,14 @@ export function classifyRedirectDestination(url: string): DestinationClassificat
       return 'metadata_endpoint';
     }
 
-    // Check for loopback
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
-      return hostname === '::1' ? 'loopback_ipv6' : 'loopback_ipv4';
+    // Check for IPv6 loopback
+    if (hostname === '::1') {
+      return 'loopback_ipv6';
+    }
+    
+    // Check for IPv4 loopback (127.0.0.0/8)
+    if (hostname === 'localhost' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return 'loopback_ipv4';
     }
 
     // Check for unspecified

@@ -1,0 +1,21 @@
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/workspace/apps/worker[39m
+
+ [32m✓[39m src/source-redirect-hop-validation.spec.ts [2m([22m[2m93 tests[22m[2m)[22m[32m 90[2mms[22m[39m
+ [32m✓[39m src/agent-specialist-runtime.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/runtime.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/source-network-adversarial-cases.spec.ts [2m([22m[2m48 tests[22m[2m)[22m[32m 165[2mms[22m[39m
+ [32m✓[39m src/source-transport-observability.spec.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+ [32m✓[39m src/source-ip-classifier.spec.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/source-test-transport.spec.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m src/source-test-discovery.spec.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/source-pagination-resume.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/source-adapter-resolution-binding.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/source-network-runtime-admission.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m      Tests [22m [1m[32m224 passed[39m[22m[90m (224)[39m
+[2m   Start at [22m 12:20:12
+[2m   Duration [22m 9.39s[2m (transform 887ms, setup 0ms, import 3.18s, tests 457ms, environment 1ms)[22m
+
