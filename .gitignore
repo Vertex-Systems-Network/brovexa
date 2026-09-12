@@ -1,1 +1,13 @@
-Nothing needs to be added to .gitignore since the changes only include TypeScript source files (.ts) and test files (.spec.ts), which are source code files that should be tracked in version control. No build artifacts, dependencies, temporary files, or other ignorable content was detected in the file changes.
+```
+# Turborepo cache
+.turbo/
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# Compressed archives
+*.tar.zst
+```

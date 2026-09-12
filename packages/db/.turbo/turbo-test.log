@@ -2,17 +2,17 @@ $ vitest run
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/workspace/packages/db[39m
 
- [32m✓[39m src/source-transport-audit-persistence.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 129[2mms[22m[39m
- [32m✓[39m src/source-transport-audit-record.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 32[2mms[22m[39m
- [32m✓[39m src/memory-eval-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 77[2mms[22m[39m
- [32m✓[39m src/schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
- [32m✓[39m src/identity.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 66[2mms[22m[39m
- [32m✓[39m src/source-transport-audit-evidence.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 79[2mms[22m[39m
- [32m✓[39m src/agent-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 65[2mms[22m[39m
- [32m✓[39m src/agent-lifecycle-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/source-transport-audit-persistence.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m src/source-transport-audit-record.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/memory-eval-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m src/source-transport-audit-evidence.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m src/schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/agent-lifecycle-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/agent-schema.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/identity.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 69[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m8 passed[39m[22m[90m (8)[39m
 [2m      Tests [22m [1m[32m30 passed[39m[22m[90m (30)[39m
-[2m   Start at [22m 12:19:58
-[2m   Duration [22m 12.71s[2m (transform 1.16s, setup 0ms, import 4.20s, tests 461ms, environment 1ms)[22m
+[2m   Start at [22m 12:24:54
+[2m   Duration [22m 11.21s[2m (transform 1.21s, setup 0ms, import 4.01s, tests 352ms, environment 1ms)[22m
 
