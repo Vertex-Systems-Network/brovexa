@@ -11,30 +11,36 @@ build/
 .turbo/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Logs
 *.log
+turbo-build.log
+turbo-test.log
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
-# Editor/IDE
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
-# OS generated files
+# OS
 .DS_Store
 Thumbs.db
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
-*.coverage
+.coverage
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
 
 # Compressed files
 *.zip

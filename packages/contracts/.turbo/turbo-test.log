@@ -2,29 +2,29 @@ $ vitest run
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/workspace/packages/contracts[39m
 
- [32m✓[39m src/source-transport.spec.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 214[2mms[22m[39m
- [32m✓[39m src/source-execution-e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 206[2mms[22m[39m
- [32m✓[39m src/source.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 192[2mms[22m[39m
- [32m✓[39m src/source-redirect-revalidation.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 204[2mms[22m[39m
- [32m✓[39m src/source-transport-security.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 91[2mms[22m[39m
- [32m✓[39m src/source-pagination-coverage.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 129[2mms[22m[39m
- [32m✓[39m src/ai.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 41[2mms[22m[39m
- [32m✓[39m src/source-transport-hop-chain.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 81[2mms[22m[39m
- [32m✓[39m src/source-adversarial-security.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 103[2mms[22m[39m
- [32m✓[39m src/source-adapter.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 96[2mms[22m[39m
- [32m✓[39m src/source-transport-result.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 79[2mms[22m[39m
- [32m✓[39m src/source-adapter-module.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 79[2mms[22m[39m
- [32m✓[39m src/source-discovery-plan.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
- [32m✓[39m src/source-discovery-dedup.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 36[2mms[22m[39m
- [32m✓[39m src/source-transport-resolution-binding.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 52[2mms[22m[39m
- [32m✓[39m src/source-discovery-dedup-evaluator.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 47[2mms[22m[39m
- [32m✓[39m src/source-resolution-evidence.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 21[2mms[22m[39m
- [32m✓[39m src/agent-execution.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 20[2mms[22m[39m
- [32m✓[39m src/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/source-adversarial-security.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 285[2mms[22m[39m
+ [32m✓[39m src/source.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 186[2mms[22m[39m
+ [32m✓[39m src/source-adapter.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m src/agent-execution.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m src/source-transport.spec.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 290[2mms[22m[39m
+ [32m✓[39m src/source-redirect-revalidation.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 128[2mms[22m[39m
+ [32m✓[39m src/source-execution-e2e.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 128[2mms[22m[39m
+ [32m✓[39m src/ai.spec.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32m✓[39m src/source-pagination-coverage.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 112[2mms[22m[39m
+ [32m✓[39m src/source-transport-security.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m src/source-adapter-module.spec.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/source-transport-hop-chain.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m src/source-discovery-dedup.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m src/source-transport-result.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/source-discovery-dedup-evaluator.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m src/source-resolution-evidence.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/source-transport-resolution-binding.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/source-discovery-plan.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m src/index.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
  [32m✓[39m src/source-network-safety.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m20 passed[39m[22m[90m (20)[39m
 [2m      Tests [22m [1m[32m200 passed[39m[22m[90m (200)[39m
-[2m   Start at [22m 21:32:13
-[2m   Duration [22m 21.18s[2m (transform 2.03s, setup 0ms, import 7.77s, tests 1.73s, environment 55ms)[22m
+[2m   Start at [22m 22:04:13
+[2m   Duration [22m 21.24s[2m (transform 1.74s, setup 0ms, import 7.90s, tests 2.00s, environment 3ms)[22m
 
