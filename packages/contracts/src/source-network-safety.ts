@@ -76,7 +76,7 @@ export function classifySourceAddress(address: string, family: 4 | 6): { classif
     }
 
     // Private: 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
-    if (a === 172 && b >= 16 && b <= 31) {
+    if (a === 172 && b !== undefined && b >= 16 && b <= 31) {
       return { classification: 'private' };
     }
 
@@ -91,7 +91,7 @@ export function classifySourceAddress(address: string, family: 4 | 6): { classif
     }
 
     // Multicast: 224.0.0.0/4
-    if (a >= 224 && a <= 239) {
+    if (a !== undefined && a >= 224 && a <= 239) {
       return { classification: 'multicast' };
     }
 
@@ -111,12 +111,12 @@ export function classifySourceAddress(address: string, family: 4 | 6): { classif
     }
 
     // Reserved: 100.64.0.0/10 (Shared Address Space for CGN)
-    if (a === 100 && b >= 64 && b <= 127) {
+    if (a === 100 && b !== undefined && b >= 64 && b <= 127) {
       return { classification: 'reserved' };
     }
 
     // Reserved: 240.0.0.0/4
-    if (a >= 240) {
+    if (a !== undefined && a >= 240) {
       return { classification: 'reserved' };
     }
 
@@ -128,7 +128,7 @@ export function classifySourceAddress(address: string, family: 4 | 6): { classif
   if (family === 6) {
     // Handle IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
     const ipv4MappedMatch = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (ipv4MappedMatch) {
+    if (ipv4MappedMatch && ipv4MappedMatch[1]) {
       // Recursively classify the embedded IPv4 address
       return classifySourceAddress(ipv4MappedMatch[1], 4);
     }
