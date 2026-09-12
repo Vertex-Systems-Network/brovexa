@@ -24,6 +24,7 @@ __exportStar(require("./source-adapter-module"), exports);
 __exportStar(require("./source-discovery-dedup"), exports);
 __exportStar(require("./source-discovery-dedup-evaluator"), exports);
 __exportStar(require("./source-discovery-plan"), exports);
+__exportStar(require("./source-network-safety"), exports);
 __exportStar(require("./source-pagination-coverage"), exports);
 __exportStar(require("./source-transport"), exports);
 __exportStar(require("./source-transport-hop-chain"), exports);

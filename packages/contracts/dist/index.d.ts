@@ -7,6 +7,7 @@ export * from './source-adapter-module';
 export * from './source-discovery-dedup';
 export * from './source-discovery-dedup-evaluator';
 export * from './source-discovery-plan';
+export * from './source-network-safety';
 export * from './source-pagination-coverage';
 export * from './source-transport';
 export * from './source-transport-hop-chain';
