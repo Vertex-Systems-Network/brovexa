@@ -222,25 +222,24 @@ export type ResearchJobPreflightDecision = z.infer<typeof ResearchJobPreflightDe
 
 export function evaluateResearchJobPreflight(rawInput: ResearchJobPreflightInput): ResearchJobPreflightDecision {
   const input = ResearchJobPreflightInputSchema.parse(rawInput);
-  const approved = input.job.approvedSourceKeys;
+  const requested = input.job.discoveryPlan.sourceKeys;
   const available = new Set(input.availableSourceKeys);
   const blocked = new Set(input.blockedSourceKeys);
   const review = new Set(input.reviewRequiredSourceKeys);
   const reasons = new Set<string>();
 
-  const unavailable = approved.filter((sourceKey) => !available.has(sourceKey));
-  const explicitlyBlocked = approved.filter((sourceKey) => blocked.has(sourceKey));
-  const needsReview = approved.filter((sourceKey) => review.has(sourceKey));
-  const executableSourceKeys = input.job.discoveryPlan.sourceKeys.filter(
-    (sourceKey) => available.has(sourceKey) && !blocked.has(sourceKey) && !review.has(sourceKey),
-  );
+  const unavailable = requested.filter((sourceKey) => !available.has(sourceKey));
+  const explicitlyBlocked = requested.filter((sourceKey) => blocked.has(sourceKey));
+  const needsReview = requested.filter((sourceKey) => review.has(sourceKey));
+  const eligibleAfterReview = requested.filter((sourceKey) => available.has(sourceKey) && !blocked.has(sourceKey));
+  const executableSourceKeys = eligibleAfterReview.filter((sourceKey) => !review.has(sourceKey));
 
   if (unavailable.length > 0) reasons.add('research_source_unavailable');
   if (explicitlyBlocked.length > 0) reasons.add('research_source_blocked');
   if (needsReview.length > 0) reasons.add('research_source_review_required');
-  if (executableSourceKeys.length === 0) reasons.add('research_no_executable_source');
+  if (eligibleAfterReview.length === 0) reasons.add('research_no_eligible_source');
 
-  const decision = explicitlyBlocked.length > 0 || unavailable.length > 0 || executableSourceKeys.length === 0
+  const decision = explicitlyBlocked.length > 0 || unavailable.length > 0 || eligibleAfterReview.length === 0
     ? 'blocked'
     : needsReview.length > 0
       ? 'review_required'
