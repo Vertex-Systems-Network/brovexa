@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/source-observability",
+  "slot_id": "OBSERVE",
+  "agent_id": "AGENT-OBSERVE",
+  "agent_instance_id": "observe-recovery-20260915-4c2e91",
+  "work_packet_id": "M02-NET-009",
+  "lease_id": "lease-observe-recovery-20260915-4c2e91",
+  "synced_main_sha": "e635aadcf425ec50ca95c38ecb7c4e26680ec66d",
+  "sync_epoch": 45,
+  "acquired_branch_head_sha": "1422febdfcd9efb9a657a0d8e2231121ff8d8701",
+  "acquired_at": "2026-09-15T03:33:00+05:00",
+  "renewed_at": "2026-09-15T03:33:00+05:00"
+}
