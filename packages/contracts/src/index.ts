@@ -5,7 +5,30 @@ export * from './ai';
 export * from './identity';
 export * from './source-adapter';
 export * from './source-adapter-module';
-export * from './source-provider-adapter';
+// Provider adapter exports (avoiding AdapterExecutionResult re-export conflict)
+export {
+  ProviderCapability,
+  ProviderSafetyLevel,
+  AdapterStatus,
+  ProviderIdentitySchema,
+  ProviderCapabilitySchema,
+  ProviderModelInfoSchema,
+  ProviderAdapterConfigSchema,
+  ChatMessageSchema,
+  ChatCompletionRequestSchema,
+  ChatCompletionResponseSchema,
+  AdapterHealthStatusSchema,
+  AdapterExecutionResultSchema as ProviderAdapterExecutionResultSchema,
+  type ProviderIdentity,
+  type ProviderCapabilityValue,
+  type ProviderModelInfo,
+  type ProviderAdapterConfig,
+  type ChatMessage,
+  type ChatCompletionRequest,
+  type ChatCompletionResponse,
+  type AdapterHealthStatus,
+  type IProviderAdapter,
+} from './source-provider-adapter';
 export * from './source-discovery-dedup';
 export * from './source-discovery-dedup-evaluator';
 export * from './source-discovery-plan';

@@ -17,6 +17,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "4.5.4"
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.21",
+    "vitest": "^3.2.4"
   }
 }

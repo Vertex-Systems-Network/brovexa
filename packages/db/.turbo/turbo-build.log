@@ -1,3 +1,4 @@
-warn: This version of pnpm requires at least Node.js v22.13
-warn: The current version of Node.js is v20.20.2
-warn: Visit https://r.pnpm.io/comp to see the list of past pnpm versions with respective Node.js version support.
+
+> @brovexa/db@0.1.0 build /workspace/packages/db
+> tsc -p tsconfig.build.json
+

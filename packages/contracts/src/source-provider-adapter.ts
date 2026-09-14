@@ -77,7 +77,7 @@ export const ProviderIdentitySchema = z.object({
 export const ProviderCapabilitySchema = z.object({
   capability: z.nativeEnum(ProviderCapability),
   supported: z.boolean(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ProviderModelInfoSchema = z.object({
@@ -126,7 +126,7 @@ export const ChatCompletionRequestSchema = z.object({
   tools: z.array(z.object({
     name: z.string().max(128),
     description: z.string().max(512),
-    parameters: z.record(z.unknown()),
+    parameters: z.record(z.string(), z.unknown()),
   })).optional(),
 });
 
@@ -178,7 +178,7 @@ export const AdapterExecutionResultSchema = z.object({
 // ============================================================================
 
 export type ProviderIdentity = z.infer<typeof ProviderIdentitySchema>;
-export type ProviderCapability = z.infer<typeof ProviderCapabilitySchema>;
+export type ProviderCapabilityValue = z.infer<typeof ProviderCapabilitySchema>;
 export type ProviderModelInfo = z.infer<typeof ProviderModelInfoSchema>;
 export type ProviderAdapterConfig = z.infer<typeof ProviderAdapterConfigSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
@@ -281,7 +281,7 @@ export function generateTestError(
   providerId: string,
   errorCode: 'TIMEOUT' | 'RATE_LIMIT' | 'INVALID_REQUEST' | 'SERVICE_UNAVAILABLE'
 ): AdapterExecutionResult {
-  const errorMessages: Record<string, string> = {
+  const errorMessages: Record<string, string | undefined> = {
     TIMEOUT: 'Request timed out after 30000ms (simulated)',
     RATE_LIMIT: 'Rate limit exceeded (simulated)',
     INVALID_REQUEST: 'Invalid request format (simulated)',
@@ -294,7 +294,7 @@ export function generateTestError(
     providerId,
     error: {
       code: errorCode,
-      message: errorMessages[errorCode],
+      message: errorMessages[errorCode] ?? 'Unknown error',
       retryable: errorCode === 'TIMEOUT' || errorCode === 'SERVICE_UNAVAILABLE',
     },
     durationMs: errorCode === 'TIMEOUT' ? 30000 : Math.floor(Math.random() * 100) + 10,
