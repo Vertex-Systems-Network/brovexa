@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "supervisor/integration-control",
+  "slot_id": "SUPERVISOR",
+  "agent_id": "SUPERVISOR",
+  "agent_instance_id": "supervisor-chatgpt-20260915-8f41c2",
+  "work_packet_id": "SUP-M02-TEN-WORKER-CONTROL",
+  "lease_id": "lease-supervisor-20260915-8f41c2",
+  "synced_main_sha": "d6faf2a9c87c1bb1589e8d7b857a1237dfa49046",
+  "sync_epoch": 41,
+  "acquired_branch_head_sha": "15df3eb361d932fad1d4226dcfdaa63d81f982e0",
+  "acquired_at": "2026-09-15T03:33:00+05:00",
+  "renewed_at": "2026-09-15T03:33:00+05:00"
+}
