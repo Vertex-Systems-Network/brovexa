@@ -1,0 +1,34 @@
+version: 1
+policy: integration-owned-when-parallel
+
+paths:
+  - AGENTS.md
+  - README.md
+  - docs/PROJECT_PLAN.md
+  - docs/CHECKPOINT.md
+  - docs/PARALLEL_AGENT_DEVELOPMENT.md
+  - docs/AI_NATIVE_PLAN.md
+  - docs/NEW_AGENT_ONBOARDING.md
+  - .agent/**
+  - .github/workflows/**
+  - .github/PULL_REQUEST_TEMPLATE.md
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - packages/*/package.json
+  - apps/*/package.json
+  - packages/db/src/index.ts
+  - packages/db/src/client.ts
+  - scripts/verify-db.mjs
+  - scripts/verify-identity.mjs
+  - scripts/verify-queue.mjs
+  - scripts/verify-parallel-development.mjs
+
+rules:
+  - Feature agents should submit requested shared-file changes in their handoff when another active workstream may touch the same path.
+  - The Supervisor composes concurrent shared-file changes.
+  - A path may be explicitly delegated to one agent when no competing writer exists.
+  - Lockfile and CI changes require dependency/supply-chain impact review.
+  - Documentation and agent instructions must be synchronized when workflow behavior changes.
+  - New-agent slot occupancy and onboarding instructions are Supervisor/integration-owned.
+  - Shared-file conflicts discovered while synchronizing a branch are escalated to the Supervisor instead of independently rewriting integration-owned content.

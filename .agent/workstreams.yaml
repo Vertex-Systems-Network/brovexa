@@ -1,0 +1,166 @@
+version: 3
+
+default_concurrency:
+  target_agents: 6
+  soft_max_agents: 8
+  scale_beyond_soft_max_requires_metrics_review: true
+
+explicit_cycle_capacity:
+  cycle: M02_PROVIDER_NEUTRAL_NETWORK_SAFETY
+  worker_target: 10
+  total_writer_target: 11
+  hard_cap_writers: 12
+  authorization: owner-requested-supervisor-governance-change
+  branch_first_bootstrap_completed: true
+  real_provider_network_activation: false
+  production_credentials: false
+
+recommended_roles:
+  - integration_architecture
+  - contracts_policy
+  - database_persistence
+  - worker_runtime
+  - module_specialist
+  - verification_security
+  - network_resolution
+  - transport_sandbox
+  - redirect_revalidation
+  - source_observability
+  - adversarial_network_security
+
+states:
+  - PLANNED
+  - CLAIMED
+  - WORKING
+  - BLOCKED
+  - READY_FOR_REVIEW
+  - READY_FOR_INTEGRATION
+  - PAUSED_FOR_SYNC
+  - INTEGRATING
+  - VERIFIED
+  - MERGED
+  - SUPERSEDED
+
+claim_rules:
+  - One active owner per work packet unless explicitly decomposed into child work packets.
+  - One active coding workstream per agent by default.
+  - One workstream uses one isolated branch/worktree and one PR by default.
+  - One occupied slot may have only one live mutating agent instance, enforced by its active slot lease.
+  - An agent must not claim work whose required dependency contract is undefined.
+  - A workstream behind the latest Supervisor synchronization epoch must enter PAUSED_FOR_SYNC before new feature work or completion submission.
+  - A newly arriving agent cannot claim a workstream until the Supervisor assigns an OPEN live slot through GitHub issue #53.
+  - A logically assigned agent cannot mutate its branch until its unique runtime instance atomically acquires the slot lease on coordination/leases.
+  - The explicit M02 ten-worker cycle may use ten worker slots only after its branch-first governance expansion is merged and live issue #53 is reconciled.
+  - The explicit cycle never authorizes real provider HTTP, production credentials, unrestricted acquisition, or more than twelve total live writers.
+
+standing_branches:
+  - slot_id: SUPERVISOR
+    agent_id: SUPERVISOR
+    role: integration_architecture
+    module: integration_control
+    branch: supervisor/integration-control
+  - slot_id: CONTRACTS
+    agent_id: AGENT-CONTRACTS
+    role: contracts_policy
+    module: contracts_policy
+    branch: agent/contracts-policy
+  - slot_id: DATABASE
+    agent_id: AGENT-DB
+    role: database_persistence
+    module: database_persistence
+    branch: agent/database-persistence
+  - slot_id: RUNTIME
+    agent_id: AGENT-RUNTIME
+    role: worker_runtime
+    module: worker_runtime
+    branch: agent/worker-runtime
+  - slot_id: MODULE
+    agent_id: AGENT-MODULE
+    role: module_specialist
+    module: module_infrastructure
+    branch: agent/module-infrastructure
+  - slot_id: VERIFY
+    agent_id: AGENT-VERIFY
+    role: verification_security
+    module: verification_security
+    branch: agent/verification-security
+  - slot_id: NETWORK
+    agent_id: AGENT-NETWORK
+    role: network_resolution
+    module: network_resolution
+    branch: agent/network-resolution
+  - slot_id: TRANSPORT
+    agent_id: AGENT-TRANSPORT
+    role: transport_sandbox
+    module: transport_sandbox
+    branch: agent/transport-sandbox
+  - slot_id: REDIRECT
+    agent_id: AGENT-REDIRECT
+    role: redirect_revalidation
+    module: redirect_revalidation
+    branch: agent/redirect-revalidation
+  - slot_id: OBSERVE
+    agent_id: AGENT-OBSERVE
+    role: source_observability
+    module: source_observability
+    branch: agent/source-observability
+  - slot_id: ADVERSARY
+    agent_id: AGENT-ADVERSARY
+    role: adversarial_network_security
+    module: adversarial_network_security
+    branch: agent/adversarial-network-security
+
+slot_registry:
+  static_definition_path: .agent/slots.yaml
+  live_occupancy_issue: 53
+  live_occupancy_authority: github-issue-53-body
+  assignment_authority: SUPERVISOR
+  new_agent_start_branch: main
+  assignment_decisions_serialized: true
+  no_open_slot_response: "Go Home Come Back Next Time"
+
+branch_leases:
+  branch_lease_source: coordination/leases
+  lease_path_pattern: .leases/<SLOT_ID>.json
+  one_live_instance_per_occupied_slot: true
+  lease_acquisition_atomic_create: true
+  lease_renewal_compare_and_swap: true
+  lease_release_compare_and_swap: true
+  implicit_expiry: false
+  policy_doc: docs/AGENT_BRANCH_LEASES.md
+
+live_state:
+  active_workstreams_source: pull-requests-and-handoffs
+  synchronization_source: github-issue-50-latest-supervisor-broadcast
+  slot_occupancy_source: github-issue-53-body
+  branch_instance_lease_source: coordination/leases
+  versioned_manifest_is_live_task_registry: false
+  versioned_manifest_is_live_slot_registry: false
+
+active_workstreams: []
+
+handoff_required_fields:
+  - task_id
+  - agent_id
+  - agent_instance_id
+  - owner_role
+  - assigned_slot_id
+  - lease_id
+  - lease_lock_path
+  - status
+  - base_sha
+  - head_sha
+  - branch
+  - pull_request
+  - changed_paths
+  - contract_impact
+  - migration_impact
+  - dependency_assumptions
+  - synced_main_sha
+  - sync_epoch
+  - verification_evidence
+  - security_compliance_impact
+  - shared_file_requests
+  - known_limitations
+  - instruction_drift_result
+  - completion_signal

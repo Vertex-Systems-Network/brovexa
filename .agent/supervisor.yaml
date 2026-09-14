@@ -1,0 +1,129 @@
+version: 4
+policy: supervisor-reviewed-integration
+
+supervisor:
+  agent_id: SUPERVISOR
+  main_branch: main
+  work_branch: supervisor/integration-control
+  role: integration_architecture
+  state_model: interrupt-review-merge-broadcast-resume
+
+capacity:
+  generic_target_agents: 6
+  generic_soft_max_agents: 8
+  explicit_m02_worker_target: 10
+  explicit_m02_total_writer_target: 11
+  hard_cap_writers: 12
+  explicit_cycle_requires_precreated_standing_branches: true
+  explicit_cycle_real_provider_network_activation: false
+
+new_agent_onboarding:
+  required_start_branch: main
+  require_exact_current_main_sha: true
+  slot_definitions: .agent/slots.yaml
+  live_slot_registry_issue: 53
+  live_slot_registry_label: "GitHub issue #53"
+  live_slot_registry_authority: github-issue-53-body
+  plan: docs/AI_NATIVE_PLAN.md
+  assignment_authority: SUPERVISOR
+  decisions_serialized: true
+  re_read_live_registry_before_assignment: true
+  re_read_live_registry_after_assignment: true
+  assign_only_status: OPEN
+  branch_must_match_current_main_before_agent_switch: true
+  update_live_registry_before_feature_work: true
+  record_agent_name: true
+  record_start_status: true
+  record_assigned_main_sha: true
+  record_sync_epoch: true
+  increment_registry_revision: true
+  versioned_docs_do_not_track_live_occupancy: true
+  no_open_slot_response: "Go Home Come Back Next Time"
+  no_open_slot_action: STOP_WITHOUT_ASSIGNMENT_OR_WORK
+  arrival_must_not_expand_capacity: true
+
+branch_leases:
+  lease_branch: coordination/leases
+  lease_path_pattern: .leases/<SLOT_ID>.json
+  lease_scope: per-slot-single-live-instance
+  lease_required_before_branch_mutation: true
+  lease_required_for_supervisor: true
+  atomic_acquire: create-file-if-absent
+  renew_strategy: compare-and-swap-current-blob-sha
+  release_strategy: delete-with-current-blob-sha
+  implicit_expiry: false
+  lease_takeover_requires_explicit_recovery_audit: true
+  live_slot_assignment_also_required: true
+  agent_instance_id_required: true
+  lease_id_required: true
+  acquisition_head_must_remain_ancestor: true
+  pr_lease_verifier: scripts/verify-pr-agent-lease.mjs
+  policy_doc: docs/AGENT_BRANCH_LEASES.md
+
+completion_signal:
+  exact_phrase: "Work Done and Submitted"
+  canonical_event: top-level-pr-comment-exact-body
+  meaning: READY_FOR_SUPERVISOR_REVIEW
+  head_change_invalidates_prior_signal: true
+  latest_signal_must_postdate_current_head: true
+  requires:
+    - open_pull_request
+    - exact_head_sha
+    - complete_handoff
+    - instruction_drift_check
+    - dependency_state
+    - verification_evidence
+    - synced_to_latest_broadcast_epoch
+    - valid_live_slot_assignment
+    - valid_active_branch_lease
+
+interrupt_flow:
+  - PAUSE_SUPERVISOR_WORK
+  - REVIEW_EXACT_HEAD
+  - REQUEST_CHANGES_OR_APPROVE
+  - REQUIRE_EXACT_HEAD_GATES
+  - MERGE_WITH_EXPECTED_HEAD
+  - READ_RESULTING_MAIN
+  - INCREMENT_SYNC_EPOCH
+  - BROADCAST_ALL_ACTIVE_AGENTS
+  - RESUME_SUPERVISOR_WORK
+
+review_queue:
+  policy: fifo-with-dependency-priority
+  concurrent_overlapping_merges: false
+
+broadcast:
+  issue_number: 50
+  live_state_authority: latest-supervisor-broadcast-comment
+  exact_alert: "New changes have been merged — please merge these changes into your branch first, then resume your own work."
+  also_comment_on_active_agent_prs: true
+  require_main_sha: true
+  require_sync_epoch: true
+  epoch_monotonic: true
+
+synchronization:
+  baseline_epoch: 1
+  baseline_main_sha: "890618e28c5e300496389051b1b3d9c32880adf7"
+  live_epoch_source: github-issue-50-latest-supervisor-broadcast
+  live_main_sha_source: github-issue-50-latest-supervisor-broadcast
+  strategy: merge-current-main-non-destructively
+  force_history_rewrite_default: false
+  shared_file_conflicts_escalate_to_supervisor: true
+  must_sync_before_resume: true
+  must_sync_before_completion_signal: true
+  active_lease_must_be_renewed_after_sync: true
+
+main_integration:
+  direct_push_prohibited: true
+  pr_and_expected_head_required: true
+  hosted_ci_runs_on_pull_request_and_main_push: true
+  main_push_provenance_check_required: true
+  github_branch_protection_external_setting_required: true
+
+states:
+  - WORKING
+  - PAUSED_FOR_REVIEW
+  - REVIEWING
+  - CHANGES_REQUESTED
+  - MERGING
+  - BROADCASTING

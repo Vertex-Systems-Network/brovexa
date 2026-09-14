@@ -1,0 +1,34 @@
+version: 1
+policy: serialized-reservation
+
+latest_integrated_migration: "0010_source_transport_audit_persistence"
+next_unreserved_number: "0012"
+
+rules:
+  - Reserve a migration number before creating migration files.
+  - One migration number may have only one active reservation.
+  - Reservation records task ID, branch, owner and status.
+  - Parallel agents must not independently choose the same next number.
+  - Integrated migrations are immutable; use a new forward migration unless an explicit migration policy says otherwise.
+  - Down/rollback behavior and destructive verifier reset order must be considered by the owning workstream.
+
+reservation_statuses:
+  - RESERVED
+  - IMPLEMENTED
+  - INTEGRATED
+  - RELEASED
+  - CANCELLED
+
+reservations:
+  - number: "0010"
+    name: source_transport_audit_persistence
+    task_id: M02-TRANSPORT-AUDIT-DURABLE-PERSISTENCE
+    branch: agent/database-persistence
+    owner: M02-DATABASE-TRANSPORT-AUDIT-PERSISTENCE
+    status: INTEGRATED
+  - number: "0011"
+    name: discovery_checkpoint_persistence
+    task_id: M02-DISCOVERY-CHECKPOINT-PERSISTENCE
+    branch: agent/database-persistence
+    owner: M02-DATABASE-DISCOVERY-CHECKPOINT
+    status: IMPLEMENTED
