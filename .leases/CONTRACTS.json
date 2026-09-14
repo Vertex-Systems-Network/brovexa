@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/contracts-policy",
+  "slot_id": "CONTRACTS",
+  "agent_id": "AGENT-CONTRACTS",
+  "agent_instance_id": "contracts-chatgpt-20260915-a13c9e",
+  "work_packet_id": "M02A-ACQ-001",
+  "lease_id": "lease-contracts-20260915-a13c9e",
+  "synced_main_sha": "140652b3f61d1c21b54525a42cc0c0eab06a4f51",
+  "sync_epoch": 48,
+  "acquired_branch_head_sha": "140652b3f61d1c21b54525a42cc0c0eab06a4f51",
+  "acquired_at": "2026-09-15T04:08:00+05:00",
+  "renewed_at": "2026-09-15T04:08:00+05:00"
+}
