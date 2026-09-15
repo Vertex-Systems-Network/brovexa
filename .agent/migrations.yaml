@@ -1,7 +1,7 @@
 version: 1
 policy: serialized-reservation
 
-latest_integrated_migration: "0011_discovery_checkpoint_persistence"
+latest_integrated_migration: "0012_research_job_acquisition_persistence"
 next_unreserved_number: "0013"
 
 rules:
@@ -37,4 +37,4 @@ reservations:
     task_id: M02A-ACQ-002
     branch: agent/database-persistence
     owner: AGENT-DATABASE
-    status: IMPLEMENTED
+    status: INTEGRATED
