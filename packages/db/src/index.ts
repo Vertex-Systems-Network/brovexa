@@ -32,6 +32,8 @@ export * from './jobs';
 export * from './lifecycle-persistence';
 export * from './memory-eval-persistence';
 export * from './migrations';
+export * from './research-job-persistence';
+export * from './research-job-schema';
 export * from './schema';
 export * from './source-discovery-checkpoint-persistence';
 export * from './source-registry-persistence';

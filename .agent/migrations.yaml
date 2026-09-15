@@ -1,8 +1,8 @@
 version: 1
 policy: serialized-reservation
 
-latest_integrated_migration: "0010_source_transport_audit_persistence"
-next_unreserved_number: "0012"
+latest_integrated_migration: "0012_research_job_acquisition_persistence"
+next_unreserved_number: "0013"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -31,4 +31,10 @@ reservations:
     task_id: M02-DISCOVERY-CHECKPOINT-PERSISTENCE
     branch: agent/database-persistence
     owner: M02-DATABASE-DISCOVERY-CHECKPOINT
-    status: IMPLEMENTED
+    status: INTEGRATED
+  - number: "0012"
+    name: research_job_acquisition_persistence
+    task_id: M02A-ACQ-002
+    branch: agent/database-persistence
+    owner: AGENT-DATABASE
+    status: INTEGRATED

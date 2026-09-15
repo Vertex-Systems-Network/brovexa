@@ -3,6 +3,7 @@ import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import * as agentSchema from './agent-schema';
 import * as connectorHealthSchema from './connector-health-schema';
 import * as coreSchema from './schema';
+import * as researchJobSchema from './research-job-schema';
 import * as sourceSchema from './source-schema';
 import * as sourceTaskSchema from './source-task-schema';
 import * as sourceTransportAuditSchema from './source-transport-audit-schema';
@@ -10,6 +11,7 @@ import * as sourceTransportAuditSchema from './source-transport-audit-schema';
 const schema = {
   ...coreSchema,
   ...agentSchema,
+  ...researchJobSchema,
   ...sourceSchema,
   ...sourceTaskSchema,
   ...connectorHealthSchema,

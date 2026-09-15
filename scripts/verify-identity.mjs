@@ -67,6 +67,8 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS acquisition_shards CASCADE');
+  await pool.query('DROP TABLE IF EXISTS research_jobs CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_discovery_checkpoints CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
