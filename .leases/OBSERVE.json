@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/source-observability",
+  "slot_id": "OBSERVE",
+  "agent_id": "AGENT-OBSERVE",
+  "agent_instance_id": "observe-chatgpt-20260915-91c4ad",
+  "work_packet_id": "M02A-ACQ-005",
+  "lease_id": "lease-observe-20260915-91c4ad",
+  "synced_main_sha": "407692f8182f710747efcbd1437f7712c3b0188a",
+  "sync_epoch": 57,
+  "acquired_branch_head_sha": "407692f8182f710747efcbd1437f7712c3b0188a",
+  "acquired_at": "2026-09-15T18:49:04+05:00",
+  "renewed_at": "2026-09-15T18:49:04+05:00"
+}
