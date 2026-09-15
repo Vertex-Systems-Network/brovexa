@@ -2,6 +2,25 @@ import type { Pool } from 'pg';
 import { withPgTransaction } from './client';
 import type { WorkErrorClass, WorkUnitStatus } from './schema';
 
+const acquisitionExecutionAllowedSql = `(
+  NOT EXISTS (
+    SELECT 1
+    FROM acquisition_shards ash
+    WHERE ash.work_unit_id = job_work_units.id
+      AND ash.workspace_id = job_work_units.workspace_id
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM acquisition_shards ash
+    JOIN research_job_controls rjc
+      ON rjc.research_job_id = ash.research_job_id
+     AND rjc.workspace_id = ash.workspace_id
+    WHERE ash.work_unit_id = job_work_units.id
+      AND ash.workspace_id = job_work_units.workspace_id
+      AND rjc.state = 'active'
+  )
+)`;
+
 export interface CreateCanonicalWorkInput {
   workspaceId: string;
   jobType: string;
@@ -157,6 +176,7 @@ export async function claimWorkUnit(
        WHERE id = $1
          AND attempt_count = $3 - 1
          AND cancellation_requested_at IS NULL
+         AND ${acquisitionExecutionAllowedSql}
          AND (
            status = 'runnable'
            OR (status = 'retry_wait' AND (next_attempt_at IS NULL OR next_attempt_at <= now()))
@@ -368,6 +388,7 @@ export async function listRecoverableWorkUnits(pool: Pool): Promise<RecoverableW
     `SELECT id, correlation_id, attempt_count, next_attempt_at
      FROM job_work_units
      WHERE cancellation_requested_at IS NULL
+       AND ${acquisitionExecutionAllowedSql}
        AND (
          status = 'runnable'
          OR (status = 'retry_wait' AND (next_attempt_at IS NULL OR next_attempt_at <= now()))
