@@ -7,9 +7,9 @@
   "agent_instance_id": "supervisor-chatgpt-20260915-8f41c2",
   "work_packet_id": "SUP-M02A-ACQUISITION-CONTROL",
   "lease_id": "lease-supervisor-20260915-8f41c2",
-  "synced_main_sha": "f5d513e540289dfd6d8f351676e7463644e564bb",
-  "sync_epoch": 49,
+  "synced_main_sha": "507308b297334bb4a6cd4f9077e5a6e832e32f2c",
+  "sync_epoch": 50,
   "acquired_branch_head_sha": "15df3eb361d932fad1d4226dcfdaa63d81f982e0",
   "acquired_at": "2026-09-15T03:33:00+05:00",
-  "renewed_at": "2026-09-15T04:17:00+05:00"
+  "renewed_at": "2026-09-15T12:43:00+05:00"
 }
