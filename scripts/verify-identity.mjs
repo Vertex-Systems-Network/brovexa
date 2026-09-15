@@ -67,6 +67,7 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS research_job_controls CASCADE');
   await pool.query('DROP TABLE IF EXISTS acquisition_shards CASCADE');
   await pool.query('DROP TABLE IF EXISTS research_jobs CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_discovery_checkpoints CASCADE');
@@ -117,7 +118,6 @@ try {
   const identity = await pool.query('SELECT current_database() AS name');
   const databaseName = identity.rows[0]?.name;
   assert.ok(databaseName?.endsWith('_test'), `Refusing destructive verification against database: ${databaseName}`);
-
   await resetTestDatabase();
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), expectedMigrations);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
