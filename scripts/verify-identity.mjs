@@ -118,6 +118,7 @@ try {
   const identity = await pool.query('SELECT current_database() AS name');
   const databaseName = identity.rows[0]?.name;
   assert.ok(databaseName?.endsWith('_test'), `Refusing destructive verification against database: ${databaseName}`);
+
   await resetTestDatabase();
   assert.deepEqual(await applyPendingMigrations(pool, migrationsDir), expectedMigrations);
   assert.equal((await probeDatabase(pool)).schemaReady, true);
