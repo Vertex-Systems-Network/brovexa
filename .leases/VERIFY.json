@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/verification-security",
+  "slot_id": "VERIFY",
+  "agent_id": "AGENT-VERIFY",
+  "agent_instance_id": "verify-chatgpt-20260916-6d2f81",
+  "work_packet_id": "M02A-ACQ-006",
+  "lease_id": "lease-verify-20260916-6d2f81",
+  "synced_main_sha": "3773ad5a29076e26494bc823d3a534c02f2c92d5",
+  "sync_epoch": 58,
+  "acquired_branch_head_sha": "055f864f2d9fd650ba2381aa025592d18062344d",
+  "acquired_at": "2026-09-16T02:34:38+05:00",
+  "renewed_at": "2026-09-16T02:34:38+05:00"
+}
