@@ -5,7 +5,7 @@
   "slot_id": "SUPERVISOR",
   "agent_id": "SUPERVISOR",
   "agent_instance_id": "supervisor-chatgpt-20260915-8f41c2",
-  "work_packet_id": "SUP-M02A-DOWNSTREAM-CONTROL",
+  "work_packet_id": "SUP-M02A-ACQUISITION-CONTROL",
   "lease_id": "lease-supervisor-20260915-8f41c2",
   "synced_main_sha": "467786854577fe37f64670a395124f667743bc62",
   "sync_epoch": 53,
