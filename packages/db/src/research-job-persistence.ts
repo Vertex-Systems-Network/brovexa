@@ -493,8 +493,18 @@ export async function createAcquisitionShard(pool: Pool, input: CreateAcquisitio
 }
 
 function validateCounters(counters: AcquisitionProgressCounters): void {
-  for (const [field, value] of Object.entries(counters)) {
-    assertSafeInteger(value, `counters.${field}`, 'ACQUISITION_SHARD_INPUT_INVALID');
+  const fields: readonly (keyof AcquisitionProgressCounters)[] = [
+    'completedUnits',
+    'failedUnits',
+    'returnedRecords',
+    'requests',
+    'pages',
+    'bytes',
+    'currencyMicros',
+    'runtimeMs',
+  ];
+  for (const field of fields) {
+    assertSafeInteger(counters[field], `counters.${field}`, 'ACQUISITION_SHARD_INPUT_INVALID');
   }
 }
 
