@@ -43,4 +43,4 @@ reservations:
     task_id: M02A-ACQ-004-DB-CONTROL
     branch: agent/database-persistence
     owner: AGENT-DATABASE
-    status: IMPLEMENTED
+    status: RESERVED
