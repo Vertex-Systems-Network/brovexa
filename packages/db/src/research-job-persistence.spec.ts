@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import type { Pool, PoolClient } from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -238,7 +238,7 @@ describe('M02A research job persistence', () => {
 
 describe('0012 acquisition migration contract', () => {
   it('reuses canonical work/checkpoint tables and does not duplicate source discovery state', async () => {
-    const migrationPath = fileURLToPath(new URL('../migrations/0012_research_job_acquisition_persistence.up.sql', import.meta.url));
+    const migrationPath = resolve(process.cwd(), 'migrations/0012_research_job_acquisition_persistence.up.sql');
     const migration = await readFile(migrationPath, 'utf8');
 
     expect(migration).toContain('CREATE TABLE research_jobs');
