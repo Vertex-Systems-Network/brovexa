@@ -1,10 +1,10 @@
 # Brovexa Project Plan
 
-Status: **ACTIVE IMPLEMENTATION — M00/ABD-215 readiness and explicit owner development consent are satisfied. Production/provider activation gates remain separate.**
+Status: **ACTIVE IMPLEMENTATION — M00 readiness and explicit owner development consent are satisfied. Production/provider activation gates remain separate.**
 
 ## Product mission
 
-Brovexa is an AI-native global business discovery, research, opportunity and lead-intelligence platform. It discovers businesses from approved sources, resolves canonical entities, enriches public/authorized information, verifies digital presence, detects explicit/implicit business signals, reasons about service opportunities, creates evidence-backed leads, and helps users prioritize/action them while preserving compliance and human control.
+Brovexa is an AI-native global business discovery, research, entity-resolution, opportunity and lead-intelligence platform. It discovers businesses from approved sources, resolves canonical entities, enriches public/authorized information, verifies digital presence, detects explicit/implicit business signals, reasons about service opportunities, creates evidence-backed leads, and helps users prioritize/action them while preserving compliance and human control.
 
 Brovexa is source-agnostic and must not depend on unrestricted copying of any one provider dataset.
 
@@ -22,7 +22,7 @@ Brovexa is source-agnostic and must not depend on unrestricted copying of any on
 
 ## Canonical intelligence pipeline
 
-Research Intent → Job Preflight → Global/Source Plan → Background Acquisition → Source Normalization → Entity Resolution → Contact Enrichment → Website Intelligence → Signal Detection → Evidence Verification → Opportunity Reasoning → Lead Qualification/Scoring → Lead OS → Decision-Maker/Buying Committee → Next Best Action → Outreach Review → CRM/Outcome Feedback → Memory/Eval Updates.
+Research Intent → Job Preflight → Global/Source Plan → Background Acquisition → Source Normalization → **Entity Resolution** → Contact Enrichment → Website Intelligence → Signal Detection → Evidence Verification → Opportunity Reasoning → Lead Qualification/Scoring → Lead OS → Decision-Maker/Buying Committee → Next Best Action → Outreach Review → CRM/Outcome Feedback → Memory/Eval Updates.
 
 Each async stage must be independently retryable, idempotent, versioned, observable, budgeted and policy-aware.
 
@@ -47,21 +47,23 @@ State: **provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMP
 ## M02 — Business Discovery & Source Connectors
 Linear: ABD-217
 
-Provider-neutral source-adapter framework and compliant discovery with policy contracts, quota/cost, provenance, pagination, coverage and connector health.
+Provider-neutral source-adapter framework and compliant discovery with policy contracts, quota/cost, provenance, pagination, coverage, connector health, transport admission, deterministic network-destination safety, injected test-only transport/resolution, redirect revalidation, audit/observability and adversarial verification.
 
-State: **ACTIVE — five bounded slices VERIFIED / INTEGRATED**: source contracts/admission, registry persistence, SourceTask preflight/lifecycle, no-network execution bridge, and execution-time connector policy/health/quota safety.
-
-Real provider HTTP/network/credential execution remains separately gated.
+State: **provider-neutral foundation VERIFIED / INTEGRATED**. Real provider HTTP/network/credentials and unrestricted acquisition remain separately gated.
 
 ## M02A — Global Acquisition Studio & Background Research
 Linear: ABD-245, ABD-246, ABD-247; architecture gate ABD-242.
 
 Research Job Builder covers geography, industry/niche, business/digital filters, contact targets, signals, approved sources, depth/quality/output/schedule/budget and preflight. Long-running acquisition uses durable sharded work/checkpoints, quotas, retries/dead-letter/review, pause/resume/cancel, exact progress and kill switches.
 
+State: **provider-neutral planned packet sequence VERIFIED / INTEGRATED through `M02A-ACQ-006`**. Durable ResearchJob/AcquisitionShard persistence, controls, shard orchestration, exact observability and independent adversarial verification are integrated. Production provider/network/credential activation remains separately gated.
+
 ## M03 — Entity Resolution & Contact Enrichment
 Linear: ABD-218
 
-Canonical identity, deterministic + structured AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
+Canonical identity, deterministic + structured-AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
+
+State: **CURRENT NEXT MILESTONE / ACTIVE PLANNING**. Initial implementation is contracts-first and deterministic-first. `docs/AI_NATIVE_PLAN.md` owns the bounded M03 packet DAG. No production model/provider/contact-enrichment activation is implied.
 
 ## M04 — Website & Digital Presence Intelligence
 Linear: ABD-219
@@ -120,173 +122,58 @@ Governed research scout can create evidence-backed Add/Experiment/Watch/Reject p
 
 ## Cross-cutting — Parallel Multi-Agent Engineering System
 
-This control plane applies to **M02 and all current/future milestones**. It is designed to increase calendar throughput without agents overwriting one another, double-claiming work, colliding on migrations, submitting stale heads, running duplicate live writers, or bypassing integration gates.
+This control plane applies to all current/future milestones.
 
-### Canonical coordination sources
+Canonical coordination sources:
 
 - `AGENTS.md` — working instructions;
 - `docs/PARALLEL_AGENT_DEVELOPMENT.md` — full protocol;
-- `docs/AI_NATIVE_PLAN.md` — versioned standing branches/modules/static slot definitions/merge strategy;
+- `docs/AI_NATIVE_PLAN.md` — current milestone decomposition, standing branches/static slots and merge strategy;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
-- `docs/AGENT_BRANCH_LEASES.md` — atomic per-slot live-instance lease protocol;
-- `.agent/slots.yaml` — static slot definitions only;
-- `.agent/ownership.yaml` / `.agent/shared-files.yaml` — write/shared ownership;
+- `docs/AGENT_BRANCH_LEASES.md` — atomic per-slot live-instance protocol;
+- `.agent/slots.yaml` — static slot definitions;
+- `.agent/ownership.yaml` / `.agent/shared-files.yaml` — ownership boundaries;
 - `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream/DAG rules;
 - `.agent/migrations.yaml` — serialized migration reservations;
-- `.agent/supervisor.yaml` — Supervisor workflow/lease contract;
-- GitHub issue **#50** — live integrated-main SHA/synchronization epoch;
-- GitHub issue **#53** — live logical slot occupancy/assigned agent/start state;
-- branch `coordination/leases` — atomic live mutating-instance authority for occupied slots;
-- PR/work packet/handoff — live bounded task state;
-- GitHub issue **#54** — external native `main` branch-protection action.
+- `.agent/supervisor.yaml` — Supervisor contract;
+- GitHub issue #50 — live integrated-main SHA/synchronization epoch;
+- GitHub issue #53 — live logical slot occupancy/assignment;
+- branch `coordination/leases` — atomic live mutating-instance authority;
+- PR/work packet/handoff — bounded task state;
+- GitHub issue #54 — external native main-protection action.
 
-### Supervisor model
-
-The Main-repository agent is the **Supervisor**. It owns onboarding, live slot assignment/release, dependency/interface coordination, shared-file integration, migration ordering, exact-head PR review/merge, synchronization broadcasts and its own bounded integration work.
-
-Supervisor is **not exempt** from `docs/AGENT_BRANCH_LEASES.md`: before mutating a bounded Supervisor work branch it must own the active `SUPERVISOR` slot lease.
-
-### Default concurrency
-
-Use **6 concurrent agents** when enough independent work exists:
-
-1. Supervisor / Integration Architecture
-2. Contracts / Policy
-3. Database / Persistence
-4. Worker / Runtime
-5. Module / Connector Infrastructure
-6. Verification / Security
-
-Soft maximum: **8**, only while conflict/rework/CI latency metrics remain healthy.
-
-### New Agent Onboarding
-
-A new agent always starts from exact current `main`. It must not start feature work or switch to a standing module branch before Supervisor assignment.
-
-Standing slots are defined in `.agent/slots.yaml`; live `OPEN` / `OCCUPIED` is issue #53.
-
-Assignment transaction:
-
-1. read current `main` and latest issue #50 epoch;
-2. re-read issue #53 immediately before assignment;
-3. select a statically assignable live `OPEN` slot;
-4. synchronize/fast-forward its idle branch to current `main`;
-5. update issue #53 with `OCCUPIED`, agent/start/main/epoch and incremented registry revision;
-6. re-read issue #53 to confirm logical ownership;
-7. acquire/re-read the atomic per-slot live-instance lease on `coordination/leases` according to `docs/AGENT_BRANCH_LEASES.md`;
-8. only then hand the branch/work packet to that unique agent instance.
-
-Temporary assignment/release **does not require a governance PR** when standing definitions/rules are unchanged.
-
-If no assignable live slot is `OPEN`, Supervisor responds exactly:
-
-**Go Home Come Back Next Time**
-
-The rejected arrival receives no assignment, branch checkout, work packet, feature changes or implementation PR.
-
-### Atomic live-instance lease
+Default concurrency target is 6 including Supervisor; soft maximum is 8 while conflict/rework/CI latency remains healthy. Specialty M02 network slots remain statically available but are assigned only to bounded work matching their ownership.
 
 Hard invariant:
 
 **one occupied slot = at most one live mutating agent instance**
 
-Issue #53 answers *which logical agent owns the slot*. `coordination/leases` answers *which concrete agent process/session may mutate for that slot right now*.
+Default work invariant:
 
-Each lease records `agent_instance_id`, `lease_id`, slot, branch, work packet, synchronized main SHA/epoch and acquisition head. Acquisition is create-if-absent; renewal/release require compare-and-swap ownership. Leases do not silently expire. Crash/stale-owner takeover requires explicit Supervisor recovery audit. PR CI verifies handoff lease identity against the live slot lease before integration.
+`1 agent = 1 bounded work packet = 1 isolated/standing branch = 1 PR`
 
-### Isolation, ownership and dependencies
+New-agent onboarding, lease acquisition, head-bound completion signals, expected-head merge, resulting-main FULL GATE and post-merge synchronization are mandatory. If there is no assignable live slot, the exact response is **Go Home Come Back Next Time**.
 
-Default invariant:
+## Main-branch integration integrity
 
-`1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
+Direct pushes to `main` are prohibited by project governance. Normal integration is:
 
-Agents stay inside declared write scopes. Public contracts/interfaces are coordination boundaries. Shared files are Supervisor-composed. Tasks form an explicit DAG.
+`PR → exact-head FULL GATE → expected-head merge → resulting-main FULL GATE`
 
-Default dependency priority when all layers are required:
+Hosted main-push CI verifies integration provenance. Native GitHub branch protection/ruleset remains a separately required preventive layer tracked in issue #54.
 
-`contracts/policy → DB/persistence → module infrastructure → worker/runtime → verification changes → Supervisor integration`
+## Independent verification
 
-Independent nodes may proceed/merge earlier when they genuinely have no dependency/interface/migration/ownership/shared-file collision.
+Implementation and adversarial verification remain separate. Verification covers replay/idempotency, stale state, concurrency, tenant isolation, auth/policy/budget bypass, migration rollback, hostile inputs, dependency drift, network/credential boundaries, queue recovery, provenance, false-positive identity collisions, merge/split reversibility and coordination races.
 
-Migration numbers must be reserved in `.agent/migrations.yaml` before creation.
-
-### Completion signal and stale-head protection
-
-A completed work packet announces exactly:
-
-**Work Done and Submitted**
-
-For non-Supervisor agents this is a top-level PR comment whose full body is exactly that phrase. It means `READY_FOR_SUPERVISOR_REVIEW`, not automatic approval.
-
-The signal is **head-bound**. PR body/handoff exact head must equal current PR head, and the latest exact completion comment must postdate the current head commit. Any later commit invalidates the signal and requires re-verification + a fresh announcement.
-
-A valid submission also requires current issue #53 slot ownership, active matching slot lease, and latest issue #50 synchronization state.
-
-### Supervisor review / merge / synchronization
-
-Supervisor serializes overlapping merges, uses FIFO review subject to dependency priority, requires exact-head verification, validates the active lease, and merges approved PRs using expected-head protection.
-
-After every approved merge it broadcasts exactly:
-
-**New changes have been merged — please merge these changes into your branch first, then resume your own work.**
-
-Issue #50 carries resulting `main` SHA and monotonic `sync_epoch`. Active agents pause, synchronize non-destructively, rerun minimum verification, renew their lease metadata for the synchronized state when applicable, record new SHA/epoch, then resume.
-
-### Main-branch integration integrity
-
-Direct pushes to `main` are prohibited. Normal integration is:
-
-`PR → exact-head FULL GATE → expected-head merge`
-
-Hosted CI runs on pull requests and `push` to `main`. Main pushes execute `scripts/verify-main-integration-provenance.mjs`, which fails if the main commit is not associated with a merged PR targeting `main`.
-
-Native GitHub branch protection/ruleset is still required as the preventive layer. Current audit found `main` unprotected; issue #54 tracks requiring PR/status checks and disabling force pushes/deletions. Repository provenance CI is defense in depth, not a substitute.
-
-### Independent verification
-
-Implementation and adversarial verification remain separate. Verification covers replay/idempotency, stale state, concurrency, tenant isolation, auth/policy/budget bypass, migration rollback, hostile inputs, dependency drift, network/credential boundaries, queue recovery and lease/provenance races.
-
-Tests/invariants are not weakened merely to get green CI.
-
-### Agent Instruction Drift Check — mandatory every task
-
-Every agent performs the **Agent Instruction Drift Check** at task start and before completion. Check README, AGENTS, this plan, checkpoint, parallel/onboarding/lease docs, `.agent/` manifests, issue #50, issue #53, live slot lease, relevant module/ADR docs, current `main`, own branch/head and verification commands.
-
-If architecture, modules, slot definitions/live-state authority, lease protocol, Supervisor behavior, branch workflow, completion-signal freshness, synchronization, ownership, migrations, dependencies, CI/integration integrity, security/policy boundaries or tooling change, update relevant instructions in the same change set.
-
-A task cannot become `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
-
-### Integration gate
-
-Before merge require:
-
-- exact current head SHA and fresh completion signal;
-- valid issue #53 slot ownership;
-- active matching lease per `docs/AGENT_BRANCH_LEASES.md`;
-- latest issue #50 synchronization;
-- satisfied dependency graph;
-- no ownership/shared-file/migration collision;
-- resolved review threads;
-- `pnpm run verify:parallel` PASS;
-- required exact-head FAST/FULL verification;
-- completed instruction-drift check;
-- current-base/mergeability revalidation;
-- expected-head merge guard.
-
-Parallel development never authorizes production credentials, provider/network activation, unrestricted acquisition, autonomous outreach, destructive production actions or any separately gated capability.
-
-## Technology recommendation for ADR validation
-
-Current hypothesis, not blanket implementation authorization: Next.js/React/TypeScript; Tailwind/shadcn UI; NestJS modular monolith; PostgreSQL + pgvector initially; Redis/BullMQ initially with Temporal reevaluation if durable multi-day workflow complexity justifies it; Tauri 2; WXT; S3-compatible storage; OpenTelemetry; pnpm monorepo; Python only where it has concrete AI/data advantage.
-
-Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely because the project is AI-native.
+Tests/invariants are never weakened merely to make CI green.
 
 ## AI-native non-negotiables
 
-- structured agent contracts/outputs
+- structured contracts/outputs
 - evidence IDs for material AI claims
 - untrusted external content is data, not instruction
-- least-privilege agent tools/memory
+- least-privilege tools/memory
 - durable state outside model context
 - independent verifier/evaluator for high-impact reasoning
 - model/prompt/tool/memory versioning
@@ -298,16 +185,16 @@ Do not introduce OpenSearch, Temporal, Kubernetes or microservices merely becaus
 
 ## Definition of Ready
 
-A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and UI failure/partial states are defined.
+A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and failure/partial states are defined.
 
-Parallel work additionally requires a valid live slot assignment, active live-instance lease, bounded work packet, branch/write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information and verification/handoff criteria.
+Parallel work additionally requires valid live slot assignment, active live-instance lease, bounded write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information and verification/handoff criteria.
 
 ## Definition of Done
 
-Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
+Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + current docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
 
-For agent work, DONE also requires a current issue #50 epoch, valid issue #53 slot ownership, matching active lease, fresh head-bound **Work Done and Submitted**, required verification and Agent Instruction Drift Check.
+For agent work, DONE also requires current issue #50 state, valid issue #53 ownership, matching active lease, fresh head-bound **Work Done and Submitted**, required verification and Agent Instruction Drift Check.
 
 ## Development authorization
 
-M00/ABD-215 readiness and explicit owner consent are satisfied for active development. Production credentials/provider activation, scheduled/unrestricted acquisition, payment activation, autonomous outreach, destructive production actions and release/deployment gates remain separately controlled.
+M00 readiness and explicit owner consent are satisfied for active development. Production credentials/provider activation, scheduled/unrestricted acquisition, payment activation, autonomous outreach, destructive production actions and release/deployment gates remain separately controlled.
