@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/worker-runtime",
+  "slot_id": "RUNTIME",
+  "agent_id": "AGENT-RUNTIME",
+  "agent_instance_id": "runtime-chatgpt-20260915-7b2e91",
+  "work_packet_id": "M02A-ACQ-004",
+  "lease_id": "lease-runtime-20260915-7b2e91",
+  "synced_main_sha": "133a5b98b25bcc751e0278c0c10582ea3e435308",
+  "sync_epoch": 56,
+  "acquired_branch_head_sha": "d7d7c343d76f81fb0e7372133d216a439f5340a3",
+  "acquired_at": "2026-09-15T17:40:01+05:00",
+  "renewed_at": "2026-09-15T17:40:01+05:00"
+}
