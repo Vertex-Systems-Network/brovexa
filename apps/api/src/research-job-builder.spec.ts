@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ResearchJobSpecSchema, type ResearchJobSpec } from '@brovexa/contracts';
+import type {
+  CreateResearchJobInput,
+  CreateResearchJobResult,
+  PersistResearchJobPreflightInput,
+  PersistResearchJobPreflightResult,
+} from '@brovexa/db';
 import {
   ResearchJobBuilderError,
   buildResearchJob,
@@ -111,43 +117,58 @@ function buildInput(job: ResearchJobSpec = jobFixture()): BuildResearchJobInput 
   };
 }
 
-function persistenceFixture(job: ResearchJobSpec = jobFixture()): ResearchJobBuilderPersistence {
+function preflightResult(
+  input: PersistResearchJobPreflightInput,
+  options: {
+    decision?: PersistResearchJobPreflightResult['envelope']['decision'];
+    workspaceId?: string;
+    maxRequests?: number;
+  } = {},
+): PersistResearchJobPreflightResult {
   return {
-    persistPreflight: vi.fn(async (input) => ({
+    id: input.id,
+    created: true,
+    envelope: {
       id: input.id,
-      created: true,
-      envelope: {
-        id: input.id,
-        workspaceId: input.workspaceId,
-        researchJobId: input.researchJobId,
-        idempotencyKey: input.idempotencyKey,
-        decision: 'allow',
-        admissionSnapshotIds: [...input.admissionSnapshotIds],
-        aggregateBudget: {
-          maxRequests: 20,
-          maxPages: 10,
-          maxBytes: 500_000,
-          maxCurrencyMicros: 500_000,
-          maxRuntimeMs: 30_000,
-          maxConcurrency: 2,
-        },
-        createdAt: input.createdAt.toISOString(),
+      workspaceId: options.workspaceId ?? input.workspaceId,
+      researchJobId: input.researchJobId,
+      idempotencyKey: input.idempotencyKey,
+      decision: options.decision ?? 'allow',
+      admissionSnapshotIds: [...input.admissionSnapshotIds],
+      aggregateBudget: {
+        maxRequests: options.maxRequests ?? 20,
+        maxPages: 10,
+        maxBytes: 500_000,
+        maxCurrencyMicros: 500_000,
+        maxRuntimeMs: 30_000,
+        maxConcurrency: 2,
       },
-    })),
-    createJob: vi.fn(async (input) => ({
-      created: true,
-      researchJob: {
-        id: input.id,
-        workspaceId: input.workspaceId,
-        preflightId: input.preflightId,
-        jobRunId: 'job-run-003',
-        correlationId: 'correlation-003',
-        spec: input.spec,
-        approvedSourceKeys: [...input.approvedSourceKeys],
-        budget: input.budget,
-        createdAt: new Date('2026-09-15T10:01:01.000Z'),
-      },
-    })),
+      createdAt: input.createdAt.toISOString(),
+    },
+  };
+}
+
+function researchJobResult(input: CreateResearchJobInput): CreateResearchJobResult {
+  return {
+    created: true,
+    researchJob: {
+      id: input.id,
+      workspaceId: input.workspaceId,
+      preflightId: input.preflightId,
+      jobRunId: 'job-run-003',
+      correlationId: 'correlation-003',
+      spec: input.spec,
+      approvedSourceKeys: [...input.approvedSourceKeys],
+      budget: input.budget,
+      createdAt: new Date('2026-09-15T10:01:01.000Z'),
+    },
+  };
+}
+
+function persistenceFixture(): ResearchJobBuilderPersistence {
+  return {
+    persistPreflight: vi.fn(async (input: PersistResearchJobPreflightInput) => preflightResult(input)),
+    createJob: vi.fn(async (input: CreateResearchJobInput) => researchJobResult(input)),
   };
 }
 
@@ -167,7 +188,7 @@ async function expectBuilderError(
 describe('buildResearchJob', () => {
   it('materializes an allowed research job through persisted preflight and bounded parent budget', async () => {
     const job = jobFixture();
-    const persistence = persistenceFixture(job);
+    const persistence = persistenceFixture();
 
     const result = await buildResearchJob(buildInput(job), persistence);
 
@@ -206,31 +227,10 @@ describe('buildResearchJob', () => {
   });
 
   it('preserves a persisted blocked decision as evidence but refuses parent job creation', async () => {
-    const base = persistenceFixture();
-    const persistence: ResearchJobBuilderPersistence = {
-      ...base,
-      persistPreflight: vi.fn(async (input) => ({
-        id: input.id,
-        created: true,
-        envelope: {
-          id: input.id,
-          workspaceId: input.workspaceId,
-          researchJobId: input.researchJobId,
-          idempotencyKey: input.idempotencyKey,
-          decision: 'blocked',
-          admissionSnapshotIds: [...input.admissionSnapshotIds],
-          aggregateBudget: {
-            maxRequests: 20,
-            maxPages: 10,
-            maxBytes: 500_000,
-            maxCurrencyMicros: 500_000,
-            maxRuntimeMs: 30_000,
-            maxConcurrency: 2,
-          },
-          createdAt: input.createdAt.toISOString(),
-        },
-      })),
-    };
+    const persistence = persistenceFixture();
+    persistence.persistPreflight = vi.fn(async (input: PersistResearchJobPreflightInput) => (
+      preflightResult(input, { decision: 'blocked' })
+    ));
 
     await expectBuilderError(
       buildResearchJob(buildInput(), persistence),
@@ -241,31 +241,10 @@ describe('buildResearchJob', () => {
   });
 
   it('rejects a persisted aggregate budget that exceeds the parent research-job budget', async () => {
-    const base = persistenceFixture();
-    const persistence: ResearchJobBuilderPersistence = {
-      ...base,
-      persistPreflight: vi.fn(async (input) => ({
-        id: input.id,
-        created: true,
-        envelope: {
-          id: input.id,
-          workspaceId: input.workspaceId,
-          researchJobId: input.researchJobId,
-          idempotencyKey: input.idempotencyKey,
-          decision: 'allow',
-          admissionSnapshotIds: [...input.admissionSnapshotIds],
-          aggregateBudget: {
-            maxRequests: 41,
-            maxPages: 10,
-            maxBytes: 500_000,
-            maxCurrencyMicros: 500_000,
-            maxRuntimeMs: 30_000,
-            maxConcurrency: 2,
-          },
-          createdAt: input.createdAt.toISOString(),
-        },
-      })),
-    };
+    const persistence = persistenceFixture();
+    persistence.persistPreflight = vi.fn(async (input: PersistResearchJobPreflightInput) => (
+      preflightResult(input, { maxRequests: 41 })
+    ));
 
     await expectBuilderError(
       buildResearchJob(buildInput(), persistence),
@@ -275,31 +254,10 @@ describe('buildResearchJob', () => {
   });
 
   it('fails closed if persistence returns an identity outside the requested workspace/job boundary', async () => {
-    const base = persistenceFixture();
-    const persistence: ResearchJobBuilderPersistence = {
-      ...base,
-      persistPreflight: vi.fn(async (input) => ({
-        id: input.id,
-        created: true,
-        envelope: {
-          id: input.id,
-          workspaceId: 'workspace-other',
-          researchJobId: input.researchJobId,
-          idempotencyKey: input.idempotencyKey,
-          decision: 'allow',
-          admissionSnapshotIds: [...input.admissionSnapshotIds],
-          aggregateBudget: {
-            maxRequests: 20,
-            maxPages: 10,
-            maxBytes: 500_000,
-            maxCurrencyMicros: 500_000,
-            maxRuntimeMs: 30_000,
-            maxConcurrency: 2,
-          },
-          createdAt: input.createdAt.toISOString(),
-        },
-      })),
-    };
+    const persistence = persistenceFixture();
+    persistence.persistPreflight = vi.fn(async (input: PersistResearchJobPreflightInput) => (
+      preflightResult(input, { workspaceId: 'workspace-other' })
+    ));
 
     await expectBuilderError(
       buildResearchJob(buildInput(), persistence),
