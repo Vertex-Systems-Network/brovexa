@@ -5,7 +5,6 @@ import {
   AuthorizationError,
   applyPendingMigrations,
   assignWorkspaceRole,
-  bootstrapWorkspaceOwner,
   createIdentityUser,
   createPgPool,
   createWorkspaceMembership,
@@ -16,6 +15,7 @@ import {
   rollbackLatestMigration,
   setWorkspaceMembershipStatus,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 import {
   authClientKindValues,
   authenticationMethodValues,
