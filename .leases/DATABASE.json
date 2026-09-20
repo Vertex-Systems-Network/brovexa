@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/database-persistence",
+  "slot_id": "DATABASE",
+  "agent_id": "AGENT-DB",
+  "agent_instance_id": "database-chatgpt-20260921-sec134-b7c2e9",
+  "work_packet_id": "SEC-M03-B",
+  "lease_id": "lease-database-20260921-sec134-b7c2e9",
+  "synced_main_sha": "221c6283ff8fc919341b2de42407a3e51c62184a",
+  "sync_epoch": 61,
+  "acquired_branch_head_sha": "169fb30b0021ff6c414ded939b345181d2748206",
+  "acquired_at": "2026-09-21T04:08:00+05:00",
+  "renewed_at": "2026-09-21T04:08:00+05:00"
+}
