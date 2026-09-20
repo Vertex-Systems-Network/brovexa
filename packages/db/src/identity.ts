@@ -228,6 +228,13 @@ export async function createIdentityUser(
   return row;
 }
 
+/**
+ * Provisioning-only first-owner primitive.
+ *
+ * Security invariant: this function is intentionally excluded from the public
+ * @brovexa/db barrel. Application request/RBAC code must not gain first-owner
+ * authority by importing the normal database package surface.
+ */
 export async function bootstrapWorkspaceOwner(
   pool: Pool,
   input: { workspaceId: string; userId: string },
