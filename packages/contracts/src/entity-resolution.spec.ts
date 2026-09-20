@@ -142,6 +142,36 @@ describe('BusinessResolutionEvaluationSchema', () => {
     expect(parsed.decision.decision).toBe('match_existing');
   });
 
+  it('rejects evidence provenance borrowed from an unrelated identity signal', () => {
+    expect(() =>
+      BusinessResolutionEvaluationSchema.parse({
+        version: '1.0.0',
+        workspaceId: 'workspace.1',
+        observation,
+        thresholdPolicy,
+        evidence: [
+          {
+            ...deterministicSupport,
+            observationSignalIds: ['signal.domain'],
+            sourceReferenceIds: ['ref.2'],
+          },
+        ],
+        decision: {
+          decisionId: 'decision.provenance-laundering',
+          workspaceId: 'workspace.1',
+          sourceObservationId: 'observation.1',
+          candidateCanonicalBusinessId: 'business.1',
+          decision: 'match_existing',
+          confidence: 0.99,
+          reviewState: 'not_required',
+          reasonCodes: ['identity_exact_domain'],
+          evidenceIds: ['evidence.1'],
+          evaluatedAt: '2026-09-21T00:02:00.000Z',
+        },
+      }),
+    ).toThrow(/bound to the referenced identity signals/);
+  });
+
   it('rejects cross-workspace candidate evidence before a resolution decision can be accepted', () => {
     expect(() =>
       BusinessResolutionEvaluationSchema.parse({
