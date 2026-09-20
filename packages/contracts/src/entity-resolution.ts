@@ -327,13 +327,17 @@ export const BusinessResolutionEvaluationSchema = z
       const candidateEvidence = referencedEvidence.filter(
         (evidence) => evidence.candidateCanonicalBusinessId === candidateId,
       );
+      const allCandidateEvidence = evaluation.evidence.filter(
+        (evidence) => evidence.candidateCanonicalBusinessId === candidateId,
+      );
       if (!candidateEvidence.some((evidence) => evidence.effect === 'supports_match')) {
         addIssue(ctx, ['decision', 'evidenceIds'], 'match_existing requires supporting evidence for the selected canonical business.');
       }
 
       const requiresReview =
         evaluation.decision.confidence < evaluation.thresholdPolicy.autoMatchMinimum ||
-        candidateEvidence.some((evidence) => evidence.effect === 'contradicts_match' || evidence.method === 'structured_ai');
+        allCandidateEvidence.some((evidence) => evidence.effect === 'contradicts_match') ||
+        candidateEvidence.some((evidence) => evidence.method === 'structured_ai');
 
       if (requiresReview && evaluation.decision.reviewState !== 'approved') {
         addIssue(
@@ -345,7 +349,7 @@ export const BusinessResolutionEvaluationSchema = z
     }
 
     if (evaluation.decision.decision === 'create_new') {
-      const hasMaterialMatchSupport = referencedEvidence.some(
+      const hasMaterialMatchSupport = evaluation.evidence.some(
         (evidence) =>
           evidence.effect === 'supports_match' &&
           evidence.confidence >= evaluation.thresholdPolicy.reviewMinimum,
