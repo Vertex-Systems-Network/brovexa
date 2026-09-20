@@ -264,7 +264,8 @@ export const BusinessResolutionEvaluationSchema = z
       addIssue(ctx, ['decision', 'sourceObservationId'], 'Decision must resolve the enclosed source observation.');
     }
 
-    const signalIds = new Set(evaluation.observation.identitySignals.map((signal) => signal.signalId));
+    const signalById = new Map(evaluation.observation.identitySignals.map((signal) => [signal.signalId, signal]));
+    const signalIds = new Set(signalById.keys());
     const observationRefs = new Set(evaluation.observation.sourceReferenceIds);
     const evidenceById = new Map<string, CandidateBusinessMatchEvidence>();
 
@@ -280,11 +281,25 @@ export const BusinessResolutionEvaluationSchema = z
       if (evidence.sourceObservationId !== evaluation.observation.sourceObservationId) {
         addIssue(ctx, ['evidence', index, 'sourceObservationId'], 'Candidate evidence must belong to the enclosed source observation.');
       }
-      if (evidence.observationSignalIds.some((signalId) => !signalIds.has(signalId))) {
+      const hasUnknownSignal = evidence.observationSignalIds.some((signalId) => !signalIds.has(signalId));
+      if (hasUnknownSignal) {
         addIssue(ctx, ['evidence', index, 'observationSignalIds'], 'Candidate evidence may reference only enclosed observation signals.');
       }
       if (evidence.sourceReferenceIds.some((referenceId) => !observationRefs.has(referenceId))) {
         addIssue(ctx, ['evidence', index, 'sourceReferenceIds'], 'Candidate evidence provenance must come from the enclosed observation.');
+      }
+
+      if (!hasUnknownSignal) {
+        const signalReferenceIds = new Set(
+          evidence.observationSignalIds.flatMap((signalId) => signalById.get(signalId)?.sourceReferenceIds ?? []),
+        );
+        if (evidence.sourceReferenceIds.some((referenceId) => !signalReferenceIds.has(referenceId))) {
+          addIssue(
+            ctx,
+            ['evidence', index, 'sourceReferenceIds'],
+            'Candidate evidence provenance must be bound to the referenced identity signals.',
+          );
+        }
       }
     });
 
