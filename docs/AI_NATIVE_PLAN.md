@@ -41,7 +41,7 @@ New arrivals never invent slots or branches. If issue #53 has no assignable `OPE
 | `OBSERVE` | `agent/source-observability` | Yes |
 | `ADVERSARY` | `agent/adversarial-network-security` | Yes |
 
-`.agent/slots.yaml` is the machine-readable static registry. Issue #53 is live `OPEN` / `OCCUPIED` truth.
+`.agent/slots.yaml` is the machine-readable static registry. Issue #53 is live `OPEN` / `OCCUPIED` truth. Atomic live-instance lease semantics are defined by `docs/AGENT_BRANCH_LEASES.md`.
 
 ## M03 bounded workstream decomposition
 
