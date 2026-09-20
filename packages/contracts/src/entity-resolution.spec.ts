@@ -133,6 +133,7 @@ describe('BusinessResolutionEvaluationSchema', () => {
         decision: 'match_existing',
         confidence: 0.99,
         reviewState: 'not_required',
+        reviewDecisionRef: null,
         reasonCodes: ['identity_exact_domain'],
         evidenceIds: ['evidence.1'],
         evaluatedAt: '2026-09-21T00:02:00.000Z',
@@ -164,6 +165,7 @@ describe('BusinessResolutionEvaluationSchema', () => {
           decision: 'match_existing',
           confidence: 0.99,
           reviewState: 'not_required',
+        reviewDecisionRef: null,
           reasonCodes: ['identity_exact_domain'],
           evidenceIds: ['evidence.1'],
           evaluatedAt: '2026-09-21T00:02:00.000Z',
@@ -193,6 +195,7 @@ describe('BusinessResolutionEvaluationSchema', () => {
           decision: 'match_existing',
           confidence: 0.99,
           reviewState: 'not_required',
+        reviewDecisionRef: null,
           reasonCodes: ['identity_exact_domain'],
           evidenceIds: ['evidence.1'],
           evaluatedAt: '2026-09-21T00:02:00.000Z',
@@ -228,6 +231,7 @@ describe('BusinessResolutionEvaluationSchema', () => {
           decision: 'match_existing',
           confidence: 0.96,
           reviewState: 'not_required',
+        reviewDecisionRef: null,
           reasonCodes: ['identity_conflict_present'],
           evidenceIds: ['evidence.1', 'evidence.2'],
           evaluatedAt: '2026-09-21T00:02:00.000Z',
@@ -258,12 +262,75 @@ describe('BusinessResolutionEvaluationSchema', () => {
           decision: 'match_existing',
           confidence: 0.99,
           reviewState: 'not_required',
+        reviewDecisionRef: null,
           reasonCodes: ['identity_structured_ai_support'],
           evidenceIds: ['evidence.1'],
           evaluatedAt: '2026-09-21T00:02:00.000Z',
         },
       }),
     ).toThrow(/structured-AI-assisted matches require explicit review approval/);
+  });
+
+  it('accepts reviewed structured-AI evidence only when durable approval is referenced', () => {
+    const parsed = BusinessResolutionEvaluationSchema.parse({
+      version: '1.0.0',
+      workspaceId: 'workspace.1',
+      observation,
+      thresholdPolicy,
+      evidence: [
+        {
+          ...deterministicSupport,
+          method: 'structured_ai',
+          inferenceRef: 'inference.entity-match.1',
+        },
+      ],
+      decision: {
+        decisionId: 'decision.reviewed-ai',
+        workspaceId: 'workspace.1',
+        sourceObservationId: 'observation.1',
+        candidateCanonicalBusinessId: 'business.1',
+        decision: 'match_existing',
+        confidence: 0.99,
+        reviewState: 'approved',
+        reviewDecisionRef: 'review.decision.1',
+        reasonCodes: ['identity_structured_ai_reviewed'],
+        evidenceIds: ['evidence.1'],
+        evaluatedAt: '2026-09-21T00:02:00.000Z',
+      },
+    });
+
+    expect(parsed.decision.reviewDecisionRef).toBe('review.decision.1');
+  });
+
+  it('rejects spoofed approved state without a durable review decision reference', () => {
+    expect(() =>
+      BusinessResolutionEvaluationSchema.parse({
+        version: '1.0.0',
+        workspaceId: 'workspace.1',
+        observation,
+        thresholdPolicy,
+        evidence: [
+          {
+            ...deterministicSupport,
+            method: 'structured_ai',
+            inferenceRef: 'inference.entity-match.2',
+          },
+        ],
+        decision: {
+          decisionId: 'decision.spoofed-review',
+          workspaceId: 'workspace.1',
+          sourceObservationId: 'observation.1',
+          candidateCanonicalBusinessId: 'business.1',
+          decision: 'match_existing',
+          confidence: 0.99,
+          reviewState: 'approved',
+          reviewDecisionRef: null,
+          reasonCodes: ['identity_structured_ai_reviewed'],
+          evidenceIds: ['evidence.1'],
+          evaluatedAt: '2026-09-21T00:02:00.000Z',
+        },
+      }),
+    ).toThrow(/durable review decision reference/);
   });
 
   it('requires approval before creating a new canonical entity despite material match evidence', () => {
@@ -282,6 +349,7 @@ describe('BusinessResolutionEvaluationSchema', () => {
           decision: 'create_new',
           confidence: 0.2,
           reviewState: 'not_required',
+        reviewDecisionRef: null,
           reasonCodes: ['identity_create_new'],
           evidenceIds: ['evidence.1'],
           evaluatedAt: '2026-09-21T00:02:00.000Z',
@@ -302,6 +370,7 @@ describe('reversible canonical business change requests', () => {
         reasonCodes: ['identity_duplicate_confirmed'],
         requestedByActorId: 'user.1',
         requestedAt: '2026-09-21T00:03:00.000Z',
+        reviewRequestId: 'review.request.1',
         reviewState: 'pending',
         reversible: true,
         sourceCanonicalBusinessIds: ['business.1', 'business.2'],
