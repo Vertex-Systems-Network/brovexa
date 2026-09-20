@@ -80,6 +80,10 @@ Supervisor integration remains:
 
 `exact-head FULL GATE → current lease/slot/dependency review → zero unresolved threads → fresh completion signal → expected-head merge → resulting-main FULL GATE → issue #50 epoch broadcast → branch/lease reconciliation`
 
+After every accepted merge, the Supervisor broadcasts exactly:
+
+**New changes have been merged — please merge these changes into your branch first, then resume your own work.**
+
 Direct pushes to `main`, force resets of standing branches and protection bypasses are prohibited by project governance.
 
 ## M02/M02A completion evidence

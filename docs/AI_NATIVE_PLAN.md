@@ -2,7 +2,7 @@
 
 Status: **ACTIVE — M02/M02A provider-neutral foundations integrated; M03 is the current execution objective.**
 
-This document is the versioned source for standing branches, static slot capacity, dependency order and current milestone decomposition. Live occupancy is not stored here. GitHub issue #53 is the authoritative live logical slot registry, issue #50 is the synchronization ledger, and branch `coordination/leases` is the atomic live-instance authority.
+This document is the versioned source for standing branches, static slot capacity, dependency order and current milestone decomposition. Live occupancy is not stored here. GitHub issue #53 is the authoritative live logical slot registry, synchronization truth is the latest valid Supervisor broadcast comment in issue #50, and branch `coordination/leases` is the atomic live-instance authority.
 
 ## Current execution objective
 

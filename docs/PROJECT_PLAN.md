@@ -152,7 +152,7 @@ Default work invariant:
 
 `1 agent = 1 bounded work packet = 1 isolated/standing branch = 1 PR`
 
-New-agent onboarding, lease acquisition, head-bound completion signals, expected-head merge, resulting-main FULL GATE and post-merge synchronization are mandatory. If there is no assignable live slot, the exact response is **Go Home Come Back Next Time**.
+New-agent onboarding, lease acquisition, head-bound completion signals, expected-head merge, resulting-main FULL GATE and post-merge synchronization are mandatory. After every accepted merge, the Supervisor broadcasts exactly: **New changes have been merged — please merge these changes into your branch first, then resume your own work.** If there is no assignable live slot, the exact response is **Go Home Come Back Next Time**.
 
 ## Main-branch integration integrity
 
