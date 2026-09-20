@@ -86,6 +86,29 @@ After every accepted merge, the Supervisor broadcasts exactly:
 
 Direct pushes to `main`, force resets of standing branches and protection bypasses are prohibited by project governance.
 
+## M01 verification state
+
+### ABD-259 — monorepo foundation / executable CI
+State: **VERIFIED / DONE**.
+
+### ABD-260 — PostgreSQL migration / data layer
+State: **VERIFIED / DONE**.
+
+### ABD-261 — durable worker / queue foundation
+State: **VERIFIED / DONE**.
+
+### ABD-262 — identity / RBAC / tenant primitives
+State: **VERIFIED / INTEGRATED**.
+
+### ABD-263 — API / observability / health
+State: **VERIFIED / INTEGRATED / DONE**.
+
+### ABD-264 — M01 FULL GATE
+State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
+
+### ABD-266 — default-branch protection / compensating controls
+State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACTION OPEN AS ISSUE #54**.
+
 ## M02/M02A completion evidence
 
 The completed provider-neutral cycles now cover, at minimum:
