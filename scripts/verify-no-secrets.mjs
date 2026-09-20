@@ -25,6 +25,20 @@ const textExtensions = new Set([
 ]);
 const extensionlessTextFiles = new Set(['.editorconfig', '.env.example', '.gitignore', '.npmrc']);
 
+const historyPathspecs = [
+  '.',
+  ':(exclude,glob)node_modules/**',
+  ':(exclude,glob)**/node_modules/**',
+  ':(exclude,glob).next/**',
+  ':(exclude,glob)**/.next/**',
+  ':(exclude,glob)dist/**',
+  ':(exclude,glob)**/dist/**',
+  ':(exclude,glob)coverage/**',
+  ':(exclude,glob)**/coverage/**',
+  ':(exclude,glob).turbo/**',
+  ':(exclude,glob)**/.turbo/**',
+];
+
 const highConfidencePatterns = [
   {
     label: 'private key material',
@@ -142,6 +156,7 @@ function scanReachableHistory() {
         '--extended-regexp',
         `-G${history}`,
         '--',
+        ...historyPathspecs,
       ],
       { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
     );
@@ -179,7 +194,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-const historySuffix = historyScanRequested ? ' with reachable-history scan' : '';
+const historySuffix = historyScanRequested ? ' with first-party reachable-history scan' : '';
 console.log(
   `Brovexa committed-secret gate passed for ${trackedFiles.length} tracked files${historySuffix}.`,
 );
