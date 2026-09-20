@@ -5,11 +5,11 @@
   "slot_id": "SUPERVISOR",
   "agent_id": "SUPERVISOR",
   "agent_instance_id": "supervisor-chatgpt-20260920-b7c4f1",
-  "work_packet_id": "SUP-M03-PLANNING-CONTROL",
+  "work_packet_id": "SUP-M03-INTEGRATION-CONTROL",
   "lease_id": "lease-supervisor-20260920-b7c4f1",
-  "synced_main_sha": "d00d5251152665422c9bbf3ca7067fbe35e5ae0d",
-  "sync_epoch": 59,
+  "synced_main_sha": "2a5101627ca11d977dbc23ea91b3755b8c4d84bd",
+  "sync_epoch": 60,
   "acquired_branch_head_sha": "2d5937270004112b1805148c2aad4d1cf10b2f8e",
   "acquired_at": "2026-09-20T18:08:00+05:00",
-  "renewed_at": "2026-09-20T18:08:00+05:00"
+  "renewed_at": "2026-09-20T18:25:00+05:00"
 }
