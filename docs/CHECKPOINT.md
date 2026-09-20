@@ -1,125 +1,90 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-03
+Updated: 2026-09-20
 
 ## Project state
 
 `ACTIVE_EXISTING_PROJECT`
 
-**M01 — Platform Foundation & Developer Experience is VERIFIED / INTEGRATED. M01A — AI Agent Runtime & Memory OS provider-neutral foundation is VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. M02 — Business Discovery & Source Connectors is ACTIVE with six bounded provider-neutral implementation slices FULL-GATE verified and integrated. The Supervisor-driven multi-agent workflow, main-first onboarding, live slot registry, head-bound completion signals, main-push provenance controls and atomic live-instance branch leases are integrated.**
+- **M01 — Platform Foundation & Developer Experience:** VERIFIED / INTEGRATED.
+- **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
+- **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
+- **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
+- **M03 — Entity Resolution & Contact Enrichment:** CURRENT NEXT MILESTONE. Supervisor is staging dependency/interface decomposition; no M03 feature packet is live until issue #53 assignment and an atomic slot lease exist.
 
-Product implementation state in this checkpoint is reconciled through PR #58 (`feat(m02): add fail-closed source transport admission contract`). PR #58 integrated as `0d03b538e22deeac481800c81a6f8176752b70d7` after all three hosted FULL-GATE lanes passed on its exact PR head.
+The epoch-59 integration snapshot after PR #131 was main `d00d5251152665422c9bbf3ca7067fbe35e5ae0d`. This SHA is historical checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
 
-### Live-state authority
+## Live-state authority
 
-This versioned file intentionally does **not** claim a permanently current `main` SHA or synchronization epoch. A documentation merge changes `main` again and would make such a claim stale immediately.
+Do not infer current branch/agent state from this versioned file. Resolve live state from:
 
-For exact live coordination state, always read:
-
-- GitHub issue **#50** — canonical current integrated-main SHA and synchronization epoch;
-- GitHub issue **#53** — canonical current logical slot occupancy, assignment baseline and registry revision;
+- GitHub issue **#50** — canonical integrated-main SHA and synchronization epoch;
+- GitHub issue **#53** — logical slot occupancy, assignment baseline and registry revision;
 - branch `coordination/leases` — exact live mutating-instance authority;
 - GitHub issue **#54** — native `main` branch-protection status.
 
-At task start, agents must resolve those live sources before mutating a standing branch. Historical SHAs in the M02 slice list below identify specific integrated implementation milestones only; they are not a substitute for the live ledgers.
+## Agent Instruction Drift Check
 
-## Canonical agent working instructions
+Every agent re-reads the relevant subset before work and again before completion:
 
-- `AGENTS.md` — canonical startup / working instructions;
-- `docs/PARALLEL_AGENT_DEVELOPMENT.md` — complete multi-agent protocol;
-- `docs/AI_NATIVE_PLAN.md` — versioned standing branch/module/static-slot plan;
-- `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
-- `docs/AGENT_BRANCH_LEASES.md` — atomic per-slot live mutating-instance protocol;
-- `.agent/slots.yaml` — static standing slot definitions only;
-- `.agent/ownership.yaml` / `.agent/shared-files.yaml` — path/shared-file ownership;
-- `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream DAG and lease metadata rules;
-- `.agent/migrations.yaml` — serialized migration reservations;
-- `.agent/supervisor.yaml` — Supervisor onboarding/review/merge/broadcast/lease contract;
-- GitHub issue **#50** — canonical integrated-main SHA / synchronization epoch;
-- GitHub issue **#53** — canonical logical slot occupancy / assignment state;
-- branch `coordination/leases` — exact live mutating-instance authority;
-- PR/work packet/handoff — bounded task state;
-- GitHub issue **#54** — required external native `main` branch-protection configuration;
-- `pnpm run verify:parallel` — executable governance verifier.
+- `AGENTS.md`;
+- `README.md`;
+- `docs/PROJECT_PLAN.md`;
+- this checkpoint;
+- `docs/AI_NATIVE_PLAN.md`;
+- `docs/PARALLEL_AGENT_DEVELOPMENT.md`;
+- `docs/NEW_AGENT_ONBOARDING.md`;
+- `docs/AGENT_BRANCH_LEASES.md`;
+- `.agent/slots.yaml`;
+- `.agent/ownership.yaml` / `.agent/shared-files.yaml`;
+- `.agent/workstreams.yaml` / `.agent/dependencies.yaml`;
+- `.agent/migrations.yaml` where persistence changes are possible;
+- issue #50, issue #53 and the live slot lease;
+- the exact current branch/head and required verification commands.
 
-Every agent performs the **Agent Instruction Drift Check** at task start and before completion. A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materially stale.
+A task cannot become ready for integration while future-agent instructions are materially stale.
 
-## Multi-agent integration state
-
-### Live slot assignment
-
-Temporary `OPEN` / `OCCUPIED` state is not stored in Git. Issue #53 is the canonical live logical slot registry. New agents start from exact current `main`; the Supervisor re-reads issue #53 immediately before assignment, synchronizes the selected idle standing branch, updates assignment state and registry revision, re-reads it, then the assigned live instance acquires the slot lease.
-
-If no assignable live `OPEN` slot exists, Supervisor responds exactly:
-
-**Go Home Come Back Next Time**
-
-No assignment, branch checkout, work packet, feature mutation or implementation PR is created for that arrival.
-
-### Atomic live-instance branch leases
+## Coordination invariants
 
 Hard invariant:
 
 **one occupied slot = at most one live mutating agent instance**
 
-Each active live writer owns at most one exact slot lock file such as `.leases/SUPERVISOR.json` on `coordination/leases`. The lease records slot, branch, work packet, `agent_instance_id`, `lease_id`, synchronized main SHA/epoch and acquisition head.
+Normal work:
 
-Lease behavior:
+`1 agent = 1 bounded packet = 1 standing/isolated branch = 1 PR`
 
-- acquisition is create-if-absent and fails closed on collision;
-- renewal/release use the current lease blob SHA as compare-and-swap protection;
-- leases do not silently expire;
-- stale/crashed-owner takeover requires explicit recovery audit;
-- Supervisor is not exempt;
-- PR handoff carries instance/lease/lock-path identity;
-- hosted PR CI validates the active lease against issue #53, branch, work packet, handoff identity and synchronized epoch;
-- `scripts/verify-agent-lease-governance.mjs` verifies versioned governance wiring;
-- `scripts/verify-pr-agent-lease.mjs` verifies live PR lease authority.
+New feature mutation requires the serialized sequence:
 
-### Completion signal
+1. start from exact current `main` and issue #50 epoch;
+2. Supervisor re-reads issue #53;
+3. synchronize an assignable `OPEN` standing branch non-destructively;
+4. Supervisor reserves it in issue #53 and increments registry revision;
+5. re-read the reservation;
+6. unique runtime instance atomically acquires/re-reads `.leases/<SLOT>.json`;
+7. only then mutate within the packet's narrowed write scope.
 
-A finished work packet announces exactly:
+If no assignable slot is open, the exact response remains:
+
+**Go Home Come Back Next Time**
+
+## Integration protocol
+
+Non-Supervisor completion signal:
 
 **Work Done and Submitted**
 
-For non-Supervisor agents this is a top-level PR comment. It means ready for Supervisor review, not automatic approval. The signal is head-bound: any later commit invalidates it until re-verification and a fresh signal.
+It must be a fresh top-level PR comment bound to the current exact head. A later commit invalidates the signal.
 
-### Synchronization signal
+Supervisor integration remains:
 
-After each approved integration, Supervisor broadcasts exactly:
+`exact-head FULL GATE → current lease/slot/dependency review → zero unresolved threads → fresh completion signal → expected-head merge → resulting-main FULL GATE → issue #50 epoch broadcast → branch/lease reconciliation`
+
+After every accepted merge, the Supervisor broadcasts exactly:
 
 **New changes have been merged — please merge these changes into your branch first, then resume your own work.**
 
-Issue #50 is the durable synchronization ledger. Active agents pause, synchronize non-destructively to the new main SHA, rerun required minimum verification and renew/reconcile lease metadata before resuming.
-
-## Main-branch integration integrity
-
-Repository-controlled protections are active:
-
-- normal integration path is `PR → exact-head FULL GATE → expected-head merge`;
-- direct pushes to `main` are prohibited by project governance;
-- hosted CI runs on PRs and pushes to `main`;
-- main-push quality verification runs `scripts/verify-main-integration-provenance.mjs` and fails a `main` commit that is not associated with a merged PR targeting `main`.
-
-Native GitHub protection is still the unresolved preventive layer. Issue **#54** remains open until a repository ruleset / branch-protection rule requires PRs and the required status checks, blocks force pushes and deletion, and `main` re-reads as protected.
-
-## Authorization boundary
-
-M01 and provider-neutral M01A are complete. M02 may continue only through small reversible provider-neutral slices unless a separately controlled gate is explicitly opened.
-
-Still separately gated:
-
-- production model/provider invocation and credentials;
-- production source connector credentials / activation;
-- real provider HTTP/API transport until network/SSRF/policy/credential controls are independently verified;
-- payment-provider activation;
-- unrestricted acquisition;
-- autonomous or bulk outreach;
-- production deployment;
-- destructive production data actions;
-- unresolved legal/provider/commercial decisions.
-
-Parallelism never widens authorization.
+Direct pushes to `main`, force resets of standing branches and protection bypasses are prohibited by project governance.
 
 ## M01 verification state
 
@@ -144,62 +109,68 @@ State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
 ### ABD-266 — default-branch protection / compensating controls
 State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACTION OPEN AS ISSUE #54**.
 
-## M01A state
+## M02/M02A completion evidence
 
-**VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE — eleven provider-neutral foundation slices.** Production model/provider execution remains separately gated.
+The completed provider-neutral cycles now cover, at minimum:
 
-## M02 state
+- source contracts/admission and source registry persistence;
+- SourceTask preflight/lifecycle and provider-neutral execution bridge;
+- connector policy/health/quota safety;
+- transport admission and deterministic network-destination safety;
+- injected test-only transport/resolution, redirect revalidation and bounded audit/observability;
+- hostile network/security verification without real hostile network access;
+- Research Job Builder contract/preflight;
+- durable ResearchJob/AcquisitionShard persistence and checkpoints;
+- durable pause/resume/cancel/kill control state;
+- provider-neutral acquisition shard orchestration;
+- exact tenant-safe acquisition progress/budget observability;
+- adversarial recovery, tenant isolation, budget/policy bypass, lifecycle, corruption and telemetry-redaction verification.
 
-**ACTIVE — six bounded slices VERIFIED / INTEGRATED.**
+M02A completed through PR #131. This completion does **not** activate real provider traffic, production credentials or unrestricted acquisition.
 
-1. Provider-neutral source adapter foundation — PR #39, merge `f2852d9055d55e332e0617e455901ca673f46503`.
-2. Durable source registry + admission persistence — PR #41, merge `e8198d259a4ffccbebd723154e1eafd5dac5365a`.
-3. Durable ResearchJob preflight + SourceTask lifecycle — PR #44, merge `ce4f43648f764aeef8e153d21cbc769ddf2bdf60`.
-4. Provider-neutral SourceTask execution bridge — PR #46, merge `08b33930bb6678a23ffcc5299ae56ed4b029f1ba`.
-5. Connector execution safety / durable health — PR #48, merge `bec3c6bb9fd89dd496b155b0f6087e5a8f77b223`.
-6. Fail-closed source transport admission / SSRF-egress contract — PR #58, merge `0d03b538e22deeac481800c81a6f8176752b70d7`.
+## M03 current safe plan
 
-Slice 6 adds version-bound transport admission contracts, source-request target/budget binding, host/scheme/method/port restrictions, DNS-resolution evidence requirements, redirect revalidation requirements, non-public destination blocking, content/byte/time limits and adversarial contract tests. It intentionally does **not** add a DNS resolver, socket/HTTP client, provider credentials or production network activation.
+Canonical scope from `docs/PROJECT_PLAN.md`:
 
-Real provider transport remains intentionally absent. Production `source.execute`, provider HTTP/network and credentialed connector execution remain separately gated.
+**Canonical identity, deterministic + structured-AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.**
 
-## Parallel engineering operating model
+Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
-Standing slots / branches:
+`M03-ER-001 → { M03-ER-002, M03-ER-003 } → M03-ER-004`
 
-- `SUPERVISOR` → `supervisor/integration-control`
-- `CONTRACTS` → `agent/contracts-policy`
-- `DATABASE` → `agent/database-persistence`
-- `RUNTIME` → `agent/worker-runtime`
-- `MODULE` → `agent/module-infrastructure`
-- `VERIFY` → `agent/verification-security`
+`M03-ER-002 → M03-ER-005`
 
-Default invariant:
+`{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`1 agent = 1 bounded work packet = 1 isolated branch/worktree = 1 PR`
+The first feature packet is the contracts/interface freeze. Persistence migration creation cannot begin until the next migration number is serialized by Supervisor governance.
 
-Additional hard invariant: one occupied slot has at most one live mutating instance lease.
+## Security / authorization boundary
 
-Default capacity target: **6**. Soft maximum: **8**, only while conflict/rework/CI latency remains healthy.
+Still separately gated:
 
-`pnpm run verify:parallel` verifies static slot/branch consistency, live-registry authority, main-first onboarding, the exact rejection phrase, Supervisor workflow, lease governance, head-bound completion, synchronization, migration numbering and main-push provenance wiring.
+- production model/provider invocation and credentials;
+- production source-provider HTTP/network/credentials;
+- unrestricted acquisition/scraping;
+- payment-provider activation;
+- autonomous or bulk outreach;
+- production deployment/release;
+- destructive production data actions;
+- unresolved legal/provider/commercial decisions.
 
-## Known limitations / not production verification
+M03 identity work must remain tenant-scoped, evidence/provenance aware, deterministic-first, review-aware and reversible where merge/split semantics require it. Parallelism never widens authorization.
 
-- native GitHub branch protection is not yet enabled; issue #54 tracks the external setting;
-- no production deployment has occurred;
-- no production model/provider/source connector is activated;
-- no production source-provider network transport or credentials are enabled;
-- remote GitHub sessions cannot prove an unseen local developer working-copy/runtime/database state;
-- governance integration does not authorize payments, unrestricted acquisition, autonomous outreach or release gates.
+## Known limitations
+
+- native GitHub `main` protection/ruleset remains external action tracked in issue #54;
+- no production deployment has been proven by these repository gates;
+- remote GitHub sessions cannot prove unseen local developer working-copy/runtime/database state;
+- provider-neutral seams are not evidence of production provider activation/readiness.
 
 ## Next safe actions
 
-1. Keep issue #54 open until native `main` protection/ruleset is enabled and verified by branch readback.
-2. Resolve exact current `main` SHA, synchronization epoch and slot occupancy from issues #50/#53 before every new work packet; do not hardcode live coordination state in this versioned checkpoint.
-3. Continue M02 through the dependency DAG without activating real provider transport or credentials.
-4. Next preferred bounded slice: deterministic IPv4/IPv6 destination classification plus injected test-only resolution/transport primitives that satisfy the new transport-admission contract while preserving `networkAccess: 'none'` for real provider traffic.
-5. Adversarially cover private/loopback/link-local/metadata/multicast/unspecified/documentation/reserved ranges, IPv4-mapped IPv6, encoded/confusable destination forms, mixed DNS answers, redirect-hop revalidation and rebinding-style evidence changes.
-6. Keep source authorization version-bound and revalidated at execution time; no runtime widening of policy, quota, target, storage, export or credential rights.
-7. Require exact-head FULL GATE, live PR lease verification, instruction-drift completion and expected-head merge for every new slice.
-8. After each merge, advance issue #50 synchronization epoch, update issue #53 baselines, synchronize active/idle standing branches as required and release completed live leases safely.
+1. Integrate the M02A→M03 instruction-drift reconciliation before assigning M03 feature work.
+2. Resolve latest main/epoch/slot/lease state after that integration.
+3. Start `M03-ER-001` on the CONTRACTS slot only after its standing branch is synchronized and atomically leased.
+4. Freeze canonical business/source-observation/resolution/evidence/review/merge-split boundaries before persistence/runtime work.
+5. After `M03-ER-001`, allow independent DATABASE and MODULE packets only when their paths/interfaces are non-overlapping and migration reservation is serialized.
+6. Preserve exact-head FULL GATE, expected-head merge, resulting-main certification and post-merge synchronization for every packet.
