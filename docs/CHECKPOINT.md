@@ -1,6 +1,6 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-16
+Updated: 2026-09-20
 
 ## Project state
 
@@ -23,7 +23,7 @@ Do not infer current branch/agent state from this versioned file. Resolve live s
 - branch `coordination/leases` — exact live mutating-instance authority;
 - GitHub issue **#54** — native `main` branch-protection status.
 
-## Canonical working instructions
+## Agent Instruction Drift Check
 
 Every agent re-reads the relevant subset before work and again before completion:
 
