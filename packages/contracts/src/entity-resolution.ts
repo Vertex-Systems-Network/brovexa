@@ -212,6 +212,7 @@ export const BusinessResolutionDecisionSchema = z
     decision: BusinessResolutionDecisionKindSchema,
     confidence: z.number().min(0).max(1),
     reviewState: BusinessResolutionReviewStateSchema,
+    reviewDecisionRef: IdentifierSchema.nullable(),
     reasonCodes: z.array(IdentifierSchema).min(1).max(64),
     evidenceIds: z.array(IdentifierSchema).min(1).max(256),
     evaluatedAt: DateTimeSchema,
@@ -239,6 +240,14 @@ export const BusinessResolutionDecisionSchema = z
     }
     if (decision.reviewState === 'rejected' && decision.decision === 'match_existing') {
       addIssue(ctx, ['reviewState'], 'A rejected review cannot produce match_existing.');
+    }
+
+    const reviewWasDecided = decision.reviewState === 'approved' || decision.reviewState === 'rejected';
+    if (reviewWasDecided && decision.reviewDecisionRef === null) {
+      addIssue(ctx, ['reviewDecisionRef'], 'Approved or rejected review state requires a durable review decision reference.');
+    }
+    if (!reviewWasDecided && decision.reviewDecisionRef !== null) {
+      addIssue(ctx, ['reviewDecisionRef'], 'A review decision reference is valid only after review approval or rejection.');
     }
   });
 export type BusinessResolutionDecision = z.infer<typeof BusinessResolutionDecisionSchema>;
@@ -361,6 +370,7 @@ const ReversibleIdentityChangeBaseSchema = z
     reasonCodes: z.array(IdentifierSchema).min(1).max(64),
     requestedByActorId: IdentifierSchema,
     requestedAt: DateTimeSchema,
+    reviewRequestId: IdentifierSchema,
     reviewState: z.literal('pending'),
     reversible: z.literal(true),
   })
