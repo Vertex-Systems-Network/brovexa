@@ -142,6 +142,35 @@ describe('BusinessResolutionEvaluationSchema', () => {
     expect(parsed.decision.decision).toBe('match_existing');
   });
 
+  it('rejects cross-workspace candidate evidence before a resolution decision can be accepted', () => {
+    expect(() =>
+      BusinessResolutionEvaluationSchema.parse({
+        version: '1.0.0',
+        workspaceId: 'workspace.1',
+        observation,
+        thresholdPolicy,
+        evidence: [
+          {
+            ...deterministicSupport,
+            workspaceId: 'workspace.attacker',
+          },
+        ],
+        decision: {
+          decisionId: 'decision.cross-workspace',
+          workspaceId: 'workspace.1',
+          sourceObservationId: 'observation.1',
+          candidateCanonicalBusinessId: 'business.1',
+          decision: 'match_existing',
+          confidence: 0.99,
+          reviewState: 'not_required',
+          reasonCodes: ['identity_exact_domain'],
+          evidenceIds: ['evidence.1'],
+          evaluatedAt: '2026-09-21T00:02:00.000Z',
+        },
+      }),
+    ).toThrow(/workspace must match the evaluation workspace/);
+  });
+
   it('fails closed when contradictory evidence is used to auto-match without review approval', () => {
     expect(() =>
       BusinessResolutionEvaluationSchema.parse({
