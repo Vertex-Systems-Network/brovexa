@@ -136,7 +136,10 @@ Runner-dependent verification now has a durable deferred queue:
 - policy: `docs/RUNNER_BENCHMARK.md`;
 - machine queue/results: `.agent/runner-benchmark.yaml`;
 - executable guard: `pnpm run verify:runner-benchmark` (also included in `pnpm run verify:parallel`);
-- current seeded task: `RUNNER-M01-WINDOWS-X64-001` for the existing Windows x64 self-hosted verification workflow.
+- current Runner inventory:
+  - `RUNNER-WINDOWS-READINESS-001` — Windows x64 runner readiness diagnostics;
+  - `RUNNER-M01-WINDOWS-X64-001` — exact-main Windows x64 compatibility benchmark;
+- dependency: `RUNNER-WINDOWS-READINESS-001 → RUNNER-M01-WINDOWS-X64-001`.
 
 Normal required PR/resulting-main/security gates remain immediate and cannot be moved into the Runner queue. Applicable deferred tasks are accumulated during development and executed in one controlled milestone-close Runner batch before the relevant milestone/release is finalized.
 
