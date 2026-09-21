@@ -13,11 +13,13 @@ roles:
       - docs/AI_NATIVE_PLAN.md
       - docs/NEW_AGENT_ONBOARDING.md
       - docs/AGENT_BRANCH_LEASES.md
+      - docs/RUNNER_BENCHMARK.md
       - .agent/**
       - .github/workflows/**
       - .github/PULL_REQUEST_TEMPLATE.md
       - scripts/verify-parallel-development.mjs
       - scripts/verify-agent-lease-governance.mjs
+      - scripts/verify-runner-benchmark.mjs
       - package.json
       - pnpm-lock.yaml
     responsibilities:
@@ -38,6 +40,8 @@ roles:
       - synchronization_epoch
       - broadcast_all_active_agents_after_merge
       - resume_supervisor_work_after_interrupt
+      - maintain_deferred_runner_benchmark_queue
+      - execute_runner_batch_at_milestone_close
 
   contracts_policy:
     default_write:

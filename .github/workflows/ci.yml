@@ -60,6 +60,9 @@ jobs:
       - name: Verify atomic branch lease governance
         run: node scripts/verify-agent-lease-governance.mjs
 
+      - name: Verify deferred Runner benchmark governance
+        run: node scripts/verify-runner-benchmark.mjs
+
       - name: Verify tracked source formatting
         run: node scripts/verify-source-hygiene.mjs
 
