@@ -135,6 +135,7 @@ Canonical coordination sources:
 - `.agent/ownership.yaml` / `.agent/shared-files.yaml` — ownership boundaries;
 - `.agent/workstreams.yaml` / `.agent/dependencies.yaml` — workstream/DAG rules;
 - `.agent/migrations.yaml` — serialized migration reservations;
+- `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml` — deferred special-Runner queue, final-batch policy and benchmark results;
 - `.agent/supervisor.yaml` — Supervisor contract;
 - GitHub issue #50 — live integrated-main SHA/synchronization epoch;
 - GitHub issue #53 — live logical slot occupancy/assignment;
@@ -187,11 +188,11 @@ Tests/invariants are never weakened merely to make CI green.
 
 A feature is READY only when behavior, data/source policy, agent/memory implications, architecture/integration, security/privacy/compliance, acceptance tests/evals, cost/budget, migration/rollback and failure/partial states are defined.
 
-Parallel work additionally requires valid live slot assignment, active live-instance lease, bounded write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information and verification/handoff criteria.
+Parallel work additionally requires valid live slot assignment, active live-instance lease, bounded write scope, synchronization epoch, dependencies, shared-file impact, migration reservation where needed, interface-freeze information, Runner benchmark task IDs/deferral justification where applicable, and verification/handoff criteria.
 
 ## Definition of Done
 
-Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + current docs/ADRs/checkpoint + meaningful Git history + visible limitations. Otherwise PARTIALLY COMPLETE.
+Implementation + appropriate automated tests/evals + quality/security checks + resilient failure handling + data integrity + performance/cost + observability + current docs/ADRs/checkpoint + meaningful Git history + visible limitations. Applicable deferred Runner tasks must be registered during development and the required milestone/release Runner batch must pass before final milestone/release completion. Otherwise PARTIALLY COMPLETE.
 
 For agent work, DONE also requires current issue #50 state, valid issue #53 ownership, matching active lease, fresh head-bound **Work Done and Submitted**, required verification and Agent Instruction Drift Check.
 
