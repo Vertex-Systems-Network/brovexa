@@ -10,7 +10,7 @@ Updated: 2026-09-20
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** CURRENT NEXT MILESTONE. Supervisor is staging dependency/interface decomposition; no M03 feature packet is live until issue #53 assignment and an atomic slot lease exist.
+- **M03 — Entity Resolution & Contact Enrichment:** ACTIVE IMPLEMENTATION. `M03-ER-001` contracts/interface freeze is integrated through PR #133. `M03-ER-002` DATABASE and `M03-ER-003` MODULE are the next dependency-ready packets; live mutation still requires issue #53 assignment plus atomic slot lease.
 
 The epoch-59 integration snapshot after PR #131 was main `d00d5251152665422c9bbf3ca7067fbe35e5ae0d`. This SHA is historical checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-The first feature packet is the contracts/interface freeze. Persistence migration creation cannot begin until the next migration number is serialized by Supervisor governance.
+`M03-ER-001` contract/interface freeze is integrated through PR #133. Migration `0014_canonical_entity_resolution_persistence` is reserved by Supervisor for `M03-ER-002`; DATABASE persistence may begin only after the DATABASE slot is reserved and leased. `M03-ER-003` may proceed independently on MODULE once separately assigned/leased.
 
 ## Security / authorization boundary
 
@@ -183,9 +183,9 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate the M02A→M03 instruction-drift reconciliation before assigning M03 feature work.
+1. Complete Supervisor integration of migration reservation `0014_canonical_entity_resolution_persistence`.
 2. Resolve latest main/epoch/slot/lease state after that integration.
-3. Start `M03-ER-001` on the CONTRACTS slot only after its standing branch is synchronized and atomically leased.
-4. Freeze canonical business/source-observation/resolution/evidence/review/merge-split boundaries before persistence/runtime work.
-5. After `M03-ER-001`, allow independent DATABASE and MODULE packets only when their paths/interfaces are non-overlapping and migration reservation is serialized.
+3. Assign/lease `M03-ER-002` to DATABASE with write scope limited to `packages/db/**` and reserved migration 0014.
+4. Assign/lease `M03-ER-003` to MODULE only with an explicit non-overlapping module path scope.
+5. Do not start `M03-ER-004` until both `M03-ER-002` and `M03-ER-003` are integrated.
 6. Preserve exact-head FULL GATE, expected-head merge, resulting-main certification and post-merge synchronization for every packet.
