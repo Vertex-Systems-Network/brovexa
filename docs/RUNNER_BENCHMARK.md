@@ -101,7 +101,7 @@ Canonical dispatch workflow:
 
 The batch dispatch must pass the **exact current `main` SHA** through the workflow `ref` input; a stale standing/foundation branch is not acceptable benchmark evidence.
 
-Reference mirror:
+Frozen M01 reference mirror (kept on its historical foundation branch for foundation-contract compatibility; **not** the final-batch dispatch source):
 
 `.github/workflows/ci-self-hosted.yml`
 
