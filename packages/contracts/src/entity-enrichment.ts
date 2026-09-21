@@ -65,6 +65,7 @@ export const BusinessDomainEvidenceSchema = z
       policyVersion: VersionSchema,
     }),
     sourceAdmissionDecisionRef: IdentifierSchema,
+    sourceAdmissionDecision: z.literal('allow'),
     observedAt: DateTimeSchema,
     recordedAt: DateTimeSchema,
   })
@@ -242,6 +243,7 @@ export const ContactDataEligibilityDecisionSchema = z
     connectorVersion: VersionSchema,
     sourceRequestId: IdentifierSchema,
     sourceAdmissionDecisionRef: IdentifierSchema,
+    sourceAdmissionDecision: z.literal('allow'),
     sourceReferenceIds: z.array(IdentifierSchema).min(1).max(64),
     sourcePolicySnapshot: z.object({
       policyId: IdentifierSchema,
