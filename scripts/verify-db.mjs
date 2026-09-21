@@ -60,6 +60,13 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('ALTER TABLE IF EXISTS canonical_businesses DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk');
+  await pool.query('DROP TABLE IF EXISTS canonical_business_lineage_operations');
+  await pool.query('DROP TABLE IF EXISTS canonical_business_aliases');
+  await pool.query('DROP TABLE IF EXISTS business_resolution_decisions');
+  await pool.query('DROP TABLE IF EXISTS candidate_business_match_evidence');
+  await pool.query('DROP TABLE IF EXISTS source_business_observations');
+  await pool.query('DROP TABLE IF EXISTS canonical_businesses');
   await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');
@@ -91,6 +98,384 @@ async function resetTestDatabase() {
   await pool.query('DROP TABLE IF EXISTS workspace_preferences CASCADE');
   await pool.query('DROP TABLE IF EXISTS workspaces CASCADE');
   await pool.query('DROP SCHEMA IF EXISTS brovexa_internal CASCADE');
+}
+
+
+function m03Ids(prefix) {
+  return {
+    business1: prefix + '-business-1',
+    business2: prefix + '-business-2',
+    businessNew: prefix + '-business-new',
+    observation: prefix + '-observation',
+    evidence: prefix + '-evidence',
+    decision: prefix + '-decision',
+    createDecision: prefix + '-create-decision',
+    lineage: prefix + '-lineage',
+  };
+}
+
+async function insertM03Base(client, workspaceId, prefix) {
+  const ids = m03Ids(prefix);
+  const observedAt = new Date('2026-09-21T12:00:00.000Z');
+  const refs = ['ref-1'];
+  const signals = [{ signalId: 'signal-1', sourceReferenceIds: refs, type: 'domain', value: 'example.test' }];
+
+  await client.query(
+    'INSERT INTO canonical_businesses (id, workspace_id, display_name) VALUES ($1, $2::uuid, $3), ($4, $2::uuid, $5)',
+    [ids.business1, workspaceId, 'M03 Business One', ids.business2, 'M03 Business Two'],
+  );
+  await client.query(
+    'INSERT INTO source_business_observations (id, workspace_id, source_candidate_id, source_key, observed_at, source_reference_ids, identity_signals, envelope) VALUES ($1, $2::uuid, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)',
+    [
+      ids.observation,
+      workspaceId,
+      prefix + '-source-candidate',
+      'source.test',
+      observedAt,
+      JSON.stringify(refs),
+      JSON.stringify(signals),
+      JSON.stringify({
+        version: '1.0.0',
+        workspaceId,
+        sourceObservationId: ids.observation,
+        sourceCandidateId: prefix + '-source-candidate',
+        sourceKey: 'source.test',
+        observedAt: observedAt.toISOString(),
+        sourceReferenceIds: refs,
+        identitySignals: signals,
+      }),
+    ],
+  );
+  return { ids, observedAt, refs, signals };
+}
+
+async function insertM03Evidence(client, workspaceId, base, options = {}) {
+  const evidenceId = options.evidenceId ?? base.ids.evidence;
+  const method = options.method ?? 'deterministic';
+  const inferenceRef = method === 'structured_ai' ? (options.inferenceRef ?? 'inference-test') : null;
+  const effect = options.effect ?? 'supports_match';
+  const confidence = options.confidence ?? 0.99;
+  const signalIds = options.signalIds ?? ['signal-1'];
+  const refs = options.refs ?? ['ref-1'];
+  const recordedAt = new Date('2026-09-21T12:00:01.000Z');
+
+  await client.query(
+    'INSERT INTO candidate_business_match_evidence (id, workspace_id, source_observation_id, candidate_canonical_business_id, observation_signal_ids, source_reference_ids, method, inference_ref, effect, reason_code, confidence, recorded_at, envelope) VALUES ($1, $2::uuid, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10, $11, $12, $13::jsonb)',
+    [
+      evidenceId,
+      workspaceId,
+      base.ids.observation,
+      base.ids.business1,
+      JSON.stringify(signalIds),
+      JSON.stringify(refs),
+      method,
+      inferenceRef,
+      effect,
+      effect === 'contradicts_match' ? 'domain.conflict' : 'domain.exact',
+      confidence,
+      recordedAt,
+      JSON.stringify({
+        evidenceId,
+        workspaceId,
+        sourceObservationId: base.ids.observation,
+        candidateCanonicalBusinessId: base.ids.business1,
+        observationSignalIds: signalIds,
+        sourceReferenceIds: refs,
+        method,
+        inferenceRef,
+        effect,
+        reasonCode: effect === 'contradicts_match' ? 'domain.conflict' : 'domain.exact',
+        confidence,
+        recordedAt: recordedAt.toISOString(),
+      }),
+    ],
+  );
+  return evidenceId;
+}
+
+async function insertM03Decision(client, workspaceId, base, options = {}) {
+  const decisionId = options.decisionId ?? base.ids.decision;
+  const decision = options.decision ?? 'match_existing';
+  const candidateId = decision === 'create_new' ? null : (options.candidateId ?? base.ids.business1);
+  const confidence = options.confidence ?? 0.99;
+  const reviewState = options.reviewState ?? 'not_required';
+  const reviewDecisionRef = options.reviewDecisionRef ?? null;
+  const evidenceIds = options.evidenceIds ?? [base.ids.evidence];
+  const evaluatedAt = new Date('2026-09-21T12:00:02.000Z');
+  const thresholdPolicy = { policyId: 'm03.default', version: '1.0.0', reviewMinimum: 0.7, autoMatchMinimum: 0.95 };
+  const reasons = options.reasonCodes ?? ['domain.exact'];
+
+  await client.query(
+    'INSERT INTO business_resolution_decisions (id, workspace_id, source_observation_id, candidate_canonical_business_id, decision, confidence, review_state, review_decision_ref, reason_codes, evidence_ids, threshold_policy_id, threshold_policy_version, review_minimum, auto_match_minimum, evaluated_at, envelope) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16::jsonb)',
+    [
+      decisionId,
+      workspaceId,
+      base.ids.observation,
+      candidateId,
+      decision,
+      confidence,
+      reviewState,
+      reviewDecisionRef,
+      JSON.stringify(reasons),
+      JSON.stringify(evidenceIds),
+      thresholdPolicy.policyId,
+      thresholdPolicy.version,
+      thresholdPolicy.reviewMinimum,
+      thresholdPolicy.autoMatchMinimum,
+      evaluatedAt,
+      JSON.stringify({
+        decisionId,
+        workspaceId,
+        sourceObservationId: base.ids.observation,
+        candidateCanonicalBusinessId: candidateId,
+        decision,
+        confidence,
+        reviewState,
+        reviewDecisionRef,
+        reasonCodes: reasons,
+        evidenceIds,
+        thresholdPolicy,
+        evaluatedAt: evaluatedAt.toISOString(),
+      }),
+    ],
+  );
+  return decisionId;
+}
+
+async function insertM03ValidGraph(client, workspaceId, prefix) {
+  const base = await insertM03Base(client, workspaceId, prefix);
+  await insertM03Evidence(client, workspaceId, base);
+  await insertM03Decision(client, workspaceId, base);
+
+  await client.query(
+    'INSERT INTO canonical_business_aliases (source_observation_id, workspace_id, canonical_business_id, decision_id, attached_at) VALUES ($1, $2::uuid, $3, $4, $5)',
+    [base.ids.observation, workspaceId, base.ids.business1, base.ids.decision, new Date('2026-09-21T12:00:03.000Z')],
+  );
+
+  await insertM03Decision(client, workspaceId, base, {
+    decisionId: base.ids.createDecision,
+    decision: 'create_new',
+    reviewState: 'approved',
+    reviewDecisionRef: prefix + '-review-approval',
+  });
+  await client.query(
+    'INSERT INTO canonical_businesses (id, workspace_id, display_name, origin_decision_id) VALUES ($1, $2::uuid, $3, $4)',
+    [base.ids.businessNew, workspaceId, 'M03 New Business', base.ids.createDecision],
+  );
+
+  await client.query(
+    'INSERT INTO canonical_business_lineage_operations (id, workspace_id, operation_type, request_id, target_canonical_business_id, source_canonical_business_ids, restore_canonical_business_ids, parent_lineage_operation_id, evidence_ids, reason_codes, requested_by_actor_id, requested_at, review_request_id, review_state, reversible, envelope) VALUES ($1, $2::uuid, $3, $4, $5, $6::jsonb, $7::jsonb, NULL, $8::jsonb, $9::jsonb, $10, $11, $12, $13, $14, $15::jsonb)',
+    [
+      base.ids.lineage,
+      workspaceId,
+      'merge',
+      prefix + '-merge-request',
+      base.ids.business1,
+      JSON.stringify([base.ids.business1, base.ids.business2]),
+      JSON.stringify([]),
+      JSON.stringify([base.ids.evidence]),
+      JSON.stringify(['duplicate.business']),
+      prefix + '-actor',
+      new Date('2026-09-21T12:00:04.000Z'),
+      prefix + '-review-request',
+      'pending',
+      true,
+      JSON.stringify({ source: 'verify-db' }),
+    ],
+  );
+  return base;
+}
+
+async function verifyM03EntityResolutionGuards(testPool, workspaceId) {
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03ValidGraph(client, workspaceId, 'm03-valid');
+      const counts = await client.query(
+        'SELECT (SELECT count(*)::int FROM canonical_businesses WHERE workspace_id = $1::uuid) AS businesses, (SELECT count(*)::int FROM source_business_observations WHERE workspace_id = $1::uuid) AS observations, (SELECT count(*)::int FROM candidate_business_match_evidence WHERE workspace_id = $1::uuid) AS evidence, (SELECT count(*)::int FROM business_resolution_decisions WHERE workspace_id = $1::uuid) AS decisions, (SELECT count(*)::int FROM canonical_business_aliases WHERE workspace_id = $1::uuid) AS aliases, (SELECT count(*)::int FROM canonical_business_lineage_operations WHERE workspace_id = $1::uuid) AS lineage',
+        [workspaceId],
+      );
+      assert.equal(counts.rows[0]?.businesses, 3);
+      assert.equal(counts.rows[0]?.observations, 1);
+      assert.equal(counts.rows[0]?.evidence, 1);
+      assert.equal(counts.rows[0]?.decisions, 2);
+      assert.equal(counts.rows[0]?.aliases, 1);
+      assert.equal(counts.rows[0]?.lineage, 1);
+      const origin = await client.query(
+        'SELECT origin_decision_id FROM canonical_businesses WHERE id = $1 AND workspace_id = $2::uuid',
+        [base.ids.businessNew, workspaceId],
+      );
+      assert.equal(origin.rows[0]?.origin_decision_id, base.ids.createDecision);
+      throw new Error('m03-valid-rollback');
+    }),
+    /m03-valid-rollback/,
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-provenance');
+      await insertM03Evidence(client, workspaceId, base, { refs: ['ref-outside'] });
+    }),
+    expectPostgresConstraint('23514', 'candidate_business_match_evidence_reference_guard'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-low-confidence');
+      await insertM03Evidence(client, workspaceId, base);
+      await insertM03Decision(client, workspaceId, base, { confidence: 0.8 });
+    }),
+    expectPostgresConstraint('23514', 'business_resolution_decisions_review_policy_guard'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-contradiction');
+      await insertM03Evidence(client, workspaceId, base);
+      const conflictingEvidence = base.ids.evidence + '-conflict';
+      await insertM03Evidence(client, workspaceId, base, { evidenceId: conflictingEvidence, effect: 'contradicts_match' });
+      await insertM03Decision(client, workspaceId, base, { evidenceIds: [base.ids.evidence, conflictingEvidence] });
+    }),
+    expectPostgresConstraint('23514', 'business_resolution_decisions_review_policy_guard'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-structured-ai');
+      await insertM03Evidence(client, workspaceId, base, { method: 'structured_ai' });
+      await insertM03Decision(client, workspaceId, base);
+    }),
+    expectPostgresConstraint('23514', 'business_resolution_decisions_review_policy_guard'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-alias-pending');
+      await insertM03Evidence(client, workspaceId, base);
+      const pendingDecision = await insertM03Decision(client, workspaceId, base, {
+        decisionId: base.ids.decision + '-pending',
+        decision: 'review_required',
+        reviewState: 'pending',
+      });
+      await client.query(
+        'INSERT INTO canonical_business_aliases (source_observation_id, workspace_id, canonical_business_id, decision_id, attached_at) VALUES ($1, $2::uuid, $3, $4, $5)',
+        [base.ids.observation, workspaceId, base.ids.business1, pendingDecision, new Date('2026-09-21T12:00:05.000Z')],
+      );
+    }),
+    expectPostgresConstraint('23514', 'canonical_business_aliases_decision_state_guard'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-lineage-evidence');
+      await client.query(
+        'INSERT INTO canonical_business_lineage_operations (id, workspace_id, operation_type, request_id, target_canonical_business_id, source_canonical_business_ids, restore_canonical_business_ids, evidence_ids, reason_codes, requested_by_actor_id, requested_at, review_request_id, review_state, reversible, envelope) VALUES ($1, $2::uuid, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13, $14, $15::jsonb)',
+        [
+          base.ids.lineage,
+          workspaceId,
+          'merge',
+          'm03-lineage-evidence-request',
+          base.ids.business1,
+          JSON.stringify([base.ids.business1, base.ids.business2]),
+          JSON.stringify([]),
+          JSON.stringify(['missing-evidence']),
+          JSON.stringify(['duplicate.business']),
+          'm03-actor',
+          new Date('2026-09-21T12:00:06.000Z'),
+          'm03-review',
+          'pending',
+          true,
+          JSON.stringify({ source: 'verify-db' }),
+        ],
+      );
+    }),
+    expectPostgresConstraint('23514', 'canonical_business_lineage_operations_evidence_guard'),
+  );
+
+  const appendOnlyCases = [
+    ['source_business_observations_append_only', 'UPDATE source_business_observations SET observed_at = observed_at WHERE id = $1', (base) => base.ids.observation],
+    ['candidate_business_match_evidence_append_only', 'UPDATE candidate_business_match_evidence SET confidence = confidence WHERE id = $1', (base) => base.ids.evidence],
+    ['business_resolution_decisions_append_only', 'UPDATE business_resolution_decisions SET confidence = confidence WHERE id = $1', (base) => base.ids.decision],
+    ['canonical_business_aliases_append_only', 'DELETE FROM canonical_business_aliases WHERE source_observation_id = $1', (base) => base.ids.observation],
+    ['canonical_business_lineage_operations_append_only', 'DELETE FROM canonical_business_lineage_operations WHERE id = $1', (base) => base.ids.lineage],
+  ];
+  for (let index = 0; index < appendOnlyCases.length; index += 1) {
+    const [constraint, mutation, idFor] = appendOnlyCases[index];
+    await assert.rejects(
+      withPgTransaction(testPool, async (client) => {
+        const base = await insertM03ValidGraph(client, workspaceId, 'm03-append-' + index);
+        await client.query(mutation, [idFor(base)]);
+      }),
+      expectPostgresConstraint('23514', constraint),
+    );
+  }
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-cross-fk');
+      await insertM03Evidence(client, workspaceId, base);
+      const otherWorkspace = await client.query(
+        "INSERT INTO workspaces (slug, display_name) VALUES ('m03-cross-fk-other', 'M03 Cross FK Other') RETURNING id",
+      );
+      const otherWorkspaceId = otherWorkspace.rows[0]?.id;
+      assert.ok(otherWorkspaceId);
+      const other = await insertM03Base(client, otherWorkspaceId, 'm03-cross-fk-other');
+      const recordedAt = new Date('2026-09-21T12:00:07.000Z');
+      await client.query(
+        'INSERT INTO candidate_business_match_evidence (id, workspace_id, source_observation_id, candidate_canonical_business_id, observation_signal_ids, source_reference_ids, method, inference_ref, effect, reason_code, confidence, recorded_at, envelope) VALUES ($1, $2::uuid, $3, $4, $5::jsonb, $6::jsonb, $7, NULL, $8, $9, $10, $11, $12::jsonb)',
+        [
+          'm03-cross-tenant-evidence',
+          otherWorkspaceId,
+          other.ids.observation,
+          base.ids.business1,
+          JSON.stringify(['signal-1']),
+          JSON.stringify(['ref-1']),
+          'deterministic',
+          'supports_match',
+          'domain.exact',
+          0.99,
+          recordedAt,
+          JSON.stringify({
+            evidenceId: 'm03-cross-tenant-evidence',
+            workspaceId: otherWorkspaceId,
+            sourceObservationId: other.ids.observation,
+            candidateCanonicalBusinessId: base.ids.business1,
+            observationSignalIds: ['signal-1'],
+            sourceReferenceIds: ['ref-1'],
+            method: 'deterministic',
+            inferenceRef: null,
+            effect: 'supports_match',
+            reasonCode: 'domain.exact',
+            confidence: 0.99,
+            recordedAt: recordedAt.toISOString(),
+          }),
+        ],
+      );
+    }),
+    expectPostgresConstraint('23503', 'candidate_business_match_evidence_candidate_fk'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      const base = await insertM03Base(client, workspaceId, 'm03-cross-origin');
+      await insertM03Evidence(client, workspaceId, base);
+      await insertM03Decision(client, workspaceId, base, {
+        decisionId: base.ids.createDecision,
+        decision: 'create_new',
+        reviewState: 'approved',
+        reviewDecisionRef: 'm03-cross-origin-review',
+      });
+      const otherWorkspace = await client.query(
+        "INSERT INTO workspaces (slug, display_name) VALUES ('m03-cross-origin-other', 'M03 Cross Origin Other') RETURNING id",
+      );
+      const otherWorkspaceId = otherWorkspace.rows[0]?.id;
+      assert.ok(otherWorkspaceId);
+      await client.query(
+        'INSERT INTO canonical_businesses (id, workspace_id, display_name, origin_decision_id) VALUES ($1, $2::uuid, $3, $4)',
+        ['m03-cross-origin-business', otherWorkspaceId, 'Cross Origin Business', base.ids.createDecision],
+      );
+    }),
+    expectPostgresConstraint('23514', 'canonical_businesses_origin_decision_guard'),
+  );
 }
 
 try {
@@ -147,6 +532,8 @@ try {
     `SELECT count(*)::int AS count FROM workspaces WHERE slug = 'rollback-verification'`,
   );
   assert.equal(rolledBackRecord.rows[0]?.count, 0);
+
+  await verifyM03EntityResolutionGuards(pool, workspaceId);
 
   await pool.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
   const preferenceCount = await pool.query(
