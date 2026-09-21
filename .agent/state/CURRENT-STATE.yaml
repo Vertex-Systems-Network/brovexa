@@ -1,18 +1,19 @@
 version: 1
 kind: supervisor-compact-state
 status: VERIFYING
-baseline_main_sha: "64eace3df1a03740c4cb1cce2ad90368f6ae5421"
-sync_epoch: 68
-registry_revision: 158
-current_work_packet: "SUP-AI-NATIVE-RESILIENCE-001"
+baseline_main_sha: "1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4"
+sync_epoch: 71
+registry_revision: 175
+current_work_packet: "SUP-AI-NATIVE-README-PROGRESS-001"
 supervisor_branch: "supervisor/integration-control"
 supervisor_lease_id: "lease-supervisor-20260921-sec134-closeout-8c71f4"
-last_completed_packet: "M03-ER-002"
-last_completed_main_sha: "64eace3df1a03740c4cb1cce2ad90368f6ae5421"
+last_completed_packet: "M03-ER-004"
+last_completed_main_sha: "1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4"
 runner_benchmark_deferred_count: 2
-open_pull_requests: []
-current_objective: "Harden timeout/resume durable state and canonical PR handoff preflight before M03-ER-003 assignment."
-exact_next_action: "Create the bounded resilience PR from the exact epoch-68 Supervisor branch, require exact-head FULL GATE, merge with expected-head safety, verify resulting main, then assign M03-ER-003."
+open_pull_requests:
+  - 145
+current_objective: "Close mandatory README progress governance and reconcile compact Supervisor state before M03-ER-005 assignment."
+exact_next_action: "Require exact-head FULL GATE for PR #145, merge with expected-head safety, verify resulting main, advance synchronization state, then dependency-safely assign M03-ER-005."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main

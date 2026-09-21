@@ -6,7 +6,7 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-09-22**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02 provider-neutral discovery/security foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` contracts, `M03-ER-002` durable persistence, and `M03-ER-003` deterministic normalization/candidate generation are integrated. `M03-ER-004` deterministic-first resolver orchestration is under exact-head verification in PR #144. Production provider/model/network activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02 provider-neutral discovery/security foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` contracts, `M03-ER-002` durable persistence, `M03-ER-003` deterministic normalization/candidate generation, and `M03-ER-004` deterministic-first resolver orchestration are integrated. `M03-ER-005` domain/contact evidence boundary and `M03-ER-006` independent adversarial verification remain downstream. Production provider/model/network activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
