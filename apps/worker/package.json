@@ -17,6 +17,7 @@
     "start": "node --env-file-if-exists=../../.env dist/main.js"
   },
   "dependencies": {
+    "@brovexa/contracts": "workspace:*",
     "@brovexa/db": "workspace:*",
     "@brovexa/queue": "workspace:*"
   }
