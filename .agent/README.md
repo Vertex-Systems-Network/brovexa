@@ -2,7 +2,7 @@
 
 These files are the machine-readable companion to `AGENTS.md`, `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, and `docs/AGENT_BRANCH_LEASES.md`.
 
-Before starting or resuming parallel work, agents inspect these manifests, current `main`, their own branch/head, latest issue #50 synchronization state, issue #53 live slot occupancy, and their slot's active lease on `coordination/leases`.
+Before starting or resuming parallel work, the Supervisor reads `.agent/state/CURRENT-STATE.yaml` and `.agent/state/LAST-CHECKPOINT.md` first, then reconciles exact current `main`, OPEN issues, OPEN PRs, issue #50 synchronization state, issue #53 live slot occupancy, active leases on `coordination/leases`, and the Runner benchmark. Repository/runtime evidence always overrides compact checkpoint text, and an interrupted response never authorizes repeating work without reconciliation.
 
 Files:
 
@@ -14,6 +14,9 @@ Files:
 - `migrations.yaml` — serialized migration number reservations/current next number.
 - `supervisor.yaml` — Supervisor onboarding/completion/interruption/review/merge/broadcast/integration and atomic lease protocol.
 - `runner-benchmark.yaml` — Supervisor-owned deferred special-Runner queue and retained benchmark results.
+- `state/CURRENT-STATE.yaml` — <=12 KiB compact durable Supervisor resume snapshot; live repository/runtime evidence always overrides it.
+- `state/LAST-CHECKPOINT.md` — <=16 KiB human-readable last checkpoint and exact next action.
+- `state/EXECUTION-JOURNAL.md` — <=32 KiB rolling Supervisor execution journal for recent state transitions.
 
 Canonical live coordination:
 

@@ -121,6 +121,24 @@ M03 starts with a contract/interface freeze. Packets are dependency-ordered; pla
 
 Supervisor owns shared-file composition, migration reservation, interface drift, exact-head review, merge ordering and synchronization.
 
+## Supervisor durable resume and PR preflight
+
+Every Supervisor start, continue, resume, interrupted response, tool failure or delivery timeout begins with the compact durable state before any new mutation:
+
+`CURRENT-STATE → LAST-CHECKPOINT → exact main → OPEN issues → OPEN PRs → issue #50/#53 + leases → Runner benchmark → new work`.
+
+Compact files are bounded and intentionally small:
+
+- `.agent/state/CURRENT-STATE.yaml` — maximum 12 KiB;
+- `.agent/state/LAST-CHECKPOINT.md` — maximum 16 KiB;
+- `.agent/state/EXECUTION-JOURNAL.md` — maximum 32 KiB rolling history.
+
+Compact state is a restart accelerator, not a competing source of truth. Repository/runtime evidence always wins. Durable resume statuses are `VERIFYING`, `WAITING_EXTERNAL`, and `BLOCKED`; after a timeout or interrupted response, the Supervisor verifies repository state before repeating any mutation.
+
+Before creating any implementation or governance PR, validate the canonical handoff body with `scripts/verify-pr-handoff-preflight.mjs`, which shares `scripts/pr-handoff-contract.mjs` with hosted PR CI. The preflight must match exact branch/head, synced main SHA/epoch, slot, instance and lease. For a fresh synchronize event, create the future commit first, update handoff metadata to that future SHA, then move the branch ref non-destructively.
+
+No new feature packet starts while an actionable governance/integration PR is unresolved.
+
 ## Mandatory assignment sequence
 
 Before feature mutation:
