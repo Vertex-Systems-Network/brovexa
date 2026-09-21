@@ -455,7 +455,7 @@ describe('0014 canonical entity-resolution migration contract', () => {
       expect(migration).toContain('CREATE OR REPLACE FUNCTION ' + fn + '()');
     }
     expect(migration.match(/business_resolution_decisions_threshold_policy_version_check/g) ?? []).toHaveLength(1);
-    expect(migration).toContain("CHECK (threshold_policy_version ~ '^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$')");
+    expect(migration).toContain("CHECK (threshold_policy_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$')");
 
     const fkDrop = rollback.indexOf('DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk');
     const decisionDrop = rollback.indexOf('DROP TABLE IF EXISTS business_resolution_decisions');

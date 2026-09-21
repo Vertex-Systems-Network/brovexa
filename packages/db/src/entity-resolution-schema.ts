@@ -195,7 +195,7 @@ export const businessResolutionDecisions = pgTable(
     check('business_resolution_decisions_threshold_policy_id_check', sql`${table.thresholdPolicyId} ~ ${identifierCheck}`),
     check(
       'business_resolution_decisions_threshold_policy_version_check',
-      sql`${table.thresholdPolicyVersion} ~ '^\\d+\\.\\d+\\.\\d+$'`,
+      sql`${table.thresholdPolicyVersion} ~ '^[0-9]+[.][0-9]+[.][0-9]+$'`,
     ),
     check(
       'business_resolution_decisions_review_minimum_check',

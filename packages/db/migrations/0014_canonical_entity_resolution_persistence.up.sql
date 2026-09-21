@@ -166,7 +166,7 @@ CREATE TABLE business_resolution_decisions (
   CONSTRAINT business_resolution_decisions_threshold_policy_id_check
     CHECK (threshold_policy_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'),
   CONSTRAINT business_resolution_decisions_threshold_policy_version_check
-    CHECK (threshold_policy_version ~ '^\\d+\\.\\d+\\.\\d+$'),
+    CHECK (threshold_policy_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$'),
   CONSTRAINT business_resolution_decisions_review_minimum_check
     CHECK (review_minimum >= 0 AND review_minimum <= 1),
   CONSTRAINT business_resolution_decisions_auto_match_minimum_check
