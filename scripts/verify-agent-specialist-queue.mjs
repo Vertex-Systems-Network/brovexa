@@ -3,7 +3,6 @@ import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   createIdentityUser,
   createPgPool,
   dispatchAgentExecutionPlan,
@@ -14,6 +13,7 @@ import {
   persistAgentExecutionPlan,
   persistContextReceipt,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 import { createWorkQueue, parseQueueRedisUrl } from '../packages/queue/dist/index.js';
 import { RetryableWorkError } from '../apps/worker/dist/errors.js';
 import { createDeterministicSpecialistHandlers } from '../apps/worker/dist/agent-specialist-runtime.js';

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 const IdentifierSchema = z.string().trim().min(1).max(128);
+export const ExecutableCapabilityKeySchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/);
 const VersionSchema = z.string().trim().min(1).max(64);
 const DateTimeSchema = z.string().datetime();
 const ConfidenceSchema = z.number().min(0).max(1);
@@ -121,8 +126,8 @@ export const AgentDefinitionSchema = z
     triggerTypes: z.array(IdentifierSchema).min(1).max(64),
     inputSchemaId: IdentifierSchema,
     outputSchemaId: IdentifierSchema,
-    allowedTools: z.array(IdentifierSchema).max(128),
-    allowedCommands: z.array(IdentifierSchema).max(128),
+    allowedTools: z.array(ExecutableCapabilityKeySchema).max(128),
+    allowedCommands: z.array(ExecutableCapabilityKeySchema).max(128),
     memory: AgentMemoryAccessSchema,
     autonomyTier: AutonomyTierSchema,
     humanInterrupts: z.array(IdentifierSchema).max(64),
@@ -410,7 +415,7 @@ export const AgentRunSchema = z
     toolSummary: z
       .array(
         z.object({
-          toolKey: IdentifierSchema,
+          toolKey: ExecutableCapabilityKeySchema,
           status: z.enum(['succeeded', 'failed', 'blocked', 'skipped']),
           costMicros: SafeIntegerBudgetSchema,
         }),
@@ -429,7 +434,7 @@ export const AgentRunSchema = z
     proposedActions: z
       .array(
         z.object({
-          commandKey: IdentifierSchema,
+          commandKey: ExecutableCapabilityKeySchema,
           payload: z.record(z.string(), z.unknown()),
           evidenceRefs: z.array(IdentifierSchema).max(128),
         }),
