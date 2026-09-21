@@ -27,7 +27,7 @@ export class EntityResolutionPersistenceError extends Error {
   }
 }
 
-export type CanonicalBusinessIdentityState = 'active' | 'superseded';
+export type PersistedCanonicalBusinessState = 'active' | 'superseded';
 export type MatchEvidenceMethod = 'deterministic' | 'structured_ai';
 export type MatchEvidenceEffect = 'supports_match' | 'contradicts_match';
 export type ResolutionDecisionKind = 'match_existing' | 'create_new' | 'review_required';
@@ -38,7 +38,7 @@ export interface PersistCanonicalBusinessInput {
   id: string;
   workspaceId: string;
   displayName: string;
-  identityState?: CanonicalBusinessIdentityState;
+  identityState?: PersistedCanonicalBusinessState;
   supersededByCanonicalBusinessId?: string | null;
 }
 
@@ -46,7 +46,7 @@ export interface PersistedCanonicalBusiness {
   id: string;
   workspaceId: string;
   displayName: string;
-  identityState: CanonicalBusinessIdentityState;
+  identityState: PersistedCanonicalBusinessState;
   supersededByCanonicalBusinessId: string | null;
   createdAt: Date;
 }
@@ -134,7 +134,7 @@ export interface PersistedCandidateBusinessMatchEvidence extends PersistCandidat
   createdAt: Date;
 }
 
-export interface PersistedBusinessResolutionDecision extends PersistBusinessResolutionDecisionInput {
+export interface PersistedResolutionDecisionRecord extends PersistBusinessResolutionDecisionInput {
   createdAt: Date;
 }
 
@@ -165,7 +165,7 @@ interface CanonicalBusinessRow {
   id: string;
   workspace_id: string;
   display_name: string;
-  identity_state: CanonicalBusinessIdentityState;
+  identity_state: PersistedCanonicalBusinessState;
   superseded_by_canonical_business_id: string | null;
   created_at: Date;
 }
@@ -346,7 +346,7 @@ function toEvidence(row: EvidenceRow): PersistedCandidateBusinessMatchEvidence {
   };
 }
 
-function toDecision(row: DecisionRow): PersistedBusinessResolutionDecision {
+function toDecision(row: DecisionRow): PersistedResolutionDecisionRecord {
   return {
     decisionId: row.id,
     workspaceId: row.workspace_id,
@@ -625,7 +625,7 @@ export async function persistCandidateBusinessMatchEvidence(
 export async function persistBusinessResolutionDecision(
   pool: Pool,
   input: PersistBusinessResolutionDecisionInput,
-): Promise<PersistenceResult<PersistedBusinessResolutionDecision>> {
+): Promise<PersistenceResult<PersistedResolutionDecisionRecord>> {
   assertWorkspaceId(input.workspaceId);
   assertIdentifier(input.decisionId, 'decisionId');
   assertIdentifier(input.sourceObservationId, 'sourceObservationId');
