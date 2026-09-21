@@ -21,6 +21,12 @@ const domainEvidence = {
   },
   sourceAdmissionDecisionRef: 'admission.domain.1',
   sourceAdmissionDecision: 'allow' as const,
+  storageClass: 'EVIDENCE_MINIMAL' as const,
+  retention: {
+    retentionTtlSeconds: 2592000,
+    deletionRequired: true,
+    refreshAfterSeconds: 604800,
+  },
   observedAt: '2026-09-22T00:00:00.000Z',
   recordedAt: '2026-09-22T00:01:00.000Z',
 };
@@ -68,7 +74,13 @@ const allowedEligibility = {
   fieldName: 'contact_email',
   dataClassification: 'PERSONAL_BUSINESS_CONTACT' as const,
   storageClass: 'EVIDENCE_MINIMAL' as const,
+  retention: {
+    retentionTtlSeconds: 2592000,
+    deletionRequired: true,
+    refreshAfterSeconds: 604800,
+  },
   decision: 'allow' as const,
+  displayAllowed: true,
   exportAllowed: false,
   reasonCodes: ['source_and_contact_data_policy_allow'],
   evaluatedAt: '2026-09-22T00:03:00.000Z',
@@ -174,6 +186,7 @@ describe('ContactDataEligibilityDecisionSchema', () => {
       ContactDataEligibilityDecisionSchema.parse({
         ...allowedEligibility,
         decision: 'review_required',
+        displayAllowed: false,
         exportAllowed: true,
         reasonCodes: ['contact_data_policy_review_required'],
       }),
@@ -230,6 +243,7 @@ describe('ApprovedBusinessContactEvidenceSchema', () => {
         dataEligibility: {
           ...allowedEligibility,
           decision: 'review_required',
+          displayAllowed: false,
           exportAllowed: false,
           reasonCodes: ['contact_data_policy_review_required'],
         },

@@ -6,6 +6,7 @@ const VersionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
 const SourceKeySchema = z.string().regex(/^source\.[a-z0-9_.-]+$/);
 const ConnectorKeySchema = z.string().regex(/^connector\.[a-z0-9_.-]+$/);
 const CountryCodeSchema = z.string().regex(/^[A-Z]{2}$/);
+const SafeIntegerSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const NormalizedDomainSchema = z
   .string()
   .trim()
@@ -49,6 +50,17 @@ export const domainEvidenceEffectValues = ['supports_domain', 'contradicts_domai
 export const DomainEvidenceEffectSchema = z.enum(domainEvidenceEffectValues);
 export type DomainEvidenceEffect = z.infer<typeof DomainEvidenceEffectSchema>;
 
+export const durableEvidenceStorageClassValues = ['REFERENCE_ONLY', 'NORMALIZED_FACT', 'EVIDENCE_MINIMAL'] as const;
+export const DurableEvidenceStorageClassSchema = z.enum(durableEvidenceStorageClassValues);
+export type DurableEvidenceStorageClass = z.infer<typeof DurableEvidenceStorageClassSchema>;
+
+export const EvidenceRetentionPolicySchema = z.object({
+  retentionTtlSeconds: SafeIntegerSchema.nullable(),
+  deletionRequired: z.boolean(),
+  refreshAfterSeconds: SafeIntegerSchema.nullable(),
+});
+export type EvidenceRetentionPolicy = z.infer<typeof EvidenceRetentionPolicySchema>;
+
 export const BusinessDomainEvidenceSchema = z
   .object({
     version: z.literal('1.0.0'),
@@ -66,6 +78,8 @@ export const BusinessDomainEvidenceSchema = z
     }),
     sourceAdmissionDecisionRef: IdentifierSchema,
     sourceAdmissionDecision: z.literal('allow'),
+    storageClass: DurableEvidenceStorageClassSchema,
+    retention: EvidenceRetentionPolicySchema,
     observedAt: DateTimeSchema,
     recordedAt: DateTimeSchema,
   })
@@ -223,10 +237,6 @@ export const contactDataClassificationValues = ['PUBLIC_BUSINESS', 'PERSONAL_BUS
 export const ContactDataClassificationSchema = z.enum(contactDataClassificationValues);
 export type ContactDataClassification = z.infer<typeof ContactDataClassificationSchema>;
 
-export const durableContactStorageClassValues = ['REFERENCE_ONLY', 'NORMALIZED_FACT', 'EVIDENCE_MINIMAL'] as const;
-export const DurableContactStorageClassSchema = z.enum(durableContactStorageClassValues);
-export type DurableContactStorageClass = z.infer<typeof DurableContactStorageClassSchema>;
-
 export const contactDataEligibilityDecisionValues = ['allow', 'review_required', 'blocked'] as const;
 export const ContactDataEligibilityDecisionKindSchema = z.enum(contactDataEligibilityDecisionValues);
 export type ContactDataEligibilityDecisionKind = z.infer<typeof ContactDataEligibilityDecisionKindSchema>;
@@ -260,8 +270,10 @@ export const ContactDataEligibilityDecisionSchema = z
     }),
     fieldName: IdentifierSchema,
     dataClassification: ContactDataClassificationSchema,
-    storageClass: DurableContactStorageClassSchema,
+    storageClass: DurableEvidenceStorageClassSchema,
+    retention: EvidenceRetentionPolicySchema,
     decision: ContactDataEligibilityDecisionKindSchema,
+    displayAllowed: z.boolean(),
     exportAllowed: z.boolean(),
     reasonCodes: z.array(IdentifierSchema).min(1).max(64),
     evaluatedAt: DateTimeSchema,
@@ -282,6 +294,9 @@ export const ContactDataEligibilityDecisionSchema = z
     }
     if (eligibility.territory.mode === 'global' && eligibility.territory.countryCodes.length > 0) {
       addIssue(ctx, ['territory', 'countryCodes'], 'global contact eligibility must not declare country codes.');
+    }
+    if (eligibility.decision !== 'allow' && eligibility.displayAllowed) {
+      addIssue(ctx, ['displayAllowed'], 'Blocked or review-required contact data cannot be display-authorized.');
     }
     if (eligibility.decision !== 'allow' && eligibility.exportAllowed) {
       addIssue(ctx, ['exportAllowed'], 'Blocked or review-required contact data cannot be export-authorized.');
