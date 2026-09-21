@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { parsePrHandoffBody } from './pr-handoff-contract.mjs';
 
 const eventName = process.env.GITHUB_EVENT_NAME;
 
@@ -26,30 +27,10 @@ const body = pullRequest.body;
 const headBranch = pullRequest.head.ref;
 const headSha = pullRequest.head.sha;
 
-function metadata(label, { numeric = false } = {}) {
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = body.match(new RegExp(`^- ${escaped}:\\s*(?:\\x60([^\\x60]+)\\x60|([^\\n]+))$`, 'm'));
-  if (!match) throw new Error(`PR handoff missing required metadata: ${label}.`);
-  const value = (match[1] ?? match[2]).trim();
-  if (numeric) {
-    const parsed = Number(value.replace(/[^0-9-]/g, ''));
-    if (!Number.isSafeInteger(parsed)) throw new Error(`PR handoff ${label} must be a safe integer.`);
-    return parsed;
-  }
-  return value;
-}
-
-const taskId = metadata('Task/workstream ID');
-const agentRole = metadata('Agent ID / role');
-const agentId = agentRole.includes(' / ') ? agentRole.split(' / ')[0] : agentRole;
-const slotId = metadata('Assigned slot ID');
-const agentInstanceId = metadata('Agent instance ID');
-const leaseId = metadata('Lease ID');
-const leasePath = metadata('Lease lock path');
-const declaredBranch = metadata('Branch');
-const declaredHeadSha = metadata('Exact head SHA');
-const syncedMainSha = metadata('Synced main SHA');
-const syncEpoch = metadata('Sync epoch', { numeric: true });
+const {
+  taskId, agentRole, agentId, slotId, agentInstanceId, leaseId, leasePath,
+  declaredBranch, declaredHeadSha, syncedMainSha, syncEpoch,
+} = parsePrHandoffBody(body);
 
 if (!/^[A-Z0-9_-]+$/.test(slotId)) throw new Error(`Invalid assigned slot ID: ${slotId}.`);
 if (!/^[0-9a-f]{40}$/.test(declaredHeadSha)) throw new Error('Exact head SHA must be a 40-character lowercase git SHA.');

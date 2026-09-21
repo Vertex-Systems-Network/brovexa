@@ -72,6 +72,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@brovexa/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@brovexa/db':
         specifier: workspace:*
         version: link:../../packages/db

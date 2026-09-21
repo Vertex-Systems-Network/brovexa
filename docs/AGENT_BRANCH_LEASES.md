@@ -121,6 +121,8 @@ Every implementation/governance PR from an agent work branch must declare:
 - work packet ID;
 - synchronized main SHA/epoch.
 
+Before creating the PR, validate the complete canonical handoff body with `scripts/verify-pr-handoff-preflight.mjs`. The preflight and hosted CI share `scripts/pr-handoff-contract.mjs`, so required labels and exact-head semantics cannot drift independently. Supervisor-created PRs are not exempt. If a fresh PR event requires a new head, prepare the future commit SHA first, write that exact SHA into the handoff, then move the branch ref without force.
+
 Hosted PR CI runs `scripts/verify-pr-agent-lease.mjs`. The verifier reads the canonical lease from `coordination/leases` and requires it to match the current PR:
 
 - lease state is `ACTIVE`;
