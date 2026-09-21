@@ -3,7 +3,6 @@ import { resolve } from 'node:path';
 import {
   aggregateAgentExecutionPlan,
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   claimWorkUnit,
   completeAgentSpecialistAttempt,
   completeWorkUnitWithEffect,
@@ -20,6 +19,7 @@ import {
   recordAgentExecutionBudgetUsage,
   transitionAgentRun,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required for execution aggregation verification.');
