@@ -127,7 +127,7 @@ for (const match of taskMatches) {
   }
 }
 
-requireText(policy, 'required hosted CI/security gates', 'docs/RUNNER_BENCHMARK.md');
+requireText(policy, 'Required hosted CI/security gates remain immediate and non-deferrable.', 'docs/RUNNER_BENCHMARK.md');
 requireText(policy, 'final Runner batch', 'docs/RUNNER_BENCHMARK.md');
 requireText(policy, 'may **not** be deferred', 'docs/RUNNER_BENCHMARK.md');
 requireText(agents, 'Runner benchmark', 'AGENTS.md');
