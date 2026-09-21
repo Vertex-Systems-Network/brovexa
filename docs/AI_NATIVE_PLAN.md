@@ -64,7 +64,13 @@ Rules:
 - required `FAIL` results block milestone close; release-blocking `BLOCKED` tasks block release;
 - completed entries remain benchmark history.
 
-Initial queue seed: `RUNNER-M01-WINDOWS-X64-001` for the existing Windows x64 self-hosted verification workflow.
+Current Runner inventory:
+- `RUNNER-WINDOWS-READINESS-001` — approved Windows x64 runner readiness/diagnostics;
+- `RUNNER-M01-WINDOWS-X64-001` — exact-current-main Windows x64 compatibility verification.
+
+Dependency: `RUNNER-WINDOWS-READINESS-001 → RUNNER-M01-WINDOWS-X64-001`.
+
+Hosted required CI lanes are intentionally excluded from this deferred queue.
 
 ## M03 bounded workstream decomposition
 

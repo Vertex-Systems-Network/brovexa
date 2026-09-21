@@ -44,6 +44,36 @@ required_task_fields:
   - last_result
 
 tasks:
+  - id: RUNNER-WINDOWS-READINESS-001
+    title: Windows x64 self-hosted runner readiness diagnostics
+    source_work_packet: RUNNER_INFRASTRUCTURE_READINESS
+    status: DEFERRED
+    runner_profile: self-hosted-windows-x64
+    execution: operator_readiness_check
+    runbook: docs/SELF_HOSTED_RUNNER_RECOVERY.md
+    diagnostic_script: scripts/diagnose-github-runner.ps1
+    command: "Run read-only diagnose-github-runner.ps1 on the approved runner and confirm GitHub runner state is Idle with labels self-hosted, Windows, X64"
+    security_gate_classification: non_blocking_deferred_runner_check
+    required_before: RUNNER-M01-WINDOWS-X64-001
+    prerequisites:
+      - approved_self_hosted_windows_x64_machine_accessible
+      - operator_has_read_only_runner_diagnostic_access
+      - no_runner_registration_or_token_rotation_is_implied
+    pass_criteria:
+      - runner_service_or_approved_listener_mode_is_healthy
+      - runner_listener_is_connected
+      - exact_labels_self_hosted_windows_x64_confirmed
+      - runner_state_idle_confirmed
+      - registration_metadata_present_without_secret_output
+      - representative_outbound_https_checks_pass
+      - no_unresolved_runner_allocation_blocker
+    last_result:
+      outcome: NOT_RUN_IN_BENCHMARK
+      main_sha: null
+      evidence: null
+      duration_seconds: null
+      notes: "Readiness task is intentionally separate from application compatibility so runner infrastructure failures are not misclassified as product failures."
+
   - id: RUNNER-M01-WINDOWS-X64-001
     title: M01 Windows x64 self-hosted compatibility benchmark
     source_work_packet: M01_PLATFORM_FOUNDATION
@@ -56,6 +86,7 @@ tasks:
     security_gate_classification: non_blocking_deferred_runner_check
     required_before: final-runner-batch-before-release-candidate
     prerequisites:
+      - RUNNER-WINDOWS-READINESS-001_PASS
       - approved_self_hosted_windows_x64_runner_online
       - current_main_hosted_full_gate_green
       - dispatch_ref_equals_exact_current_main_sha
