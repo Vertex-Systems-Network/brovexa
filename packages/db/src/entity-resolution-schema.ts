@@ -43,6 +43,7 @@ export const canonicalBusinesses = pgTable(
     displayName: text('display_name').notNull(),
     identityState: text('identity_state').$type<CanonicalBusinessIdentityState>().notNull().default('active'),
     supersededByCanonicalBusinessId: text('superseded_by_canonical_business_id'),
+    originDecisionId: text('origin_decision_id'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },
   (table) => [
@@ -155,6 +156,10 @@ export const businessResolutionDecisions = pgTable(
     reviewDecisionRef: text('review_decision_ref'),
     reasonCodes: jsonb('reason_codes').$type<string[]>().notNull(),
     evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+    thresholdPolicyId: text('threshold_policy_id').notNull(),
+    thresholdPolicyVersion: text('threshold_policy_version').notNull(),
+    reviewMinimum: doublePrecision('review_minimum').notNull(),
+    autoMatchMinimum: doublePrecision('auto_match_minimum').notNull(),
     evaluatedAt: timestamp('evaluated_at', { withTimezone: true, mode: 'date' }).notNull(),
     envelope: jsonb('envelope').$type<Record<string, unknown>>().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -179,6 +184,82 @@ export const businessResolutionDecisions = pgTable(
     check('business_resolution_decisions_confidence_check', sql`${table.confidence} >= 0 AND ${table.confidence} <= 1`),
     check('business_resolution_decisions_reasons_array_check', sql`jsonb_typeof(${table.reasonCodes}) = 'array'`),
     check('business_resolution_decisions_evidence_array_check', sql`jsonb_typeof(${table.evidenceIds}) = 'array'`),
+    check('business_resolution_decisions_threshold_policy_id_check', sql`${table.thresholdPolicyId} ~ ${identifierCheck}`),
+    check('business_resolution_decisions_threshold_policy_version_check', sql`${table.thresholdPolicyVersion} ~ '^\\d+\\.\\d+\\.\\d+    check(
+      'business_resolution_decisions_candidate_shape_check',
+      sql`(${table.decision} = 'match_existing' AND ${table.candidateCanonicalBusinessId} IS NOT NULL)
+          OR (${table.decision} = 'create_new' AND ${table.candidateCanonicalBusinessId} IS NULL)
+          OR ${table.decision} = 'review_required'`,
+    ),
+  ],
+);
+
+export const canonicalBusinessAliases = pgTable(
+  'canonical_business_aliases',
+  {
+    sourceObservationId: text('source_observation_id').primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    canonicalBusinessId: text('canonical_business_id').notNull(),
+    decisionId: text('decision_id').notNull(),
+    attachedAt: timestamp('attached_at', { withTimezone: true, mode: 'date' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('canonical_business_aliases_observation_workspace_unique').on(table.sourceObservationId, table.workspaceId),
+    uniqueIndex('canonical_business_aliases_decision_workspace_unique').on(table.decisionId, table.workspaceId),
+    index('canonical_business_aliases_business_idx').on(table.workspaceId, table.canonicalBusinessId, table.attachedAt),
+  ],
+);
+
+export const canonicalBusinessLineageOperations = pgTable(
+  'canonical_business_lineage_operations',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    operationType: text('operation_type').$type<CanonicalBusinessLineageOperationType>().notNull(),
+    requestId: text('request_id').notNull(),
+    targetCanonicalBusinessId: text('target_canonical_business_id').notNull(),
+    sourceCanonicalBusinessIds: jsonb('source_canonical_business_ids').$type<string[]>().notNull(),
+    restoreCanonicalBusinessIds: jsonb('restore_canonical_business_ids').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    parentLineageOperationId: text('parent_lineage_operation_id'),
+    evidenceIds: jsonb('evidence_ids').$type<string[]>().notNull(),
+    reasonCodes: jsonb('reason_codes').$type<string[]>().notNull(),
+    requestedByActorId: text('requested_by_actor_id').notNull(),
+    requestedAt: timestamp('requested_at', { withTimezone: true, mode: 'date' }).notNull(),
+    reviewRequestId: text('review_request_id').notNull(),
+    reviewState: text('review_state').notNull().default('pending'),
+    reversible: boolean('reversible').notNull().default(true),
+    envelope: jsonb('envelope').$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('canonical_business_lineage_operations_id_workspace_unique').on(table.id, table.workspaceId),
+    uniqueIndex('canonical_business_lineage_operations_request_workspace_unique').on(table.requestId, table.workspaceId),
+    index('canonical_business_lineage_operations_target_idx').on(
+      table.workspaceId,
+      table.targetCanonicalBusinessId,
+      table.requestedAt,
+      table.id,
+    ),
+    check('canonical_business_lineage_operations_id_check', sql`${table.id} ~ ${identifierCheck}`),
+    check('canonical_business_lineage_operations_type_check', sql`${table.operationType} in ('merge', 'split')`),
+    check('canonical_business_lineage_operations_review_check', sql`${table.reviewState} = 'pending'`),
+    check('canonical_business_lineage_operations_reversible_check', sql`${table.reversible} = true`),
+    check('canonical_business_lineage_operations_source_array_check', sql`jsonb_typeof(${table.sourceCanonicalBusinessIds}) = 'array'`),
+    check('canonical_business_lineage_operations_source_nonempty_check', sql`jsonb_array_length(${table.sourceCanonicalBusinessIds}) >= 1`),
+    check('canonical_business_lineage_operations_restore_array_check', sql`jsonb_typeof(${table.restoreCanonicalBusinessIds}) = 'array'`),
+    check('canonical_business_lineage_operations_evidence_array_check', sql`jsonb_typeof(${table.evidenceIds}) = 'array'`),
+    check('canonical_business_lineage_operations_reason_array_check', sql`jsonb_typeof(${table.reasonCodes}) = 'array'`),
+  ],
+);
+`),
+    check('business_resolution_decisions_review_minimum_check', sql`${table.reviewMinimum} >= 0 AND ${table.reviewMinimum} <= 1`),
+    check('business_resolution_decisions_auto_match_minimum_check', sql`${table.autoMatchMinimum} >= 0 AND ${table.autoMatchMinimum} <= 1`),
+    check('business_resolution_decisions_threshold_order_check', sql`${table.reviewMinimum} < ${table.autoMatchMinimum}`),
     check(
       'business_resolution_decisions_candidate_shape_check',
       sql`(${table.decision} = 'match_existing' AND ${table.candidateCanonicalBusinessId} IS NOT NULL)
