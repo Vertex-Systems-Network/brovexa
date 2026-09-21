@@ -137,6 +137,13 @@ live_state:
   versioned_manifest_is_live_task_registry: false
   versioned_manifest_is_live_slot_registry: false
 
+runner_benchmark:
+  policy_doc: docs/RUNNER_BENCHMARK.md
+  registry: .agent/runner-benchmark.yaml
+  default_batch: milestone-close
+  required_pr_or_main_gates_may_be_deferred: false
+  feature_handoff_must_report_runner_impact: true
+
 active_workstreams: []
 
 handoff_required_fields:
@@ -163,4 +170,6 @@ handoff_required_fields:
   - shared_file_requests
   - known_limitations
   - instruction_drift_result
+  - runner_benchmark_task_ids
+  - runner_deferral_justification
   - completion_signal
