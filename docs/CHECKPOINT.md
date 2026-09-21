@@ -10,9 +10,9 @@ Updated: 2026-09-22
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** ACTIVE IMPLEMENTATION. `M03-ER-001` contracts, `M03-ER-002` durable persistence, `M03-ER-003` deterministic normalization/candidate generation, and `M03-ER-004` deterministic-first orchestration are integrated through PRs #133, #140/#141, #143, and #144. `M03-ER-005` domain/contact evidence boundary is the next dependency-ready packet; `M03-ER-006` independent adversarial verification remains downstream. Live mutation still requires issue #53 assignment plus atomic slot lease.
+- **M03 — Entity Resolution & Contact Enrichment:** ACTIVE IMPLEMENTATION. `M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated through PRs #133, #140/#141, #143, #144 and #146. The CONTRACTS slice adds provider-neutral domain verification plus approved contact-data evidence boundaries. `M03-ER-005-DATABASE` is next after migration `0015` reservation; `M03-ER-006` independent adversarial verification remains downstream. Live mutation still requires issue #53 assignment plus atomic slot lease.
 
-The latest reconciled integration snapshot is epoch **71** after PR #144 at main `1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4`, with resulting-main CI `35654560539` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
+The latest reconciled integration snapshot is epoch **73** after PR #146 at main `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`, with resulting-main CI `35660438181` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
 
 ## Live-state authority
 
@@ -21,7 +21,7 @@ Do not infer current branch/agent state from this versioned file. Resolve live s
 - GitHub issue **#50** — canonical integrated-main SHA and synchronization epoch;
 - GitHub issue **#53** — logical slot occupancy, assignment baseline and registry revision;
 - branch `coordination/leases` — exact live mutating-instance authority;
-- GitHub issue **#54** — native `main` branch-protection status.
+- GitHub issue **#54** — completed native `main` branch-protection/ruleset hardening record.
 
 ## Agent Instruction Drift Check
 
@@ -108,7 +108,7 @@ State: **VERIFIED / INTEGRATED / DONE**.
 State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
 
 ### ABD-266 — default-branch protection / compensating controls
-State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACTION OPEN AS ISSUE #54**.
+State: **NATIVE `main` PROTECTION/RULESET ACTIVE; REPOSITORY PROVENANCE/SECURITY CONTROLS REMAIN DEFENSE IN DEPTH**.
 
 ## M02/M02A completion evidence
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`M03-ER-001` through `M03-ER-004` are integrated. Migration `0014_canonical_entity_resolution_persistence` is integrated with `M03-ER-002`. The migration registry now exposes `0015` as the next unreserved number; any `M03-ER-005` persistence migration must be Supervisor-reserved before creation. The safest follow-on is CONTRACTS first for the domain/contact evidence boundary, then DATABASE persistence after that contract is integrated.
+`M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated. Migration `0014_canonical_entity_resolution_persistence` is integrated with `M03-ER-002`. This changeset reserves `0015_entity_enrichment_evidence_persistence` exclusively for `M03-ER-005-DATABASE`; `0016` becomes the next unreserved number. The DATABASE slice must preserve tenant isolation, idempotency, approved provenance and explicit retention/deletion semantics before `M03-ER-005` can become terminal.
 
 ## Security / authorization boundary
 
@@ -176,16 +176,16 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Known limitations
 
-- native GitHub `main` protection/ruleset remains external action tracked in issue #54;
+- native GitHub `main` protection/ruleset is active; completed issue #54 is the historical hardening record;
 - no production deployment has been proven by these repository gates;
 - remote GitHub sessions cannot prove unseen local developer working-copy/runtime/database state;
 - provider-neutral seams are not evidence of production provider activation/readiness.
 
 ## Next safe actions
 
-1. Close Supervisor governance PR #145 with exact-head FULL GATE, expected-head merge and resulting-main verification.
-2. Resolve the resulting exact main/epoch/slot/lease state and reconcile README/compact state before newer progress is reported.
-3. Assign/lease the CONTRACTS phase of `M03-ER-005` from exact current main with a bounded contract-only write scope; keep provider/network/credential activation disabled.
-4. After the ER-005 contract is integrated, reserve migration `0015` if persistence is required, then assign/lease the DATABASE phase with tenant isolation, append-only evidence provenance, idempotency and rollback guards.
-5. Start `M03-ER-006` on VERIFY only after `M03-ER-005` is integrated.
+1. Integrate the Supervisor migration-reservation/governance changeset with exact-head FULL GATE, expected-head merge and resulting-main verification.
+2. Advance issue #50/#53 state and keep all idle standing branches synchronized to the new main.
+3. Assign/lease `M03-ER-005-DATABASE` only after migration `0015_entity_enrichment_evidence_persistence` is integrated as RESERVED.
+4. Implement tenant-safe domain evidence, verification decision, ContactDataEligibility and approved contact-evidence persistence with retention/deletion/refresh semantics, idempotency, rollback guards and no outreach authorization.
+5. Start `M03-ER-006` on VERIFY only after the ER-005 persistence slice is integrated.
 6. Preserve exact-head FULL GATE, expected-head merge, resulting-main certification and post-merge synchronization for every packet.
