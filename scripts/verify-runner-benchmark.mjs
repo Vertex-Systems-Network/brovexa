@@ -81,12 +81,15 @@ if (taskMatches.length === 0) {
   throw new Error('.agent/runner-benchmark.yaml must contain at least one seeded Runner task.');
 }
 
-const ids = new Set();
+const ids = new Set(taskMatches.map((match) => match[1]));
+const taskBlocks = new Map(taskMatches.map((match) => [match[1], match[2]]));
+
 for (const match of taskMatches) {
   const id = match[1];
   const block = match[2];
-  if (ids.has(id)) throw new Error(`Duplicate Runner benchmark task ID: ${id}`);
-  ids.add(id);
+  if (taskMatches.filter((candidate) => candidate[1] === id).length > 1) {
+    throw new Error(`Duplicate Runner benchmark task ID: ${id}`);
+  }
 
   for (const requiredField of [
     'title',
@@ -126,6 +129,37 @@ for (const match of taskMatches) {
     }
   }
 }
+
+requireText(manifest, 'RUNNER-WINDOWS-READINESS-001', '.agent/runner-benchmark.yaml');
+requireText(manifest, 'RUNNER-M01-WINDOWS-X64-001', '.agent/runner-benchmark.yaml');
+requireText(manifest, 'RUNNER-WINDOWS-READINESS-001_PASS', '.agent/runner-benchmark.yaml');
+requireText(policy, 'RUNNER-WINDOWS-READINESS-001 → RUNNER-M01-WINDOWS-X64-001', 'docs/RUNNER_BENCHMARK.md');
+
+const dependencyGraph = new Map();
+for (const [id, block] of taskBlocks) {
+  const deps = [...block.matchAll(/^      - (RUNNER-[A-Z0-9_-]+)_PASS$/gm)].map((match) => match[1]);
+  for (const dep of deps) {
+    if (!ids.has(dep)) throw new Error(`Runner task ${id} depends on unknown task ${dep}.`);
+    if (dep === id) throw new Error(`Runner task ${id} cannot depend on itself.`);
+  }
+  const requiredBefore = field(block, 'required_before', `Runner task ${id}`);
+  if (requiredBefore.startsWith('RUNNER-') && !ids.has(requiredBefore)) {
+    throw new Error(`Runner task ${id} required_before references unknown task ${requiredBefore}.`);
+  }
+  dependencyGraph.set(id, deps);
+}
+
+const visiting = new Set();
+const visited = new Set();
+function visit(id) {
+  if (visiting.has(id)) throw new Error(`Runner benchmark dependency cycle detected at ${id}.`);
+  if (visited.has(id)) return;
+  visiting.add(id);
+  for (const dep of dependencyGraph.get(id) || []) visit(dep);
+  visiting.delete(id);
+  visited.add(id);
+}
+for (const id of ids) visit(id);
 
 requireText(policy, 'Required hosted CI/security gates remain immediate and non-deferrable.', 'docs/RUNNER_BENCHMARK.md');
 requireText(policy, 'final Runner batch', 'docs/RUNNER_BENCHMARK.md');
