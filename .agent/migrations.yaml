@@ -2,7 +2,7 @@ version: 1
 policy: serialized-reservation
 
 latest_integrated_migration: "0013_acquisition_control_persistence"
-next_unreserved_number: "0014"
+next_unreserved_number: "0015"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -44,3 +44,9 @@ reservations:
     branch: agent/database-persistence
     owner: AGENT-DATABASE
     status: INTEGRATED
+  - number: "0014"
+    name: canonical_entity_resolution_persistence
+    task_id: M03-ER-002
+    branch: agent/database-persistence
+    owner: AGENT-DATABASE
+    status: RESERVED
