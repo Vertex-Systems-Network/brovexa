@@ -1,0 +1,74 @@
+version: 1
+policy: deferred-runner-benchmark
+
+authority:
+  owner: SUPERVISOR
+  policy_doc: docs/RUNNER_BENCHMARK.md
+  queue_path: .agent/runner-benchmark.yaml
+  registration_mode: append-stable-id
+  feature_agents_request_via_handoff: true
+  supervisor_deduplicates_equivalent_tasks: true
+
+execution_policy:
+  default_batch: milestone-close
+  literal_parallel_execution_required: false
+  serialize_exclusive_or_sensitive_runners: true
+  ordinary_required_gates_must_pass_before_batch: true
+  required_pr_or_main_gates_may_be_deferred: false
+  security_merge_blockers_may_be_deferred: false
+  failed_required_task_blocks_milestone_close: true
+  release_blocking_blocked_task_blocks_release: true
+  retain_completed_results_as_history: true
+
+allowed_statuses:
+  - DEFERRED
+  - READY_FOR_BATCH
+  - RUNNING
+  - PASS
+  - FAIL
+  - BLOCKED
+  - SUPERSEDED
+
+required_task_fields:
+  - id
+  - title
+  - source_work_packet
+  - status
+  - runner_profile
+  - execution
+  - command
+  - security_gate_classification
+  - required_before
+  - prerequisites
+  - pass_criteria
+  - last_result
+
+tasks:
+  - id: RUNNER-M01-WINDOWS-X64-001
+    title: M01 Windows x64 self-hosted compatibility benchmark
+    source_work_packet: M01_PLATFORM_FOUNDATION
+    status: DEFERRED
+    runner_profile: self-hosted-windows-x64
+    execution: workflow_dispatch
+    workflow: .github/workflows/m01-self-hosted-dispatch.yml
+    reference_workflow: .github/workflows/ci-self-hosted.yml
+    command: "Dispatch M01 Self-hosted Verification Dispatch with ref=<exact current main SHA>"
+    security_gate_classification: non_blocking_deferred_runner_check
+    required_before: final-runner-batch-before-release-candidate
+    prerequisites:
+      - approved_self_hosted_windows_x64_runner_online
+      - current_main_hosted_full_gate_green
+      - dispatch_ref_equals_exact_current_main_sha
+      - no_unresolved_security_merge_blocker
+    pass_criteria:
+      - foundation_contract_pass
+      - foundation_guardrails_pass
+      - frozen_lockfile_install_pass
+      - runtime_quality_gate_pass
+      - api_source_to_runtime_reload_pass
+    last_result:
+      outcome: NOT_RUN_IN_BENCHMARK
+      main_sha: null
+      evidence: null
+      duration_seconds: null
+      notes: "Seeded from the existing dispatchable Windows x64 self-hosted verification workflow."

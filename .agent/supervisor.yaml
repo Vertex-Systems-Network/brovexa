@@ -60,6 +60,24 @@ branch_leases:
   pr_lease_verifier: scripts/verify-pr-agent-lease.mjs
   policy_doc: docs/AGENT_BRANCH_LEASES.md
 
+runner_benchmark:
+  policy_doc: docs/RUNNER_BENCHMARK.md
+  registry: .agent/runner-benchmark.yaml
+  owner: SUPERVISOR
+  registration_mode: append-stable-id
+  feature_agents_request_via_handoff: true
+  deduplicate_equivalent_tasks: true
+  default_batch: milestone-close
+  ordinary_required_gates_must_pass_before_batch: true
+  required_pr_or_main_gates_may_be_deferred: false
+  security_merge_blockers_may_be_deferred: false
+  literal_parallel_execution_required: false
+  serialize_exclusive_or_sensitive_runners: true
+  failed_required_task_blocks_milestone_close: true
+  release_blocking_blocked_task_blocks_release: true
+  retain_completed_results_as_history: true
+  verifier: scripts/verify-runner-benchmark.mjs
+
 completion_signal:
   exact_phrase: "Work Done and Submitted"
   canonical_event: top-level-pr-comment-exact-body

@@ -39,6 +39,7 @@ Every agent re-reads the relevant subset before work and again before completion
 - `.agent/ownership.yaml` / `.agent/shared-files.yaml`;
 - `.agent/workstreams.yaml` / `.agent/dependencies.yaml`;
 - `.agent/migrations.yaml` where persistence changes are possible;
+- `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml` for deferred special-Runner obligations;
 - issue #50, issue #53 and the live slot lease;
 - the exact current branch/head and required verification commands.
 
@@ -127,6 +128,17 @@ The completed provider-neutral cycles now cover, at minimum:
 - adversarial recovery, tenant isolation, budget/policy bypass, lifecycle, corruption and telemetry-redaction verification.
 
 M02A completed through PR #131. This completion does **not** activate real provider traffic, production credentials or unrestricted acquisition.
+
+## Deferred Runner benchmark state
+
+Runner-dependent verification now has a durable deferred queue:
+
+- policy: `docs/RUNNER_BENCHMARK.md`;
+- machine queue/results: `.agent/runner-benchmark.yaml`;
+- executable guard: `pnpm run verify:runner-benchmark` (also included in `pnpm run verify:parallel`);
+- current seeded task: `RUNNER-M01-WINDOWS-X64-001` for the existing Windows x64 self-hosted verification workflow.
+
+Normal required PR/resulting-main/security gates remain immediate and cannot be moved into the Runner queue. Applicable deferred tasks are accumulated during development and executed in one controlled milestone-close Runner batch before the relevant milestone/release is finalized.
 
 ## M03 current safe plan
 
