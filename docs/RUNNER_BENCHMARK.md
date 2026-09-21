@@ -93,9 +93,18 @@ At milestone close:
 7. any `FAIL` or release-blocking `BLOCKED` task prevents milestone/release finalization;
 8. after all required entries are `PASS` or explicitly `SUPERSEDED` with evidence, close the Runner batch.
 
-## Initial registered task
+## Current registered Runner inventory
 
-The existing M01 Windows x64 self-hosted workflow is registered as the first benchmark task rather than being duplicated from its reference mirror.
+The current repository inventory contains two genuine special-Runner obligations:
+
+1. `RUNNER-WINDOWS-READINESS-001` — read-only Windows x64 self-hosted runner readiness diagnostics and exact-label/Idle confirmation.
+2. `RUNNER-M01-WINDOWS-X64-001` — exact-current-main Windows x64 compatibility benchmark.
+
+Hosted Ubuntu CI, PostgreSQL/RBAC and Valkey/worker FULL GATE jobs are **not** deferred Runner tasks because they are ordinary required CI and remain immediate.
+
+The Windows readiness task must pass before the Windows compatibility benchmark is dispatched. This keeps infrastructure/allocation failure evidence separate from application compatibility evidence.
+
+The existing M01 Windows x64 self-hosted workflow is registered once rather than being duplicated from its frozen reference mirror.
 
 Canonical dispatch workflow:
 
