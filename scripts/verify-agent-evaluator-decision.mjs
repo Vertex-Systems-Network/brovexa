@@ -4,7 +4,6 @@ import {
   aggregateAgentExecutionPlan,
   applyAgentEvaluatorDecision,
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   claimWorkUnit,
   completeAgentSpecialistAttempt,
   completeWorkUnitWithEffect,
@@ -23,6 +22,7 @@ import {
   resolveAgentExecutionReview,
   transitionAgentRun,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required for evaluator decision verification.');
