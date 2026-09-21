@@ -100,6 +100,8 @@ The current repository inventory contains two genuine special-Runner obligations
 1. `RUNNER-WINDOWS-READINESS-001` — read-only Windows x64 self-hosted runner readiness diagnostics and exact-label/Idle confirmation.
 2. `RUNNER-M01-WINDOWS-X64-001` — exact-current-main Windows x64 compatibility benchmark.
 
+Dependency: `RUNNER-WINDOWS-READINESS-001 → RUNNER-M01-WINDOWS-X64-001`.
+
 Hosted Ubuntu CI, PostgreSQL/RBAC and Valkey/worker FULL GATE jobs are **not** deferred Runner tasks because they are ordinary required CI and remain immediate.
 
 The Windows readiness task must pass before the Windows compatibility benchmark is dispatched. This keeps infrastructure/allocation failure evidence separate from application compatibility evidence.
