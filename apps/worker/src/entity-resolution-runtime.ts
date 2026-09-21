@@ -223,6 +223,7 @@ export async function resolveBusinessEntityDeterministically(
         observation.sourceObservationId,
         match.candidateCanonicalBusinessId,
         keyIdentity(key),
+        String(match.confidence),
       ]),
       workspaceId: observation.workspaceId,
       sourceObservationId: observation.sourceObservationId,
@@ -277,6 +278,9 @@ export async function resolveBusinessEntityDeterministically(
     observation.sourceObservationId,
     thresholdPolicy.policyId,
     thresholdPolicy.version,
+    autoMatch ? 'match_existing' : 'review_required',
+    selectedCandidateId ?? '',
+    ...evidenceIds,
   ]);
 
   const decision = autoMatch

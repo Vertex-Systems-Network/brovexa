@@ -235,6 +235,38 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(0);
   });
 
+  it('creates a new immutable evaluation identity when deterministic confidence materially changes', async () => {
+    const first = createPersistenceRecorder();
+    const second = createPersistenceRecorder();
+
+    const resolveWithConfidence = async (
+      confidence: number,
+      persistence: EntityResolutionPersistenceAdapter,
+    ) =>
+      resolveBusinessEntityDeterministically({
+        ...baseInput(persistence),
+        candidateLookup: async ({ keys }) => {
+          const domain = keys.find((key) => key.keyKind === 'domain_exact');
+          if (!domain) throw new Error('expected domain key');
+          return [
+            {
+              candidateCanonicalBusinessId: 'business.1',
+              keyKind: domain.keyKind,
+              keyValue: domain.keyValue,
+              keyScope: domain.keyScope,
+              confidence,
+            },
+          ];
+        },
+      });
+
+    const firstResult = await resolveWithConfidence(0.99, first.adapter);
+    const secondResult = await resolveWithConfidence(0.95, second.adapter);
+
+    expect(secondResult.evidence[0]?.evidenceId).not.toBe(firstResult.evidence[0]?.evidenceId);
+    expect(secondResult.decision?.decisionId).not.toBe(firstResult.decision?.decisionId);
+  });
+
   it('produces stable evidence and decision IDs independent of candidate lookup ordering', async () => {
     const first = createPersistenceRecorder();
     const second = createPersistenceRecorder();
