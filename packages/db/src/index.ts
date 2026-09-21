@@ -27,7 +27,21 @@ export { getPrivilegedAgentExecutionTrace } from './agent-runtime-observability'
 export * from './client';
 export * from './connector-health-persistence';
 export * from './connector-health-schema';
-export * from './identity';
+export {
+  AuthorizationError,
+  assertWorkspaceCapability,
+  assignWorkspaceRole,
+  createIdentityUser,
+  createWorkspaceMembership,
+  getWorkspaceRoleByKey,
+  removeWorkspaceRoleAssignment,
+  resolveWorkspaceAuthorization,
+  setWorkspaceMembershipStatus,
+  workspaceCapabilityValues,
+  type AuthorizationErrorCode,
+  type WorkspaceAuthorizationContext,
+  type WorkspaceCapability,
+} from './identity';
 export * from './jobs';
 export * from './lifecycle-persistence';
 export * from './memory-eval-persistence';
