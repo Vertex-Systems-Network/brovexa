@@ -43,6 +43,29 @@ New arrivals never invent slots or branches. If issue #53 has no assignable `OPE
 
 `.agent/slots.yaml` is the machine-readable static registry. Issue #53 is live `OPEN` / `OCCUPIED` truth. Atomic live-instance lease semantics are defined by `docs/AGENT_BRANCH_LEASES.md`.
 
+## Runner benchmark / deferred execution lane
+
+Runner-specific work is tracked separately from normal feature packets.
+
+Canonical policy: `docs/RUNNER_BENCHMARK.md`
+
+Canonical queue/results: `.agent/runner-benchmark.yaml`
+
+Flow:
+
+`feature work → ordinary required gates now → register safe-to-defer Runner checks → continue bounded development → milestone-close Runner batch → record benchmark evidence → finalize milestone/release only when required Runner checks pass`
+
+Rules:
+
+- required PR/resulting-main/security gates are never deferred;
+- each deferred Runner task gets a stable ID, source packet, runner profile, execution action, prerequisites, pass criteria and blocking class;
+- feature agents request entries in handoff; Supervisor owns/de-duplicates the shared queue;
+- all applicable deferred tasks are executed together in one controlled closeout batch window, but exclusive or sensitive runners may be serialized;
+- required `FAIL` results block milestone close; release-blocking `BLOCKED` tasks block release;
+- completed entries remain benchmark history.
+
+Initial queue seed: `RUNNER-M01-WINDOWS-X64-001` for the existing Windows x64 self-hosted verification workflow.
+
 ## M03 bounded workstream decomposition
 
 M03 starts with a contract/interface freeze. Packets are dependency-ordered; planned packets are not live assignments until issue #53 reservation plus an atomic lease exist.

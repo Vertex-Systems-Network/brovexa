@@ -11,6 +11,7 @@ const requiredFiles = [
   'docs/PARALLEL_AGENT_DEVELOPMENT.md',
   'docs/AI_NATIVE_PLAN.md',
   'docs/NEW_AGENT_ONBOARDING.md',
+  'docs/RUNNER_BENCHMARK.md',
   '.agent/README.md',
   '.agent/ownership.yaml',
   '.agent/shared-files.yaml',
@@ -19,9 +20,11 @@ const requiredFiles = [
   '.agent/dependencies.yaml',
   '.agent/migrations.yaml',
   '.agent/supervisor.yaml',
+  '.agent/runner-benchmark.yaml',
   '.github/PULL_REQUEST_TEMPLATE.md',
   '.github/workflows/ci.yml',
   'scripts/verify-main-integration-provenance.mjs',
+  'scripts/verify-runner-benchmark.mjs',
 ];
 
 async function read(path) {
@@ -86,6 +89,7 @@ const checkpoint = await read('docs/CHECKPOINT.md');
 const protocol = await read('docs/PARALLEL_AGENT_DEVELOPMENT.md');
 const aiNativePlan = await read('docs/AI_NATIVE_PLAN.md');
 const onboarding = await read('docs/NEW_AGENT_ONBOARDING.md');
+const runnerPolicy = await read('docs/RUNNER_BENCHMARK.md');
 const agentReadme = await read('.agent/README.md');
 const ownership = await read('.agent/ownership.yaml');
 const sharedFiles = await read('.agent/shared-files.yaml');
@@ -94,9 +98,11 @@ const slots = await read('.agent/slots.yaml');
 const dependencies = await read('.agent/dependencies.yaml');
 const migrations = await read('.agent/migrations.yaml');
 const supervisor = await read('.agent/supervisor.yaml');
+const runnerBenchmark = await read('.agent/runner-benchmark.yaml');
 const prTemplate = await read('.github/PULL_REQUEST_TEMPLATE.md');
 const ci = await read('.github/workflows/ci.yml');
 const mainProvenance = await read('scripts/verify-main-integration-provenance.mjs');
+const runnerVerifier = await read('scripts/verify-runner-benchmark.mjs');
 
 for (const [source, content] of [
   ['AGENTS.md', agents],
@@ -120,6 +126,19 @@ for (const requiredRef of [
 ]) {
   requireText(agents, requiredRef, 'AGENTS.md');
 }
+
+requireText(agents, 'docs/RUNNER_BENCHMARK.md', 'AGENTS.md');
+requireText(readme, 'docs/RUNNER_BENCHMARK.md', 'README.md');
+requireText(plan, 'docs/RUNNER_BENCHMARK.md', 'docs/PROJECT_PLAN.md');
+requireText(checkpoint, 'docs/RUNNER_BENCHMARK.md', 'docs/CHECKPOINT.md');
+requireText(protocol, 'docs/RUNNER_BENCHMARK.md', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
+requireText(aiNativePlan, 'docs/RUNNER_BENCHMARK.md', 'docs/AI_NATIVE_PLAN.md');
+requireText(onboarding, 'docs/RUNNER_BENCHMARK.md', 'docs/NEW_AGENT_ONBOARDING.md');
+requireText(runnerPolicy, 'final Runner batch', 'docs/RUNNER_BENCHMARK.md');
+requireText(runnerPolicy, 'may **not** be deferred', 'docs/RUNNER_BENCHMARK.md');
+requireText(runnerBenchmark, 'policy: deferred-runner-benchmark', '.agent/runner-benchmark.yaml');
+requireText(runnerBenchmark, 'required_pr_or_main_gates_may_be_deferred: false', '.agent/runner-benchmark.yaml');
+requireText(runnerVerifier, 'Brovexa Runner benchmark governance verification passed', 'scripts/verify-runner-benchmark.mjs');
 
 requireText(readme, 'Every coding, review or integration agent must start with `AGENTS.md`.', 'README.md');
 requireText(plan, 'Cross-cutting — Parallel Multi-Agent Engineering System', 'docs/PROJECT_PLAN.md');
