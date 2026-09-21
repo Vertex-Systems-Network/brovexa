@@ -63,7 +63,7 @@ Linear: ABD-218
 
 Canonical identity, deterministic + structured-AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
 
-State: **ACTIVE IMPLEMENTATION**. `M03-ER-001` through `M03-ER-004` are integrated; `M03-ER-005` domain verification/approved contact-evidence boundary is next, followed by `M03-ER-006` independent adversarial verification. Implementation remains contracts-first, deterministic-first, provenance-aware and tenant-scoped. `docs/AI_NATIVE_PLAN.md` owns the bounded M03 packet DAG. No production model/provider/contact-enrichment activation is implied.
+State: **ACTIVE IMPLEMENTATION**. `M03-ER-001` through `M03-ER-004` plus `M03-ER-005-CONTRACTS` are integrated. The next slice is `M03-ER-005-DATABASE`, using Supervisor-reserved migration `0015_entity_enrichment_evidence_persistence`; `M03-ER-006` independent adversarial verification follows only after ER-005 persistence integrates. Implementation remains contracts-first, deterministic-first, provenance-aware, tenant-scoped and retention/deletion aware. No production model/provider/contact-enrichment or outreach activation is implied.
 
 ## M04 — Website & Digital Presence Intelligence
 Linear: ABD-219
@@ -141,7 +141,7 @@ Canonical coordination sources:
 - GitHub issue #53 — live logical slot occupancy/assignment;
 - branch `coordination/leases` — atomic live mutating-instance authority;
 - PR/work packet/handoff — bounded task state;
-- GitHub issue #54 — external native main-protection action.
+- GitHub issue #54 — completed native `main` protection/ruleset hardening record.
 
 Default concurrency target is 6 including Supervisor; soft maximum is 8 while conflict/rework/CI latency remains healthy. Specialty M02 network slots remain statically available but are assigned only to bounded work matching their ownership.
 
@@ -161,7 +161,7 @@ Direct pushes to `main` are prohibited by project governance. Normal integration
 
 `PR → exact-head FULL GATE → expected-head merge → resulting-main FULL GATE`
 
-Hosted main-push CI verifies integration provenance. Native GitHub branch protection/ruleset remains a separately required preventive layer tracked in issue #54.
+Hosted main-push CI verifies integration provenance. Native GitHub `main` protection/ruleset is active; completed issue #54 is the hardening record. Repository provenance CI remains defense in depth.
 
 ## Independent verification
 

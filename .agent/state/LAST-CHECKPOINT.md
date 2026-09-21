@@ -2,23 +2,20 @@
 
 ## Source of truth
 
-Repository/runtime evidence outranks this compact checkpoint. Baseline main is `1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4`, synchronization epoch is **71**, live registry revision at reconciliation is **175**, and the active Supervisor packet is `SUP-AI-NATIVE-README-PROGRESS-001`.
+Repository/runtime evidence outranks this compact checkpoint. Baseline main is `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`, synchronization epoch is **73**, live registry revision at reconciliation is **181**, and the active Supervisor packet is `SUP-M03-ER-005-DB-RESERVATION`.
 
-`M03-ER-004` is terminally integrated through PR #144. Resulting-main CI run `35654560539` passed the required FULL GATE lanes, the RUNTIME standing branch was synchronized to resulting main, and its lease was released.
+`M03-ER-005-CONTRACTS` is terminally integrated through PR #146. Exact-head CI `35659382058` and resulting-main CI `35660438181` both passed the required FULL GATE lanes. CONTRACTS is synchronized/released. All idle standing branches are synchronized to epoch 73.
 
 ## Current bounded packet
 
-Close the progress-governance blocker without changing feature/runtime behavior:
+Reserve migration `0015_entity_enrichment_evidence_persistence` exclusively for `M03-ER-005-DATABASE`, reconcile progress/instructions, and integrate the Persistent Supervisor epoch-parser plus native-protection documentation fixes already prepared on the Supervisor branch.
 
-- reconcile the root README to current M03 execution truth;
-- require README reconciliation on every Supervisor continuation when material progress occurs;
-- enforce the policy through the Supervisor manifest and resilience verifier;
-- reconcile compact durable state so timeout/resume does not restart from stale epoch-68 evidence.
+No DATABASE mutation begins until the reservation is integrated. Contact-data persistence must preserve the integrated contracts: allowed source admission, tenant/canonical-business binding, approved provenance, storage class, retention/deletion/refresh obligations, separate display/export eligibility, and outreach authorization remaining outside this packet.
 
 ## Exact next action
 
-Require PR #145 exact-head FULL GATE, merge it with expected-head safety, verify resulting `main`, advance synchronization/registry state, then assign `M03-ER-005` through the CONTRACTS/DATABASE dependency-safe preflight.
+Run exact-head FULL GATE for the Supervisor reservation/governance PR, merge with expected-head safety, verify resulting `main`, advance synchronization state, then assign `M03-ER-005-DATABASE`, acquire its atomic lease, and implement migration/schema/persistence/tests.
 
 ## Safety boundaries
 
-No provider/network activation, no production mutation, no auth weakening, no force push, no direct main push, and no deferral of required PR/resulting-main/security gates.
+No provider/network activation, no credentialed contact-enrichment provider, no outreach authorization, no production mutation, no auth weakening, no force push, no direct main push, and no deferral of required PR/resulting-main/security gates.

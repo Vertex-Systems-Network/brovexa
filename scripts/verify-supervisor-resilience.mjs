@@ -32,6 +32,7 @@ const agentReadme = await readFile(resolve(root, '.agent/README.md'), 'utf8');
 const leasePolicy = await readFile(resolve(root, 'docs/AGENT_BRANCH_LEASES.md'), 'utf8');
 const prVerifier = await readFile(resolve(root, 'scripts/verify-pr-agent-lease.mjs'), 'utf8');
 const preflight = await readFile(resolve(root, 'scripts/verify-pr-handoff-preflight.mjs'), 'utf8');
+const persistentSupervisorWorkflow = await readFile(resolve(root, '.github/workflows/persistent-supervisor.yml'), 'utf8');
 
 requireText(current, 'version: 1', '.agent/state/CURRENT-STATE.yaml');
 requireMatch(current, /^status: (VERIFYING|WAITING_EXTERNAL|BLOCKED)$/m, '.agent/state/CURRENT-STATE.yaml', 'status must be a durable resume state');
@@ -90,6 +91,7 @@ requireText(agentReadme, '.agent/state/CURRENT-STATE.yaml', '.agent/README.md');
 requireText(leasePolicy, 'scripts/verify-pr-handoff-preflight.mjs', 'docs/AGENT_BRANCH_LEASES.md');
 requireText(prVerifier, "from './pr-handoff-contract.mjs'", 'scripts/verify-pr-agent-lease.mjs');
 requireText(preflight, "from './pr-handoff-contract.mjs'", 'scripts/verify-pr-handoff-preflight.mjs');
+requireText(persistentSupervisorWorkflow, '(?:Sync|Synchronization) epoch:', '.github/workflows/persistent-supervisor.yml');
 
 const sampleHead = 'a'.repeat(40);
 const sampleMain = 'b'.repeat(40);
