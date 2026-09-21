@@ -5,7 +5,6 @@ import {
   AuthorizationError,
   applyPendingMigrations,
   assignWorkspaceRole,
-  bootstrapWorkspaceOwner,
   createIdentityUser,
   createPgPool,
   createWorkspaceMembership,
@@ -16,6 +15,7 @@ import {
   rollbackLatestMigration,
   setWorkspaceMembershipStatus,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 import {
   authClientKindValues,
   authenticationMethodValues,
@@ -67,6 +67,7 @@ function expectAuthorizationCode(expectedCode) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS research_job_controls CASCADE');
   await pool.query('DROP TABLE IF EXISTS acquisition_shards CASCADE');
   await pool.query('DROP TABLE IF EXISTS research_jobs CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_discovery_checkpoints CASCADE');
