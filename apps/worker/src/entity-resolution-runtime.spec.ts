@@ -105,6 +105,47 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(1);
   });
 
+  it('does not auto-match an exact candidate when the observation contains contradictory location evidence', async () => {
+    const recorder = createPersistenceRecorder();
+    const input = baseInput(recorder.adapter);
+    input.observation.sourceReferenceIds = [
+      ...input.observation.sourceReferenceIds,
+      'ref.locality.other',
+    ];
+    input.observation.identitySignals = [
+      ...input.observation.identitySignals,
+      {
+        signalId: 'signal.locality.other',
+        kind: 'locality',
+        rawValue: 'Karachi',
+        sourceScope: null,
+        sourceReferenceIds: ['ref.locality.other'],
+      },
+    ];
+
+    const result = await resolveBusinessEntityDeterministically({
+      ...input,
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        return [
+          {
+            candidateCanonicalBusinessId: 'business.1',
+            keyKind: domain.keyKind,
+            keyValue: domain.keyValue,
+            keyScope: domain.keyScope,
+            confidence: 0.99,
+          },
+        ];
+      },
+    });
+
+    expect(result.status).toBe('review_required');
+    expect(result.reasonCodes).toContain('identity_conflicting_localities');
+    expect(recorder.decisions).toHaveLength(1);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('requires review when multiple canonical candidates match deterministic keys', async () => {
     const recorder = createPersistenceRecorder();
     const result = await resolveBusinessEntityDeterministically({
