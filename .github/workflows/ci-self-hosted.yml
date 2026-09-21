@@ -5,6 +5,11 @@ name: CI Self-hosted Reference
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact branch, tag, or commit SHA to verify
+        required: true
+        default: main
 
 permissions:
   contents: read
@@ -15,16 +20,16 @@ concurrency:
 
 jobs:
   quality:
-    name: Verify m01/platform-foundation (Windows x64 reference)
+    name: Verify selected ref (Windows x64 reference)
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 25
 
     steps:
-      - name: Checkout approved M01 foundation branch
+      - name: Checkout requested benchmark ref
         # actions/checkout v7.0.1 — immutable commit pin.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: m01/platform-foundation
+          ref: ${{ inputs.ref }}
           persist-credentials: false
           fetch-depth: 1
 
