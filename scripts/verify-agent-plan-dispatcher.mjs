@@ -4,7 +4,6 @@ import {
   AgentExecutionDispatchError,
   AgentPersistenceConflictError,
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   cancelAgentExecutionDispatch,
   claimWorkUnit,
   completeWorkUnitWithEffect,
@@ -24,6 +23,7 @@ import {
   setWorkspaceMembershipStatus,
   writeAgentExecutionCheckpoint,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for dispatcher verification.');
