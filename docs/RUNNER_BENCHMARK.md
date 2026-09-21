@@ -16,6 +16,8 @@ Runner-dependent checks are accumulated in one durable benchmark queue and execu
 
 The Runner benchmark is not a way to bypass repository quality or security controls.
 
+Required hosted CI/security gates remain immediate and non-deferrable.
+
 The following may **not** be deferred into the Runner queue:
 
 - required PR or resulting-`main` status checks;
