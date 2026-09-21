@@ -147,6 +147,7 @@ readme_progress:
   no_noop_commit_when_no_material_change: true
   no_materially_newer_chat_state_than_readme: true
   supervisor_owns_progress_composition: true
+  self_update_merge_does_not_recurse: true
   required_fields:
     - reconciliation_date
     - exact_integrated_main_sha

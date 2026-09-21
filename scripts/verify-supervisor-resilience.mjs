@@ -62,6 +62,7 @@ for (const expected of [
   'reconcile_before_final_response: true',
   'update_on_material_progress: true',
   'no_materially_newer_chat_state_than_readme: true',
+  'self_update_merge_does_not_recurse: true',
 ]) requireText(supervisor, expected, '.agent/supervisor.yaml');
 
 for (const step of [

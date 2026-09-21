@@ -1,3 +1,4 @@
+export * from './entity-resolution-runtime';
 import {
   claimWorkUnit,
   completeWorkUnitWithEffect,

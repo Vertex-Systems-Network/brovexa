@@ -164,7 +164,7 @@ Each material README progress update must include, where applicable:
 - current module progress bar/percentage;
 - evidence-backed phase table update when a phase materially changes.
 
-README progress is evidence-based. Do not inflate broader product completion merely because one current packet advances. Active feature agents do not need write access to `README.md`; the Supervisor owns progress composition so feature scopes remain isolated.
+README progress is evidence-based. Do not inflate broader product completion merely because one current packet advances. A README-only progress-governance merge does not recursively require another README commit solely because that documentation merge creates a new merge SHA/epoch; the next continuation must reconcile that resulting main before any newer progress is reported. Active feature agents do not need write access to `README.md`; the Supervisor owns progress composition so feature scopes remain isolated.
 ## Mandatory assignment sequence
 
 Before feature mutation:

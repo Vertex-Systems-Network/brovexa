@@ -10,18 +10,18 @@ Updated: **2026-09-22**
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `1359084980b3c606193d35c67ea12e4abb4a0aba`
-- **Synchronization epoch:** `70`
-- **Live registry revision at reconciliation:** `171`
-- **Current product packet:** `M03-ER-004` / `AGENT-RUNTIME` / `VERIFYING`
-- **Current implementation PR:** #144 — exact head `be433abc5bad6caa8e852a36e06ba2df801b811a`
-- **Current exact-head CI:** `35653627803` — in progress at this reconciliation
+- **Exact integrated main:** `1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4`
+- **Synchronization epoch:** `71`
+- **Live registry revision at reconciliation:** `173`
+- **Current product packet:** `M03-ER-004` / `RESULTING_MAIN_VERIFYING`
+- **Current implementation PR:** #144 — MERGED from exact head `be433abc5bad6caa8e852a36e06ba2df801b811a`
+- **Current resulting-main CI:** `35654560539` — queued/in progress at this reconciliation
 - **Current Supervisor packet:** `SUP-AI-NATIVE-README-PROGRESS-001`
-- **M03 execution progress:** **~60%**
+- **M03 execution progress:** **~70%**
 
-`██████░░░░ 60%`
+`███████░░░ 70%`
 
-M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, and `M03-ER-003` are integrated; `M03-ER-004` is implemented and verifying; `M03-ER-005` and `M03-ER-006` remain downstream. This live execution percentage is separate from the broader weighted product-delivery estimate below.
+M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, and `M03-ER-003` are integrated; `M03-ER-004` is merged and under resulting-main verification; `M03-ER-005` and `M03-ER-006` remain downstream. This live execution percentage is separate from the broader weighted product-delivery estimate below.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~30% complete**
@@ -35,7 +35,7 @@ M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, and
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
 | M02A | Global Acquisition Studio & Background Research | Planned; implementation largely not started | **5%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003 INTEGRATED; ER-004 VERIFYING; ER-005/006 pending | **60%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003 INTEGRATED; ER-004 merged/resulting-main VERIFYING; ER-005/006 pending | **70%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
