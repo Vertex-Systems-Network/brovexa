@@ -4,7 +4,6 @@ import {
   AgentRuntimeHardeningError,
   AuthorizationError,
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   claimWorkUnit,
   completeWorkUnitWithEffect,
   createIdentityUser,
@@ -21,6 +20,7 @@ import {
   transitionAgentRun,
   writeAgentExecutionCheckpoint,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required for runtime hardening verification.');
