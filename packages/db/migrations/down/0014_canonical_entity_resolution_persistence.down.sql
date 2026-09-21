@@ -32,6 +32,9 @@ DROP TRIGGER IF EXISTS canonical_businesses_supersession_guard ON canonical_busi
 --> statement-breakpoint
 DROP FUNCTION IF EXISTS brovexa_internal.guard_canonical_business_supersession();
 --> statement-breakpoint
+ALTER TABLE canonical_businesses
+  DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk;
+--> statement-breakpoint
 DROP TABLE IF EXISTS canonical_business_lineage_operations;
 --> statement-breakpoint
 DROP TABLE IF EXISTS canonical_business_aliases;
