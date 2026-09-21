@@ -213,6 +213,33 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.observations).toHaveLength(0);
   });
 
+  it('validates candidate evidence before invoking an injected persistence side effect', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async ({ keys }) => {
+          const domain = keys.find((key) => key.keyKind === 'domain_exact');
+          if (!domain) throw new Error('expected domain key');
+          return [
+            {
+              candidateCanonicalBusinessId: 'invalid candidate id with spaces',
+              keyKind: domain.keyKind,
+              keyValue: domain.keyValue,
+              keyScope: domain.keyScope,
+              confidence: 0.99,
+            },
+          ];
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('rejects lookup keys that were not generated from the approved observation evidence', async () => {
     const recorder = createPersistenceRecorder();
 

@@ -13,6 +13,7 @@ import {
 import {
   BusinessResolutionEvaluationSchema,
   BusinessResolutionThresholdPolicySchema,
+  CandidateBusinessMatchEvidenceSchema,
   SourceBusinessObservationSchema,
   generateDeterministicEntityCandidateKeys,
   type BusinessResolutionDecision,
@@ -217,7 +218,7 @@ export async function resolveBusinessEntityDeterministically(
   }
 
   const evidence = matches.map(({ match, key }) =>
-    ({
+    CandidateBusinessMatchEvidenceSchema.parse({
       evidenceId: stableIdentifier('evidence', [
         observation.workspaceId,
         observation.sourceObservationId,
@@ -236,15 +237,8 @@ export async function resolveBusinessEntityDeterministically(
       reasonCode: key.reasonCode,
       confidence: match.confidence,
       recordedAt: evaluatedAt.toISOString(),
-    }) satisfies CandidateBusinessMatchEvidence,
+    }),
   );
-
-  for (const item of evidence) {
-    await persistence.persistEvidence({
-      ...item,
-      recordedAt: new Date(item.recordedAt),
-    });
-  }
 
   const candidateIds = sortedUnique(evidence.map((item) => item.candidateCanonicalBusinessId));
   const generatedExactKeyIds = generation.keys
@@ -335,6 +329,13 @@ export async function resolveBusinessEntityDeterministically(
     evidence,
     decision,
   });
+
+  for (const item of evidence) {
+    await persistence.persistEvidence({
+      ...item,
+      recordedAt: new Date(item.recordedAt),
+    });
+  }
 
   await persistence.persistDecision({
     ...decision,
