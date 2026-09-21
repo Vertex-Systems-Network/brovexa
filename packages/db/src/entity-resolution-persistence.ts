@@ -40,6 +40,7 @@ export interface PersistCanonicalBusinessInput {
   displayName: string;
   identityState?: PersistedCanonicalBusinessState;
   supersededByCanonicalBusinessId?: string | null;
+  originDecisionId?: string | null;
 }
 
 export interface PersistedCanonicalBusiness {
@@ -48,6 +49,7 @@ export interface PersistedCanonicalBusiness {
   displayName: string;
   identityState: PersistedCanonicalBusinessState;
   supersededByCanonicalBusinessId: string | null;
+  originDecisionId: string | null;
   createdAt: Date;
 }
 
@@ -76,6 +78,13 @@ export interface PersistCandidateBusinessMatchEvidenceInput {
   recordedAt: Date;
 }
 
+export interface PersistBusinessResolutionThresholdPolicy {
+  policyId: string;
+  version: string;
+  reviewMinimum: number;
+  autoMatchMinimum: number;
+}
+
 export interface PersistBusinessResolutionDecisionInput {
   decisionId: string;
   workspaceId: string;
@@ -87,6 +96,7 @@ export interface PersistBusinessResolutionDecisionInput {
   reviewDecisionRef: string | null;
   reasonCodes: readonly string[];
   evidenceIds: readonly string[];
+  thresholdPolicy: PersistBusinessResolutionThresholdPolicy;
   evaluatedAt: Date;
 }
 
@@ -167,6 +177,7 @@ interface CanonicalBusinessRow {
   display_name: string;
   identity_state: PersistedCanonicalBusinessState;
   superseded_by_canonical_business_id: string | null;
+  origin_decision_id: string | null;
   created_at: Date;
 }
 
@@ -208,6 +219,10 @@ interface DecisionRow {
   review_decision_ref: string | null;
   reason_codes: string[];
   evidence_ids: string[];
+  threshold_policy_id: string;
+  threshold_policy_version: string;
+  review_minimum: number;
+  auto_match_minimum: number;
   evaluated_at: Date;
   created_at: Date;
 }
@@ -311,6 +326,7 @@ function toCanonicalBusiness(row: CanonicalBusinessRow): PersistedCanonicalBusin
     displayName: row.display_name,
     identityState: row.identity_state,
     supersededByCanonicalBusinessId: row.superseded_by_canonical_business_id,
+    originDecisionId: row.origin_decision_id,
     createdAt: row.created_at,
   };
 }
@@ -358,6 +374,12 @@ function toDecision(row: DecisionRow): PersistedResolutionDecisionRecord {
     reviewDecisionRef: row.review_decision_ref,
     reasonCodes: Object.freeze([...row.reason_codes]),
     evidenceIds: Object.freeze([...row.evidence_ids]),
+    thresholdPolicy: Object.freeze({
+      policyId: row.threshold_policy_id,
+      version: row.threshold_policy_version,
+      reviewMinimum: row.review_minimum,
+      autoMatchMinimum: row.auto_match_minimum,
+    }),
     evaluatedAt: row.evaluated_at,
     createdAt: row.created_at,
   };
@@ -409,9 +431,14 @@ export async function persistCanonicalBusiness(
   }
   const identityState = input.identityState ?? 'active';
   const supersededBy = input.supersededByCanonicalBusinessId ?? null;
+  const originDecisionId = input.originDecisionId ?? null;
   if (!['active', 'superseded'].includes(identityState)) fail('ENTITY_RESOLUTION_INPUT_INVALID', 'identityState is invalid.');
   if (identityState === 'active' && supersededBy !== null) {
     fail('ENTITY_RESOLUTION_INPUT_INVALID', 'An active canonical business cannot declare supersession.');
+  }
+  if (originDecisionId !== null) assertIdentifier(originDecisionId, 'originDecisionId');
+  if (identityState === 'superseded' && originDecisionId !== null) {
+    fail('ENTITY_RESOLUTION_INPUT_INVALID', 'A superseded canonical business cannot declare a create_new origin decision.');
   }
   if (identityState === 'superseded') {
     if (supersededBy === null) fail('ENTITY_RESOLUTION_INPUT_INVALID', 'A superseded canonical business requires a surviving identity.');
@@ -421,16 +448,16 @@ export async function persistCanonicalBusiness(
 
   const inserted = await pool.query<CanonicalBusinessRow>(
     `INSERT INTO canonical_businesses
-       (id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id)
-     VALUES ($1, $2::uuid, $3, $4, $5)
+       (id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, origin_decision_id)
+     VALUES ($1, $2::uuid, $3, $4, $5, $6)
      ON CONFLICT (id) DO NOTHING
-     RETURNING id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, created_at`,
-    [input.id, input.workspaceId, input.displayName.trim(), identityState, supersededBy],
+     RETURNING id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, origin_decision_id, created_at`,
+    [input.id, input.workspaceId, input.displayName.trim(), identityState, supersededBy, originDecisionId],
   );
   if (inserted.rows[0]) return { created: true, record: toCanonicalBusiness(inserted.rows[0]) };
 
   const existing = await pool.query<CanonicalBusinessRow>(
-    `SELECT id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, created_at
+    `SELECT id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, origin_decision_id, created_at
      FROM canonical_businesses WHERE id = $1`,
     [input.id],
   );
@@ -440,7 +467,8 @@ export async function persistCanonicalBusiness(
     row.workspace_id !== input.workspaceId ||
     row.display_name !== input.displayName.trim() ||
     row.identity_state !== identityState ||
-    row.superseded_by_canonical_business_id !== supersededBy
+    row.superseded_by_canonical_business_id !== supersededBy ||
+    row.origin_decision_id !== originDecisionId
   ) {
     fail('CANONICAL_BUSINESS_ID_CONFLICT', `Canonical business ${input.id} already exists with different durable identity.`);
   }
@@ -551,6 +579,38 @@ export async function persistCandidateBusinessMatchEvidence(
   assertConfidence(input.confidence);
   assertDate(input.recordedAt, 'recordedAt');
 
+  const observation = await pool.query<{ source_reference_ids: string[]; identity_signals: Record<string, unknown>[] }>(
+    `SELECT source_reference_ids, identity_signals
+     FROM source_business_observations
+     WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.sourceObservationId, input.workspaceId],
+  );
+  const observationRow = observation.rows[0];
+  if (!observationRow) {
+    fail('MATCH_EVIDENCE_ID_CONFLICT', 'Candidate evidence requires an existing source observation in the same workspace.');
+  }
+  const signalById = new Map(
+    observationRow.identity_signals.map((signal) => [
+      typeof signal.signalId === 'string' ? signal.signalId : '',
+      signal,
+    ]),
+  );
+  if (signalIds.some((signalId) => !signalById.has(signalId))) {
+    fail('MATCH_EVIDENCE_ID_CONFLICT', 'Candidate evidence may reference only persisted observation signals.');
+  }
+  const observationRefs = new Set(observationRow.source_reference_ids);
+  const referencedSignalRefs = new Set(
+    signalIds.flatMap((signalId) => {
+      const signal = signalById.get(signalId);
+      return Array.isArray(signal?.sourceReferenceIds)
+        ? signal.sourceReferenceIds.filter((value): value is string => typeof value === 'string')
+        : [];
+    }),
+  );
+  if (refs.some((referenceId) => !observationRefs.has(referenceId) || !referencedSignalRefs.has(referenceId))) {
+    fail('MATCH_EVIDENCE_ID_CONFLICT', 'Candidate evidence provenance must be bound to the referenced observation signals.');
+  }
+
   const envelope = {
     evidenceId: input.evidenceId,
     workspaceId: input.workspaceId,
@@ -642,6 +702,15 @@ export async function persistBusinessResolutionDecision(
   if (!reviewWasDecided && input.reviewDecisionRef !== null) fail('ENTITY_RESOLUTION_INPUT_INVALID', 'reviewDecisionRef is valid only for approved/rejected review.');
   if (input.reviewDecisionRef !== null) assertIdentifier(input.reviewDecisionRef, 'reviewDecisionRef');
   assertConfidence(input.confidence);
+  assertIdentifier(input.thresholdPolicy.policyId, 'thresholdPolicy.policyId');
+  if (!/^\d+\.\d+\.\d+$/.test(input.thresholdPolicy.version)) {
+    fail('ENTITY_RESOLUTION_INPUT_INVALID', 'thresholdPolicy.version must use semantic version format.');
+  }
+  assertConfidence(input.thresholdPolicy.reviewMinimum);
+  assertConfidence(input.thresholdPolicy.autoMatchMinimum);
+  if (input.thresholdPolicy.reviewMinimum >= input.thresholdPolicy.autoMatchMinimum) {
+    fail('ENTITY_RESOLUTION_INPUT_INVALID', 'thresholdPolicy.autoMatchMinimum must be greater than reviewMinimum.');
+  }
   const reasons = normalizeStringArray(input.reasonCodes, 'reasonCodes', { max: 64 });
   const evidenceIds = normalizeStringArray(input.evidenceIds, 'evidenceIds', { max: 256 });
   assertDate(input.evaluatedAt, 'evaluatedAt');
@@ -650,8 +719,10 @@ export async function persistBusinessResolutionDecision(
     id: string;
     candidate_canonical_business_id: string;
     effect: MatchEvidenceEffect;
+    method: MatchEvidenceMethod;
+    confidence: number;
   }>(
-    `SELECT id, candidate_canonical_business_id, effect
+    `SELECT id, candidate_canonical_business_id, effect, method, confidence
      FROM candidate_business_match_evidence
      WHERE workspace_id = $1::uuid
        AND source_observation_id = $2
@@ -672,6 +743,43 @@ export async function persistBusinessResolutionDecision(
     fail('RESOLUTION_DECISION_EVIDENCE_INVALID', 'match_existing requires supporting evidence for the selected candidate.');
   }
 
+  const observationEvidence = await pool.query<{
+    candidate_canonical_business_id: string;
+    effect: MatchEvidenceEffect;
+    method: MatchEvidenceMethod;
+    confidence: number;
+  }>(
+    `SELECT candidate_canonical_business_id, effect, method, confidence
+     FROM candidate_business_match_evidence
+     WHERE workspace_id = $1::uuid AND source_observation_id = $2`,
+    [input.workspaceId, input.sourceObservationId],
+  );
+
+  let requiresReview = false;
+  if (input.decision === 'match_existing') {
+    requiresReview =
+      input.confidence < input.thresholdPolicy.autoMatchMinimum ||
+      observationEvidence.rows.some(
+        (row) =>
+          row.candidate_canonical_business_id === input.candidateCanonicalBusinessId &&
+          row.effect === 'contradicts_match',
+      ) ||
+      evidence.rows.some(
+        (row) =>
+          row.candidate_canonical_business_id === input.candidateCanonicalBusinessId &&
+          row.method === 'structured_ai',
+      );
+  } else if (input.decision === 'create_new') {
+    requiresReview = observationEvidence.rows.some(
+      (row) =>
+        row.effect === 'supports_match' &&
+        row.confidence >= input.thresholdPolicy.reviewMinimum,
+    );
+  }
+  if (requiresReview && input.reviewState !== 'approved') {
+    fail('RESOLUTION_DECISION_EVIDENCE_INVALID', 'Resolution policy requires explicit review approval.');
+  }
+
   const envelope = {
     decisionId: input.decisionId,
     workspaceId: input.workspaceId,
@@ -683,6 +791,7 @@ export async function persistBusinessResolutionDecision(
     reviewDecisionRef: input.reviewDecisionRef,
     reasonCodes: reasons,
     evidenceIds,
+    thresholdPolicy: { ...input.thresholdPolicy },
     evaluatedAt: input.evaluatedAt.toISOString(),
   };
 
@@ -690,12 +799,14 @@ export async function persistBusinessResolutionDecision(
     `INSERT INTO business_resolution_decisions
        (id, workspace_id, source_observation_id, candidate_canonical_business_id,
         decision, confidence, review_state, review_decision_ref, reason_codes,
-        evidence_ids, evaluated_at, envelope)
-     VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12::jsonb)
+        evidence_ids, threshold_policy_id, threshold_policy_version, review_minimum,
+        auto_match_minimum, evaluated_at, envelope)
+     VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16::jsonb)
      ON CONFLICT (id) DO NOTHING
      RETURNING id, workspace_id, source_observation_id, candidate_canonical_business_id,
                decision, confidence, review_state, review_decision_ref, reason_codes,
-               evidence_ids, evaluated_at, created_at`,
+               evidence_ids, threshold_policy_id, threshold_policy_version, review_minimum,
+               auto_match_minimum, evaluated_at, created_at`,
     [
       input.decisionId,
       input.workspaceId,
@@ -707,6 +818,10 @@ export async function persistBusinessResolutionDecision(
       input.reviewDecisionRef,
       JSON.stringify(reasons),
       JSON.stringify(evidenceIds),
+      input.thresholdPolicy.policyId,
+      input.thresholdPolicy.version,
+      input.thresholdPolicy.reviewMinimum,
+      input.thresholdPolicy.autoMatchMinimum,
       input.evaluatedAt,
       JSON.stringify(envelope),
     ],
@@ -716,7 +831,8 @@ export async function persistBusinessResolutionDecision(
   const existing = await pool.query<DecisionRow & { envelope: Record<string, unknown> }>(
     `SELECT id, workspace_id, source_observation_id, candidate_canonical_business_id,
             decision, confidence, review_state, review_decision_ref, reason_codes,
-            evidence_ids, evaluated_at, envelope, created_at
+            evidence_ids, threshold_policy_id, threshold_policy_version, review_minimum,
+            auto_match_minimum, evaluated_at, envelope, created_at
      FROM business_resolution_decisions WHERE id = $1`,
     [input.decisionId],
   );
@@ -732,6 +848,10 @@ export async function persistBusinessResolutionDecision(
     row.review_decision_ref !== input.reviewDecisionRef ||
     !sameJson(row.reason_codes, reasons) ||
     !sameJson(row.evidence_ids, evidenceIds) ||
+    row.threshold_policy_id !== input.thresholdPolicy.policyId ||
+    row.threshold_policy_version !== input.thresholdPolicy.version ||
+    row.review_minimum !== input.thresholdPolicy.reviewMinimum ||
+    row.auto_match_minimum !== input.thresholdPolicy.autoMatchMinimum ||
     row.evaluated_at.getTime() !== input.evaluatedAt.getTime() ||
     !sameJson(row.envelope, envelope)
   ) {
@@ -755,11 +875,15 @@ export async function persistCanonicalBusinessAlias(
     candidate_canonical_business_id: string | null;
     decision: ResolutionDecisionKind;
     review_state: ResolutionReviewState;
+    origin_decision_id: string | null;
   }>(
-    `SELECT source_observation_id, candidate_canonical_business_id, decision, review_state
-     FROM business_resolution_decisions
-     WHERE id = $1 AND workspace_id = $2::uuid`,
-    [input.decisionId, input.workspaceId],
+    `SELECT decision.source_observation_id, decision.candidate_canonical_business_id,
+            decision.decision, decision.review_state, business.origin_decision_id
+     FROM business_resolution_decisions AS decision
+     LEFT JOIN canonical_businesses AS business
+       ON business.id = $3 AND business.workspace_id = decision.workspace_id
+     WHERE decision.id = $1 AND decision.workspace_id = $2::uuid`,
+    [input.decisionId, input.workspaceId, input.canonicalBusinessId],
   );
   const decisionRow = decision.rows[0];
   if (
@@ -769,7 +893,9 @@ export async function persistCanonicalBusinessAlias(
     decisionRow.review_state === 'pending' ||
     decisionRow.review_state === 'rejected' ||
     (decisionRow.decision === 'match_existing' &&
-      decisionRow.candidate_canonical_business_id !== input.canonicalBusinessId)
+      decisionRow.candidate_canonical_business_id !== input.canonicalBusinessId) ||
+    (decisionRow.decision === 'create_new' &&
+      decisionRow.origin_decision_id !== input.decisionId)
   ) {
     fail('CANONICAL_ALIAS_DECISION_INVALID', 'Alias attachment requires a finalized decision bound to the same observation and canonical identity.');
   }
@@ -852,6 +978,15 @@ export async function persistCanonicalBusinessLineageOperation(
   );
   if (new Set(entities.rows.map((row) => row.id)).size !== idsToVerify.length) {
     fail('LINEAGE_ENTITY_NOT_FOUND', 'Every lineage identity must exist in the same workspace.');
+  }
+
+  const lineageEvidence = await pool.query<{ id: string }>(
+    `SELECT id FROM candidate_business_match_evidence
+     WHERE workspace_id = $1::uuid AND id = ANY($2::text[])`,
+    [input.workspaceId, evidenceIds],
+  );
+  if (new Set(lineageEvidence.rows.map((row) => row.id)).size !== evidenceIds.length) {
+    fail('LINEAGE_ENTITY_NOT_FOUND', 'Every lineage evidence ID must exist in the same workspace.');
   }
 
   if (parentId !== null) {
@@ -956,7 +1091,7 @@ export async function getCanonicalBusiness(
   assertWorkspaceId(workspaceId);
   assertIdentifier(canonicalBusinessId, 'canonicalBusinessId');
   const result = await pool.query<CanonicalBusinessRow>(
-    `SELECT id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, created_at
+    `SELECT id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, origin_decision_id, created_at
      FROM canonical_businesses
      WHERE workspace_id = $1::uuid AND id = $2`,
     [workspaceId, canonicalBusinessId],
