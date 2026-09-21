@@ -1,38 +1,34 @@
-# Brovexa M01 Self-Hosted Runner Recovery
+# Brovexa Windows x64 Self-Hosted Runner Readiness
 
-Status: **Operational blocker-resolution runbook**
+Status: **ACTIVE RUNNER READINESS RUNBOOK**
 
-Purpose: restore an approved Windows x64 GitHub Actions runner to a state where the default-branch `M01 Self-hosted Verification Dispatch` can execute the M01 quality gate.
+Purpose: verify that the approved Windows x64 GitHub Actions runner is healthy and eligible to execute the deferred Runner benchmark `RUNNER-M01-WINDOWS-X64-001`.
 
-This runbook does **not** authorize runner removal, re-registration, token rotation, organization-policy changes, production deployment, or any destructive action.
+Canonical Runner governance:
 
-## Current Brovexa evidence
+- policy: `docs/RUNNER_BENCHMARK.md`;
+- queue/results: `.agent/runner-benchmark.yaml`;
+- readiness task: `RUNNER-WINDOWS-READINESS-001`;
+- compatibility task: `RUNNER-M01-WINDOWS-X64-001`;
+- canonical dispatch workflow: `.github/workflows/m01-self-hosted-dispatch.yml`.
 
-- hosted GitHub Actions repeatedly fail before runner allocation / before executable workflow steps;
-- the historical no-checkout Windows probe remains queued;
-- GitHub currently shows no `workflow_dispatch` execution for the default-branch M01 dispatcher;
-- therefore M01 remains `IMPLEMENTED BUT NOT VERIFIED` and `ABD-259` stays open.
+This runbook does **not** authorize runner removal, re-registration, token rotation, organization-policy changes, production deployment, credential expansion, or destructive actions.
 
-GitHub routes a self-hosted job only to an online/idle runner matching all required labels. The Brovexa dispatcher requires:
+## Current operating model
 
-```text
-self-hosted
-Windows
-X64
-```
+M01 hosted verification is already integrated and continuously enforced. The Windows self-hosted path is an additional deferred compatibility benchmark, not a substitute for hosted PR/resulting-`main` FULL GATE.
 
-If no online/idle runner matches, the job remains queued.
+The dependency is:
 
-## 1. Inspect the runner in GitHub
+`RUNNER-WINDOWS-READINESS-001 → RUNNER-M01-WINDOWS-X64-001`
 
-In the repository or organization UI:
+Do not dispatch the compatibility benchmark until readiness is confirmed.
 
-1. Open **Settings**.
-2. Open **Actions → Runners**.
-3. Find the approved Brovexa/Windows runner.
-4. Confirm its status and labels.
+## 1. Confirm GitHub runner state
 
-Expected ready state:
+In repository/organization GitHub settings, inspect **Actions → Runners** and find the approved Brovexa Windows runner.
+
+Expected state:
 
 ```text
 Status: Idle
@@ -42,12 +38,12 @@ Labels: self-hosted, Windows, X64
 Interpretation:
 
 - `Idle` — connected and available;
-- `Active` — currently executing a job;
-- `Offline` — runner application is not connected to GitHub.
+- `Active` — connected but currently executing work;
+- `Offline` — runner application is not connected.
 
-Do not create extra labels or weaken the workflow's exact label requirements merely to force assignment.
+Do not add broad labels or weaken the workflow's exact label requirements merely to obtain assignment.
 
-## 2. Run the repository diagnostic script
+## 2. Run the read-only diagnostic
 
 From a Windows PowerShell terminal in the Brovexa checkout:
 
@@ -55,7 +51,7 @@ From a Windows PowerShell terminal in the Brovexa checkout:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-runner.ps1
 ```
 
-If the runner installation cannot be inferred from its Windows service, pass its installation directory explicitly:
+If the installation root cannot be inferred from the Windows service:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-runner.ps1 -RunnerRoot "C:\path\to\actions-runner"
@@ -63,161 +59,124 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose-github-ru
 
 The script is intentionally read-only. It checks:
 
-- `actions.runner.*` Windows service presence/state;
+- `actions.runner.*` service presence/state;
 - `Runner.Listener` process visibility;
-- runner installation/registration-file presence without printing registration contents;
-- runner binary file version;
-- latest `_diag` file path/time without dumping log contents;
-- basic outbound TCP/443 reachability to GitHub endpoints.
+- installation/registration-file presence without printing registration contents;
+- runner binary version;
+- latest `_diag` path/time without dumping log contents;
+- representative outbound TCP/443 reachability to GitHub endpoints.
 
-It does **not** start/stop/remove/register/reconfigure the runner and does not request or print runner tokens.
+It does not start, stop, remove, register, reconfigure, or request runner tokens.
 
-## 3. If the Windows service exists but is stopped
+## 3. Resolve service/listener problems safely
 
-Inspect:
+If an already-approved Windows service exists but is stopped, inspect it first:
 
 ```powershell
 Get-Service "actions.runner.*"
 ```
 
-GitHub's documented Windows service start command is:
+Starting the already-approved service is an operator action:
 
 ```powershell
 Start-Service "actions.runner.*"
 ```
 
-Starting an already-approved existing runner service is an operator action. Do not run removal/reconfiguration commands merely because a job is queued.
-
-After starting, re-check:
+Then verify:
 
 ```powershell
 Get-Service "actions.runner.*"
 Get-Process "Runner.Listener" -ErrorAction SilentlyContinue
 ```
 
-Then confirm the runner changes to `Idle` in GitHub **Settings → Actions → Runners**.
+If the runner intentionally uses an already-approved interactive installation instead of a service, confirm that registration is still valid before using its existing `run.cmd`. Re-registration/token rotation is a separate privileged recovery decision and is not authorized by this runbook.
 
-## 4. If no runner service exists
+## 4. Network requirements
 
-The runner may have been configured for interactive use rather than as a Windows service, or its registration may be stale.
+The runner needs outbound HTTPS/TCP 443 to GitHub services used by Actions. The diagnostic checks representative endpoints including:
 
-If an already-configured runner installation exists, open PowerShell in that runner installation directory and use the existing runner application only if its registration is still valid:
+- `github.com`;
+- `api.github.com`;
+- `codeload.github.com`;
+- `results-receiver.actions.githubusercontent.com`;
+- `objects.githubusercontent.com`.
 
-```powershell
-.\run.cmd
-```
+A representative PASS does not prove every wildcard/CNAME path is allowed by a corporate firewall.
 
-A healthy interactive runner reports that it is connected and listening for jobs.
+Do not disable TLS verification as a troubleshooting shortcut.
 
-Do **not** remove/re-register the runner as a first troubleshooting step. Registration/reconfiguration requires time-limited GitHub tokens and changes trusted machine state, so it should be treated as a separate explicit recovery decision if the existing registration is proven unusable.
+## 5. Diagnostic-log handling
 
-## 5. Network requirements
+Runner diagnostics normally live under the installation `_diag` directory. The repository diagnostic prints only the latest file path/time.
 
-The self-hosted runner requires outbound HTTPS (TCP 443) to GitHub. GitHub documents essential communication with:
+Review logs locally for categories such as connection/authentication, DNS/proxy/TLS, auto-update, service-start, or stale registration errors. Do not paste registration tokens, authorization headers, credentials, or other secrets into issues/chat or benchmark result fields.
 
-```text
-github.com
-api.github.com
-*.actions.githubusercontent.com
-```
+## 6. Readiness PASS criteria
 
-The current M01 workflow also downloads GitHub Actions, so connectivity to `codeload.github.com` and relevant GitHub content/result endpoints is required.
+Mark `RUNNER-WINDOWS-READINESS-001` PASS only when evidence shows:
 
-The diagnostic script tests representative fixed hostnames. A PASS there does not prove every wildcard/CNAME path is allowed by a corporate firewall.
+- approved runner machine is reachable;
+- runner service or approved listener mode is healthy;
+- `Runner.Listener` is connected;
+- GitHub shows exact labels `self-hosted, Windows, X64`;
+- GitHub runner state is `Idle` immediately before dispatch;
+- registration metadata exists without secret disclosure;
+- representative outbound HTTPS checks pass;
+- no unresolved runner-allocation blocker remains.
 
-If the runner is `Offline` despite a running listener process, review network/firewall/proxy/TLS interception before touching registration.
+Infrastructure failure is recorded as readiness `FAIL`/`BLOCKED`, not as an application build/test failure.
 
-Do not disable TLS certificate verification as a normal fix.
+## 7. Dispatch the exact-main compatibility benchmark
 
-## 6. Review runner diagnostics without leaking secrets
+After readiness PASS:
 
-Runner diagnostic logs are normally under the runner installation's `_diag` directory.
+1. re-read current `main` SHA;
+2. require current hosted FULL GATE/security checks to be green;
+3. open **Actions → M01 Self-hosted Verification Dispatch**;
+4. dispatch the workflow with `ref=<exact current main SHA>`;
+5. never substitute a stale standing/foundation branch for final-batch evidence.
 
-The Brovexa diagnostic script prints only the latest diagnostic file path and timestamp. Review the file locally for connectivity/service errors, but do not paste credentials, registration tokens, authorization headers, or other secrets into issues/chat.
+The canonical dispatch workflow checks out the supplied exact ref and runs foundation/guardrail checks, frozen-lockfile dependency install, runtime quality, and API source-to-runtime reload verification.
 
-Useful categories to look for:
+The historical `.github/workflows/ci-self-hosted.yml` remains a frozen M01 reference and is **not** the final-batch dispatch source.
 
-- connection/authentication failure;
-- DNS/proxy/TLS failure;
-- runner auto-update failure;
-- service start failure;
-- runner registration no longer recognized.
+## 8. Evidence required
 
-## 7. Execute the Brovexa verification workflow
+For readiness, record:
 
-Once the approved runner is `Idle` with the exact required labels:
+- diagnostic outcome;
+- runner name and exact labels if visible;
+- GitHub runner state;
+- unresolved infrastructure blocker, if any.
 
-1. Open the repository **Actions** tab.
-2. Select **M01 Self-hosted Verification Dispatch**.
-3. Choose **Run workflow** from the default branch.
-4. Start the workflow.
+For compatibility, record:
 
-The workflow itself checks out exactly:
-
-```text
-m01/platform-foundation
-```
-
-It must not be edited to execute arbitrary PR/ref input on the trusted machine.
-
-## 8. Evidence required from the run
-
-Capture the exact:
-
+- exact current-main SHA used as `ref`;
 - workflow run ID;
 - job ID;
-- runner name/labels if visible;
-- each executed step and conclusion;
-- dependency-install result;
-- foundation preflight result;
-- build result;
-- typecheck result;
-- Vitest result.
+- each executed step/conclusion;
+- final workflow conclusion.
 
-Do not summarize a queued or no-step job as a failed application build.
+Store only evidence references and non-sensitive metrics in `.agent/runner-benchmark.yaml`; do not copy secrets or sensitive logs into the registry.
 
-Use the actual failure category:
+## 9. Failure classification
+
+Use the actual category:
 
 ```text
-CI INFRASTRUCTURE FAILURE
+RUNNER INFRASTRUCTURE / ALLOCATION FAILURE
 DEPENDENCY INSTALL FAILURE
 FOUNDATION CONTRACT FAILURE
 BUILD FAILURE
 TYPECHECK FAILURE
 TEST FAILURE
+API RELOAD VERIFICATION FAILURE
 ```
 
-## 9. After the first successful dependency installation
+A queued/no-step job is not an application failure.
 
-The first approved successful `pnpm install --no-frozen-lockfile` must generate `pnpm-lock.yaml`.
+## 10. Final-batch rule
 
-Then, in the same M01 verification work package:
+Runner readiness and compatibility are executed during the controlled milestone/release Runner batch defined in `docs/RUNNER_BENCHMARK.md`.
 
-1. commit `pnpm-lock.yaml`;
-2. change hosted CI, self-hosted reference workflow, and default-branch dispatcher to:
-
-```text
-pnpm install --frozen-lockfile
-```
-
-3. rerun the complete quality gate.
-
-A successful non-frozen install alone is not the final Foundation Slice 1 gate.
-
-## 10. ABD-259 exit criteria
-
-Do not close `ABD-259` until all are verified from executable evidence:
-
-- approved runner executes;
-- Node 24.20.0 / pnpm 11.23.0 environment is used;
-- dependency install succeeds;
-- lockfile is committed;
-- CI is frozen-lockfile-only;
-- foundation preflight passes;
-- build passes;
-- TypeScript 7 typecheck passes;
-- Vitest passes;
-- `pnpm run dev:api` source-to-runtime restart behavior is exercised;
-- GitHub/Linear/checkpoint evidence is reconciled.
-
-Only after this gate should `ABD-260` PostgreSQL/Drizzle implementation start.
+Required hosted PR/resulting-`main`/security gates remain immediate and cannot be deferred into this process.
