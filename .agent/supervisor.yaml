@@ -138,6 +138,41 @@ main_integration:
   main_push_provenance_check_required: true
   github_branch_protection_external_setting_required: true
 
+
+compact_state:
+  current_state_path: .agent/state/CURRENT-STATE.yaml
+  last_checkpoint_path: .agent/state/LAST-CHECKPOINT.md
+  execution_journal_path: .agent/state/EXECUTION-JOURNAL.md
+  current_state_max_bytes: 12288
+  last_checkpoint_max_bytes: 16384
+  execution_journal_max_bytes: 32768
+  allowed_resume_statuses:
+    - VERIFYING
+    - WAITING_EXTERNAL
+    - BLOCKED
+  repository_runtime_evidence_overrides_checkpoint: true
+  timeout_resume_no_repeat_without_reconciliation: true
+  startup_resume_sequence:
+    - READ_COMPACT_CURRENT_STATE
+    - READ_LAST_CHECKPOINT
+    - RESOLVE_EXACT_MAIN
+    - RECONCILE_OPEN_ISSUES
+    - RECONCILE_OPEN_PRS
+    - RECONCILE_CLAIMS_QUEUE_AND_LEASES
+    - READ_RUNNER_BENCHMARK
+    - ONLY_THEN_START_NEW_WORK
+
+pr_handoff_preflight:
+  required_before_create_pull_request: true
+  verifier: scripts/verify-pr-handoff-preflight.mjs
+  canonical_parser: scripts/pr-handoff-contract.mjs
+  ci_verifier: scripts/verify-pr-agent-lease.mjs
+  canonical_template: .github/PULL_REQUEST_TEMPLATE.md
+  exact_head_metadata_required: true
+  live_lease_metadata_required: true
+  future_head_before_event_required_when_head_changes: true
+  no_unchanged_head_rerun_after_deterministic_failure: true
+
 states:
   - WORKING
   - PAUSED_FOR_REVIEW
@@ -145,3 +180,6 @@ states:
   - CHANGES_REQUESTED
   - MERGING
   - BROADCASTING
+  - VERIFYING
+  - WAITING_EXTERNAL
+  - BLOCKED
