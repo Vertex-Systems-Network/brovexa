@@ -1,19 +1,18 @@
 version: 1
 kind: supervisor-compact-state
 status: VERIFYING
-baseline_main_sha: "5aced920813a0ab1418fa9dab71d6ed75fd68744"
-sync_epoch: 72
-registry_revision: 178
-current_work_packet: "SUP-M03-ER-005-ASSIGNMENT"
+baseline_main_sha: "3a0ac38058dcfdcbc8292a6dbe3437b137b02344"
+sync_epoch: 73
+registry_revision: 181
+current_work_packet: "SUP-M03-ER-005-DB-RESERVATION"
 supervisor_branch: "supervisor/integration-control"
 supervisor_lease_id: "lease-supervisor-20260921-sec134-closeout-8c71f4"
-last_completed_packet: "SUP-AI-NATIVE-README-PROGRESS-001"
-last_completed_main_sha: "5aced920813a0ab1418fa9dab71d6ed75fd68744"
+last_completed_packet: "M03-ER-005-CONTRACTS"
+last_completed_main_sha: "3a0ac38058dcfdcbc8292a6dbe3437b137b02344"
 runner_benchmark_deferred_count: 2
-open_pull_requests:
-  - 146
-current_objective: "Verify and integrate M03-ER-005-CONTRACTS, then dependency-safely reserve and assign the DATABASE persistence follow-on."
-exact_next_action: "Require exact-head FULL GATE for PR #146, accept a fresh head-bound completion signal, merge with expected-head safety, verify resulting main, advance synchronization state, then reserve migration 0015 and assign M03-ER-005-DATABASE."
+open_pull_requests: []
+current_objective: "Integrate migration 0015 reservation and Supervisor control-plane drift fixes, then assign M03-ER-005-DATABASE without widening provider/network/outreach authority."
+exact_next_action: "Submit the Supervisor reservation/governance changeset for exact-head FULL GATE and merge; after resulting-main certification, assign DATABASE, acquire its lease, and implement tenant-safe domain/contact evidence persistence."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main
