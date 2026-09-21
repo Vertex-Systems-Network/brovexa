@@ -143,6 +143,20 @@ describe('deterministic entity candidate generation', () => {
     ]);
   });
 
+  it('fails closed when bounded name or location signals contradict an otherwise exact key', () => {
+    const result = generateDeterministicEntityCandidateKeys([
+      ...baseSignals,
+      signal('signal.name.other', 'business_name', 'Different Trading Name', ['ref.name.other']),
+      signal('signal.locality.other', 'locality', 'Karachi', ['ref.locality.other']),
+    ]);
+
+    expect(result.requiresReviewBeforeMatch).toBe(true);
+    expect(result.conflictReasonCodes).toEqual([
+      'identity_conflicting_business_names',
+      'identity_conflicting_localities',
+    ]);
+  });
+
   it('never treats name/location-only evidence as sufficient for automatic matching', () => {
     const result = generateDeterministicEntityCandidateKeys([
       signal('signal.name', 'business_name', 'Acme', ['ref.1']),

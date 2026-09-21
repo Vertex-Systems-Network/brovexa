@@ -251,9 +251,19 @@ export function generateDeterministicEntityCandidateKeys(
     }
   }
 
-  const countryCodes = normalizedSignals.filter((signal) => signal.kind === 'country_code');
-  if (distinctValues(countryCodes).length > 1) {
-    conflictReasonCodes.add('identity_conflicting_country_codes');
+  const conflictKinds: Array<[BusinessIdentitySignalKind, string]> = [
+    ['business_name', 'identity_conflicting_business_names'],
+    ['address', 'identity_conflicting_addresses'],
+    ['locality', 'identity_conflicting_localities'],
+    ['region', 'identity_conflicting_regions'],
+    ['country_code', 'identity_conflicting_country_codes'],
+    ['postal_code', 'identity_conflicting_postal_codes'],
+  ];
+  for (const [kind, reasonCode] of conflictKinds) {
+    const scopedSignals = normalizedSignals.filter((signal) => signal.kind === kind);
+    if (distinctValues(scopedSignals).length > 1) {
+      conflictReasonCodes.add(reasonCode);
+    }
   }
 
   const keys = [...keyMap.values()].sort(compareKeys);
