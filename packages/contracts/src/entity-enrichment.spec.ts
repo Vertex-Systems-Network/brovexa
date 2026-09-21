@@ -20,6 +20,7 @@ const domainEvidence = {
     policyVersion: '1.0.0',
   },
   sourceAdmissionDecisionRef: 'admission.domain.1',
+  sourceAdmissionDecision: 'allow' as const,
   observedAt: '2026-09-22T00:00:00.000Z',
   recordedAt: '2026-09-22T00:01:00.000Z',
 };
@@ -49,6 +50,7 @@ const allowedEligibility = {
   connectorVersion: '1.0.0',
   sourceRequestId: 'request.contact.1',
   sourceAdmissionDecisionRef: 'admission.contact.1',
+  sourceAdmissionDecision: 'allow' as const,
   sourceReferenceIds: ['ref.contact.1'],
   sourcePolicySnapshot: {
     policyId: 'policy.public-web',
