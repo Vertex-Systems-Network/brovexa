@@ -24,6 +24,12 @@
 - Contract/interface impact:
 - Migration impact/reservation:
 
+## Runner benchmark
+
+- Runner benchmark task IDs: none / RUNNER-...
+- Runner deferral justification: none / why this is safe to batch later
+- Current required merge/security gates deferred to Runner queue: must be no
+
 ## Verification
 
 - Active slot lease verified on `coordination/leases`: yes/no

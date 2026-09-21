@@ -13,6 +13,7 @@ Files:
 - `dependencies.yaml` — dependency DAG, default layer order, and interface-freeze rules.
 - `migrations.yaml` — serialized migration number reservations/current next number.
 - `supervisor.yaml` — Supervisor onboarding/completion/interruption/review/merge/broadcast/integration and atomic lease protocol.
+- `runner-benchmark.yaml` — Supervisor-owned deferred special-Runner queue and retained benchmark results.
 
 Canonical live coordination:
 
@@ -31,6 +32,8 @@ The generic operating target remains six agents with a soft maximum of eight. A 
 The expanded standing slot IDs are `NETWORK`, `TRANSPORT`, `REDIRECT`, `OBSERVE`, and `ADVERSARY`, mapped by `.agent/slots.yaml` to `agent/network-resolution`, `agent/transport-sandbox`, `agent/redirect-revalidation`, `agent/source-observability`, and `agent/adversarial-network-security`.
 
 Expansion does **not** enable real provider DNS/HTTP, production credentials, unrestricted acquisition, or any behavior outside the M02 provider-neutral safety work packets. Every occupied slot still requires issue #53 assignment plus its own atomic lease before branch mutation.
+
+Runner-specific verification follows `docs/RUNNER_BENCHMARK.md`: safe-to-defer special-Runner checks are registered with stable IDs and executed in a controlled milestone-close batch; current required PR/main/security gates are never deferred.
 
 These manifests/registries/leases coordinate work; they do not authorize wider product behavior.
 

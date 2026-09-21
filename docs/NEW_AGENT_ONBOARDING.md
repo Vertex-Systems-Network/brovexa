@@ -43,7 +43,8 @@ The Supervisor immediately checks:
 - `docs/AI_NATIVE_PLAN.md`;
 - `.agent/slots.yaml`;
 - issue #53 live occupancy;
-- `docs/AGENT_BRANCH_LEASES.md` and the corresponding live slot lease state on `coordination/leases`.
+- `docs/AGENT_BRANCH_LEASES.md` and the corresponding live slot lease state on `coordination/leases`;
+- `docs/RUNNER_BENCHMARK.md` and `.agent/runner-benchmark.yaml` for any deferred special-Runner obligations.
 
 Onboarding decisions are serialized. The Supervisor **re-reads issue #53 immediately before assignment** so two arrivals cannot receive the same slot.
 
@@ -70,6 +71,20 @@ If an `OPEN` slot exists:
 The Supervisor owns assignment/release. A feature agent cannot self-assign a slot. The Supervisor is also subject to the same live-instance lease rule before mutating its own bounded work branch.
 
 **No repository governance PR is required merely to record temporary assignment/release** when slot definitions, branch names, capacity, and rules are unchanged. This keeps onboarding fast and prevents the coordination system from serializing all agent startup behind FULL GATE.
+
+## Runner-impact classification before work
+
+Before the bounded packet is handed to the agent, the Supervisor/agent records whether the packet is expected to create or consume any special-Runner verification.
+
+During implementation, newly discovered Runner-dependent work follows `docs/RUNNER_BENCHMARK.md`:
+
+- current required merge/security gates cannot be deferred;
+- safe-to-defer Runner checks receive/request a stable ID in `.agent/runner-benchmark.yaml`;
+- the PR handoff records Runner task IDs and deferral justification;
+- the shared queue is Supervisor-owned;
+- applicable deferred tasks are executed in the milestone-close final Runner batch before the relevant milestone/release is declared complete.
+
+A Runner queue entry is not evidence that the check passed; only a recorded benchmark result is.
 
 ## Atomic live-instance lease invariant
 

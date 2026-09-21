@@ -14,9 +14,10 @@ Before planning or changing code, every agent must:
 6. Read `docs/AI_NATIVE_PLAN.md` for standing branch/module/merge assignments.
 7. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
 8. Read `docs/AGENT_BRANCH_LEASES.md` before mutating any agent/Supervisor work branch.
-9. Read the relevant milestone/module documents for the assigned workstream.
-10. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
-11. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml`, and `.agent/supervisor.yaml`.
+9. Read `docs/RUNNER_BENCHMARK.md` and inspect `.agent/runner-benchmark.yaml` for deferred special-Runner work.
+10. Read the relevant milestone/module documents for the assigned workstream.
+11. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
+12. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml`, and `.agent/supervisor.yaml`.
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
 
@@ -108,6 +109,29 @@ Lease renewal and release use the current lease blob SHA as compare-and-swap pro
 After synchronizing to a newer issue #50 epoch, the holder renews its lease with the new synchronized main SHA/epoch before resuming edits.
 
 Every PR must carry `Agent instance ID`, `Lease ID`, and `Lease lock path`. Hosted PR CI verifies the canonical active lease, live slot owner, work packet, branch, synchronization state, and that current PR history descends from the lease acquisition head.
+
+## Deferred Runner benchmark — mandatory
+
+Runner-dependent work is governed by `docs/RUNNER_BENCHMARK.md` and the authoritative queue `.agent/runner-benchmark.yaml`.
+
+A Runner-dependent task is a verification/benchmark that specifically needs a self-hosted, OS-specific, architecture-specific, hardware/device, privileged, paid or otherwise special runner/environment.
+
+Required behavior:
+
+- run all ordinary required tests/security gates now;
+- **never** move a required PR/resulting-main/security gate into the Runner queue merely because it is inconvenient or unavailable;
+- when a special-Runner check can safely wait, register/request a stable Runner task ID before claiming the work packet complete;
+- include Runner task IDs plus deferral justification in the PR handoff;
+- the Supervisor owns/de-duplicates the shared queue and preserves completed entries as history;
+- milestone/release close runs the applicable queue as one controlled final Runner batch after ordinary hosted FULL GATE/security checks are green;
+- "batch" is one closeout window, not permission to run exclusive/sensitive Runner tasks unsafely in parallel;
+- any required Runner task that ends `FAIL`, or is release-blocking and `BLOCKED`, prevents the applicable milestone/release from being finalized.
+
+Initial seeded task: `RUNNER-M01-WINDOWS-X64-001`.
+
+Executable guard:
+
+`pnpm run verify:runner-benchmark`
 
 ## Completion signal — mandatory and head-bound
 
@@ -278,6 +302,7 @@ Every agent handoff includes at least:
 - shared-file requests;
 - known limitations/non-scope;
 - instruction drift result;
+- Runner benchmark task IDs / deferral justification;
 - completion signal status.
 
 See `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md`, and `docs/AGENT_BRANCH_LEASES.md` for the full operating model.
