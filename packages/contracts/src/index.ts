@@ -3,6 +3,7 @@ import { z } from 'zod';
 export * from './agent-execution';
 export * from './ai';
 export * from './entity-resolution';
+export * from './entity-resolution-normalization';
 export * from './identity';
 export * from './research-job';
 export * from './source-adapter';
