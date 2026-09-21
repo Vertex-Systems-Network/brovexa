@@ -297,7 +297,7 @@ function canonicalJson(value: unknown): string {
       .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
       .join(',')}}`;
   }
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? 'null';
 }
 
 function sameJson(left: unknown, right: unknown): boolean {
