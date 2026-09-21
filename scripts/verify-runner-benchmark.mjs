@@ -27,6 +27,8 @@ const [
   prTemplate,
   ci,
   packageJson,
+  dispatchWorkflow,
+  referenceWorkflow,
 ] = await Promise.all([
   read('.agent/runner-benchmark.yaml'),
   read('docs/RUNNER_BENCHMARK.md'),
@@ -37,6 +39,8 @@ const [
   read('.github/PULL_REQUEST_TEMPLATE.md'),
   read('.github/workflows/ci.yml'),
   read('package.json'),
+  read('.github/workflows/m01-self-hosted-dispatch.yml'),
+  read('.github/workflows/ci-self-hosted.yml'),
 ]);
 
 for (const [content, source] of [
@@ -135,6 +139,10 @@ requireText(prTemplate, 'Runner benchmark task IDs:', '.github/PULL_REQUEST_TEMP
 requireText(prTemplate, 'Runner deferral justification:', '.github/PULL_REQUEST_TEMPLATE.md');
 requireText(ci, 'Verify deferred Runner benchmark governance', '.github/workflows/ci.yml');
 requireText(ci, 'node scripts/verify-runner-benchmark.mjs', '.github/workflows/ci.yml');
+requireText(dispatchWorkflow, 'Exact branch, tag, or commit SHA to verify', '.github/workflows/m01-self-hosted-dispatch.yml');
+requireText(dispatchWorkflow, 'ref: ${{ inputs.ref }}', '.github/workflows/m01-self-hosted-dispatch.yml');
+requireText(referenceWorkflow, 'ref: ${{ inputs.ref }}', '.github/workflows/ci-self-hosted.yml');
+requireText(manifest, 'dispatch_ref_equals_exact_current_main_sha', '.agent/runner-benchmark.yaml');
 requireText(packageJson, '"verify:runner-benchmark": "node scripts/verify-runner-benchmark.mjs"', 'package.json');
 requireText(packageJson, 'node scripts/verify-runner-benchmark.mjs', 'package.json');
 
