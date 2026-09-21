@@ -99,6 +99,8 @@ Canonical dispatch workflow:
 
 `.github/workflows/m01-self-hosted-dispatch.yml`
 
+The batch dispatch must pass the **exact current `main` SHA** through the workflow `ref` input; a stale standing/foundation branch is not acceptable benchmark evidence.
+
 Reference mirror:
 
 `.github/workflows/ci-self-hosted.yml`
