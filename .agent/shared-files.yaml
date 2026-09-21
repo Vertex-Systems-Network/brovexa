@@ -9,6 +9,7 @@ paths:
   - docs/PARALLEL_AGENT_DEVELOPMENT.md
   - docs/AI_NATIVE_PLAN.md
   - docs/NEW_AGENT_ONBOARDING.md
+  - docs/RUNNER_BENCHMARK.md
   - .agent/**
   - .github/workflows/**
   - .github/PULL_REQUEST_TEMPLATE.md
@@ -23,6 +24,7 @@ paths:
   - scripts/verify-identity.mjs
   - scripts/verify-queue.mjs
   - scripts/verify-parallel-development.mjs
+  - scripts/verify-runner-benchmark.mjs
 
 rules:
   - Feature agents should submit requested shared-file changes in their handoff when another active workstream may touch the same path.
