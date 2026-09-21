@@ -4,10 +4,24 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 ## Development progress
 
-Updated: **2026-09-11**
+Updated: **2026-09-22**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, and the planned provider-neutral M01A AI Agent Runtime & Memory OS foundation are complete. **M02 — Business Discovery & Source Connectors is ACTIVE with five bounded implementation slices FULL-GATE verified and integrated.** Production provider/network transport and production source credentials/connectors remain separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02 provider-neutral discovery/security foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` contracts, `M03-ER-002` durable persistence, and `M03-ER-003` deterministic normalization/candidate generation are integrated. `M03-ER-004` deterministic-first resolver orchestration is under exact-head verification in PR #144. Production provider/model/network activation remains separately gated.
 
+### Live AI-Native execution snapshot
+
+- **Exact integrated main:** `1359084980b3c606193d35c67ea12e4abb4a0aba`
+- **Synchronization epoch:** `70`
+- **Live registry revision at reconciliation:** `171`
+- **Current product packet:** `M03-ER-004` / `AGENT-RUNTIME` / `VERIFYING`
+- **Current implementation PR:** #144 — exact head `be433abc5bad6caa8e852a36e06ba2df801b811a`
+- **Current exact-head CI:** `35653627803` — in progress at this reconciliation
+- **Current Supervisor packet:** `SUP-AI-NATIVE-README-PROGRESS-001`
+- **M03 execution progress:** **~60%**
+
+`██████░░░░ 60%`
+
+M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, and `M03-ER-003` are integrated; `M03-ER-004` is implemented and verifying; `M03-ER-005` and `M03-ER-006` remain downstream. This live execution percentage is separate from the broader weighted product-delivery estimate below.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~30% complete**
@@ -21,7 +35,7 @@ Updated: **2026-09-11**
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
 | M02A | Global Acquisition Studio & Background Research | Planned; implementation largely not started | **5%** |
-| M03 | Entity Resolution & Contact Enrichment | Planned | **5%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003 INTEGRATED; ER-004 VERIFYING; ER-005/006 pending | **60%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
