@@ -21,7 +21,7 @@ Do not infer current branch/agent state from this versioned file. Resolve live s
 - GitHub issue **#50** — canonical integrated-main SHA and synchronization epoch;
 - GitHub issue **#53** — logical slot occupancy, assignment baseline and registry revision;
 - branch `coordination/leases` — exact live mutating-instance authority;
-- GitHub issue **#54** — native `main` branch-protection status.
+- GitHub issue **#54** — completed native `main` branch-protection/ruleset hardening record.
 
 ## Agent Instruction Drift Check
 
@@ -108,7 +108,7 @@ State: **VERIFIED / INTEGRATED / DONE**.
 State: **VERIFIED / DONE / INTEGRATED AND CONTINUOUSLY RE-RUN**.
 
 ### ABD-266 — default-branch protection / compensating controls
-State: **REPOSITORY COMPENSATING CONTROLS ACTIVE; NATIVE PROTECTION EXTERNAL ACTION OPEN AS ISSUE #54**.
+State: **NATIVE `main` PROTECTION/RULESET ACTIVE; REPOSITORY PROVENANCE/SECURITY CONTROLS REMAIN DEFENSE IN DEPTH**.
 
 ## M02/M02A completion evidence
 
@@ -176,7 +176,7 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Known limitations
 
-- native GitHub `main` protection/ruleset remains external action tracked in issue #54;
+- native GitHub `main` protection/ruleset is active; completed issue #54 is the historical hardening record;
 - no production deployment has been proven by these repository gates;
 - remote GitHub sessions cannot prove unseen local developer working-copy/runtime/database state;
 - provider-neutral seams are not evidence of production provider activation/readiness.

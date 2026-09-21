@@ -72,7 +72,7 @@ Canonical coordination model:
 - GitHub issue **#53** — live logical slot `OPEN` / `OCCUPIED`, assigned agent, start status and registry revision;
 - Git branch **`coordination/leases`** — live instance leases at `.leases/<SLOT_ID>.json`;
 - PR/work packet/handoff — live bounded task state;
-- GitHub issue **#54** — external `main` branch-protection setting still required.
+- GitHub issue **#54** — completed native `main` protection/ruleset hardening record.
 
 The Main-repository agent is the **Supervisor**. It owns onboarding, dependency-safe integration, migration/shared-file coordination, expected-head merges, synchronization broadcasts, and its own bounded Supervisor work. The Supervisor is not exempt from atomic branch leases.
 
@@ -166,7 +166,7 @@ Direct pushes to `main` are prohibited. Normal integration is:
 
 Hosted CI runs on both pull requests and `push` to `main`. Main-push CI includes `scripts/verify-main-integration-provenance.mjs`, which fails when the pushed `main` commit is not associated with a merged PR targeting `main`.
 
-GitHub native branch protection remains the preventive external setting. Current audit found `main` unprotected, so issue **#54** tracks enabling required PR/status checks and disabling force pushes/deletions. Repository provenance CI is defense in depth, not a substitute for that setting.
+GitHub native `main` protection is active through the repository ruleset recorded by completed issue **#54**. Required PR/status-check and non-force/deletion protections remain the preventive layer; repository provenance CI stays active as defense in depth and does not authorize direct pushes.
 
 ### Executable governance
 
@@ -219,7 +219,7 @@ A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materi
 - Live slot registry: GitHub issue `#53`
 - Live instance lease branch: `coordination/leases`
 - Supervisor synchronization channel: GitHub issue `#50`
-- Branch-protection follow-up: GitHub issue `#54`
+- Branch-protection hardening record: completed GitHub issue `#54`
 - Parallel governance verifier: `pnpm run verify:parallel`
 - Deferred Runner benchmark: `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml`
 - Current checkpoint: `docs/CHECKPOINT.md`
