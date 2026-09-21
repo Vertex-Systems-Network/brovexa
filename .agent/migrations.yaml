@@ -1,7 +1,7 @@
 version: 1
 policy: serialized-reservation
 
-latest_integrated_migration: "0013_acquisition_control_persistence"
+latest_integrated_migration: "0014_canonical_entity_resolution_persistence"
 next_unreserved_number: "0015"
 
 rules:
