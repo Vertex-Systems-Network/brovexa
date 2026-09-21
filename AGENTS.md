@@ -192,7 +192,7 @@ Direct pushes to `main` are prohibited. Normal integration is **PR → exact-hea
 
 Hosted CI must run on pull requests **and** `push` to `main`. A main-push provenance check verifies that the resulting main commit is associated with a merged PR targeting `main`. A provenance failure means the integration path was bypassed and must be investigated immediately.
 
-GitHub branch protection/ruleset is an external repository setting and remains the strongest preventive control; repository CI/provenance checks are defense in depth and do not authorize direct pushes. Issue #54 tracks this external setting until it is enabled.
+GitHub native `main` protection is enabled through the repository ruleset recorded by completed issue #54 and remains the strongest preventive control. Repository CI/provenance checks are defense in depth and do not authorize direct pushes; agents must still re-read current protection/ruleset state rather than assume it from historical documentation.
 
 ## Agent response to alerts
 

@@ -121,7 +121,7 @@ jobs:
             let broadcastMain = null;
             for (const comment of broadcastComments) {
               const body = comment.body || '';
-              const epoch = Number(body.match(/Sync epoch:\s*`?(\d+)`?/i)?.[1] || 0);
+              const epoch = Number(body.match(/(?:Sync|Synchronization) epoch:\s*`?(\d+)`?/i)?.[1] || 0);
               if (epoch >= broadcastEpoch) {
                 const sha = body.match(/(?:Resulting main SHA|Resulting main|Live main):\s*`([0-9a-f]{40})`/i)?.[1] || null;
                 if (epoch > 0) {

@@ -6,28 +6,28 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-09-22**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02 provider-neutral discovery/security foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` contracts, `M03-ER-002` durable persistence, `M03-ER-003` deterministic normalization/candidate generation, and `M03-ER-004` deterministic-first resolver orchestration are integrated. `M03-ER-005` domain/contact evidence boundary and `M03-ER-006` independent adversarial verification remain downstream. Production provider/model/network activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` through `M03-ER-004` plus the CONTRACTS half of `M03-ER-005` are integrated. PR #146 established provider-neutral domain verification and approved contact-data evidence boundaries with allowed source admission, retention/deletion/refresh obligations, display/export eligibility and no implied outreach authorization. `M03-ER-005-DATABASE` is the next dependency-safe slice after migration `0015` reservation; `M03-ER-006` remains downstream. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4`
-- **Synchronization epoch:** `71`
-- **Live registry revision at reconciliation:** `175`
-- **Current product packet:** `M03-ER-004` / `INTEGRATED`
-- **Current implementation PR:** #144 — MERGED from exact head `be433abc5bad6caa8e852a36e06ba2df801b811a`
-- **Current resulting-main CI:** `35654560539` — SUCCESS
-- **Current Supervisor packet:** `SUP-AI-NATIVE-README-PROGRESS-001`
-- **Next dependency-safe packet:** `M03-ER-005` — CONTRACTS/DATABASE preflight ready; not assigned while PR #145 is actionable
-- **M03 execution progress:** **~70%**
+- **Exact integrated main:** `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`
+- **Synchronization epoch:** `73`
+- **Live registry revision at reconciliation:** `181`
+- **Current product packet:** `M03-ER-005-DATABASE` / `MIGRATION RESERVATION`
+- **Current integration path:** Supervisor migration-reservation/governance changeset → DATABASE assignment
+- **Current resulting-main CI:** `35660438181` — SUCCESS
+- **Current Supervisor packet:** `SUP-M03-ER-005-DB-RESERVATION`
+- **Next dependency-safe packet:** `M03-ER-005-DATABASE` — assign immediately after migration `0015` reservation integrates
+- **M03 execution progress:** **~75%**
 
-`███████░░░ 70%`
+`███████▌░░ 75%`
 
-M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, `M03-ER-003`, and `M03-ER-004` are integrated; `M03-ER-005` and `M03-ER-006` remain downstream. This live execution percentage is separate from the broader weighted product-delivery estimate below.
+M03 progress is based on the durable packet DAG: `M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated; `M03-ER-005-DATABASE` and `M03-ER-006` remain. Contract integration moves M03 to ~75%; persistence remains required before ER-005 is terminal.
 ### Overall delivery estimate
 
-**Weighted program delivery: ~30% complete**
+**Weighted program delivery: ~35% complete**
 
-`██████░░░░░░░░░░░░░░ 30%`
+`███████░░░░░░░░░░░░░ 35%`
 
 | Phase | Module | Current evidence state | Progress |
 |---|---|---|---:|
@@ -35,8 +35,8 @@ M03 progress is based on the durable packet DAG: `M03-ER-001`, `M03-ER-002`, `M0
 | M01 | Platform Foundation & Developer Experience | VERIFIED / INTEGRATED | **100%** |
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
-| M02A | Global Acquisition Studio & Background Research | Planned; implementation largely not started | **5%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003/004 INTEGRATED; ER-005/006 pending | **70%** |
+| M02A | Global Acquisition Studio & Background Research | Provider-neutral packet sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003/004 + ER-005 CONTRACTS INTEGRATED; DB/ER-006 pending | **75%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
@@ -72,7 +72,7 @@ Canonical coordination model:
 - GitHub issue **#53** — live logical slot `OPEN` / `OCCUPIED`, assigned agent, start status and registry revision;
 - Git branch **`coordination/leases`** — live instance leases at `.leases/<SLOT_ID>.json`;
 - PR/work packet/handoff — live bounded task state;
-- GitHub issue **#54** — external `main` branch-protection setting still required.
+- GitHub issue **#54** — completed native `main` protection/ruleset hardening record.
 
 The Main-repository agent is the **Supervisor**. It owns onboarding, dependency-safe integration, migration/shared-file coordination, expected-head merges, synchronization broadcasts, and its own bounded Supervisor work. The Supervisor is not exempt from atomic branch leases.
 
@@ -166,7 +166,7 @@ Direct pushes to `main` are prohibited. Normal integration is:
 
 Hosted CI runs on both pull requests and `push` to `main`. Main-push CI includes `scripts/verify-main-integration-provenance.mjs`, which fails when the pushed `main` commit is not associated with a merged PR targeting `main`.
 
-GitHub native branch protection remains the preventive external setting. Current audit found `main` unprotected, so issue **#54** tracks enabling required PR/status checks and disabling force pushes/deletions. Repository provenance CI is defense in depth, not a substitute for that setting.
+GitHub native `main` protection is active through the repository ruleset recorded by completed issue **#54**. Required PR/status-check and non-force/deletion protections remain the preventive layer; repository provenance CI stays active as defense in depth and does not authorize direct pushes.
 
 ### Executable governance
 
@@ -219,7 +219,7 @@ A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materi
 - Live slot registry: GitHub issue `#53`
 - Live instance lease branch: `coordination/leases`
 - Supervisor synchronization channel: GitHub issue `#50`
-- Branch-protection follow-up: GitHub issue `#54`
+- Branch-protection hardening record: completed GitHub issue `#54`
 - Parallel governance verifier: `pnpm run verify:parallel`
 - Deferred Runner benchmark: `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml`
 - Current checkpoint: `docs/CHECKPOINT.md`
