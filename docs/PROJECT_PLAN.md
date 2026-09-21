@@ -63,7 +63,7 @@ Linear: ABD-218
 
 Canonical identity, deterministic + structured-AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
 
-State: **CURRENT NEXT MILESTONE / ACTIVE PLANNING**. Initial implementation is contracts-first and deterministic-first. `docs/AI_NATIVE_PLAN.md` owns the bounded M03 packet DAG. No production model/provider/contact-enrichment activation is implied.
+State: **ACTIVE IMPLEMENTATION**. `M03-ER-001` through `M03-ER-004` are integrated; `M03-ER-005` domain verification/approved contact-evidence boundary is next, followed by `M03-ER-006` independent adversarial verification. Implementation remains contracts-first, deterministic-first, provenance-aware and tenant-scoped. `docs/AI_NATIVE_PLAN.md` owns the bounded M03 packet DAG. No production model/provider/contact-enrichment activation is implied.
 
 ## M04 — Website & Digital Presence Intelligence
 Linear: ABD-219

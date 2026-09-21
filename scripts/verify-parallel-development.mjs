@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import './verify-supervisor-resilience.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 
@@ -25,6 +26,12 @@ const requiredFiles = [
   '.github/workflows/ci.yml',
   'scripts/verify-main-integration-provenance.mjs',
   'scripts/verify-runner-benchmark.mjs',
+  'scripts/pr-handoff-contract.mjs',
+  'scripts/verify-pr-handoff-preflight.mjs',
+  'scripts/verify-supervisor-resilience.mjs',
+  '.agent/state/CURRENT-STATE.yaml',
+  '.agent/state/LAST-CHECKPOINT.md',
+  '.agent/state/EXECUTION-JOURNAL.md',
 ];
 
 async function read(path) {

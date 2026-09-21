@@ -27,6 +27,8 @@ export { getPrivilegedAgentExecutionTrace } from './agent-runtime-observability'
 export * from './client';
 export * from './connector-health-persistence';
 export * from './connector-health-schema';
+export * from './entity-resolution-persistence';
+export * from './entity-resolution-schema';
 export {
   AuthorizationError,
   assertWorkspaceCapability,
