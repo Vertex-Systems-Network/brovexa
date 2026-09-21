@@ -1,0 +1,26 @@
+version: 1
+kind: supervisor-compact-state
+status: VERIFYING
+baseline_main_sha: "1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4"
+sync_epoch: 71
+registry_revision: 175
+current_work_packet: "SUP-AI-NATIVE-README-PROGRESS-001"
+supervisor_branch: "supervisor/integration-control"
+supervisor_lease_id: "lease-supervisor-20260921-sec134-closeout-8c71f4"
+last_completed_packet: "M03-ER-004"
+last_completed_main_sha: "1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4"
+runner_benchmark_deferred_count: 2
+open_pull_requests:
+  - 145
+current_objective: "Close mandatory README progress governance and reconcile compact Supervisor state before M03-ER-005 assignment."
+exact_next_action: "Require exact-head FULL GATE for PR #145, merge with expected-head safety, verify resulting main, advance synchronization state, then dependency-safely assign M03-ER-005."
+source_precedence:
+  - repository_runtime_evidence
+  - exact_current_main
+  - open_issues
+  - open_pull_requests
+  - live_registry_issue_53
+  - latest_broadcast_issue_50
+  - coordination_leases
+  - runner_benchmark
+  - compact_checkpoint
