@@ -411,4 +411,86 @@ describe('0014 canonical entity-resolution migration contract', () => {
     expect(migration).not.toContain('http://');
     expect(migration).not.toContain('https://');
   });
+
+  it('rejects duplicate migration objects and enforces rollback plus schema parity guards', async () => {
+    const migration = await readFile(
+      resolve(process.cwd(), 'migrations/0014_canonical_entity_resolution_persistence.up.sql'),
+      'utf8',
+    );
+    const rollback = await readFile(
+      resolve(process.cwd(), 'migrations/down/0014_canonical_entity_resolution_persistence.down.sql'),
+      'utf8',
+    );
+    const schema = await readFile(resolve(process.cwd(), 'src/entity-resolution-schema.ts'), 'utf8');
+
+    const expectedTables = [
+      'canonical_businesses',
+      'source_business_observations',
+      'candidate_business_match_evidence',
+      'business_resolution_decisions',
+      'canonical_business_aliases',
+      'canonical_business_lineage_operations',
+    ];
+    for (const table of expectedTables) {
+      expect(migration.split('CREATE TABLE ' + table + ' (')).toHaveLength(2);
+    }
+
+    const indexes = [...migration.matchAll(/CREATE INDEX ([a-z0-9_]+)/g)].map((match) => match[1]);
+    const functions = [...migration.matchAll(/CREATE OR REPLACE FUNCTION ([a-z0-9_.]+)/g)].map((match) => match[1]);
+    const triggers = [...migration.matchAll(/CREATE TRIGGER ([a-z0-9_]+)/g)].map((match) => match[1]);
+    expect(indexes).toHaveLength(7);
+    expect(new Set(indexes).size).toBe(7);
+    expect(functions).toHaveLength(6);
+    expect(new Set(functions).size).toBe(6);
+    expect(triggers).toHaveLength(11);
+    expect(new Set(triggers).size).toBe(11);
+
+    expect(migration).not.toMatch(/\\nAS \\$\\n/);
+    for (const fn of [
+      'brovexa_internal.guard_candidate_match_evidence_provenance',
+      'brovexa_internal.guard_resolution_decision_policy',
+      'brovexa_internal.guard_canonical_business_origin',
+      'brovexa_internal.guard_lineage_evidence',
+    ]) {
+      expect(migration).toContain('CREATE OR REPLACE FUNCTION ' + fn + '()');
+    }
+    expect(migration.match(/business_resolution_decisions_threshold_policy_version_check/g) ?? []).toHaveLength(1);
+    expect(migration).toContain("CHECK (threshold_policy_version ~ '^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$')");
+
+    const fkDrop = rollback.indexOf('DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk');
+    const decisionDrop = rollback.indexOf('DROP TABLE IF EXISTS business_resolution_decisions');
+    expect(fkDrop).toBeGreaterThanOrEqual(0);
+    expect(decisionDrop).toBeGreaterThan(fkDrop);
+
+    for (const checkName of [
+      'candidate_business_match_evidence_signal_array_check',
+      'candidate_business_match_evidence_refs_array_check',
+      'business_resolution_decisions_reasons_array_check',
+      'business_resolution_decisions_evidence_array_check',
+      'canonical_business_lineage_operations_evidence_array_check',
+      'canonical_business_lineage_operations_reason_array_check',
+    ]) {
+      expect(schema.match(new RegExp(checkName, 'g')) ?? []).toHaveLength(1);
+    }
+    expect(schema).toContain('jsonb_array_length($' + '{table.observationSignalIds}) > 0');
+    expect(schema).toContain('jsonb_array_length($' + '{table.sourceReferenceIds}) > 0');
+    expect(schema).toContain('jsonb_array_length($' + '{table.reasonCodes}) > 0');
+    expect(schema).toContain('jsonb_array_length($' + '{table.evidenceIds}) > 0');
+  });
+
+  it('scopes every idempotency conflict fallback by workspace before replay', async () => {
+    const persistence = await readFile(resolve(process.cwd(), 'src/entity-resolution-persistence.ts'), 'utf8');
+    const scopedFallbacks = [
+      'FROM canonical_businesses WHERE id = $1 AND workspace_id = $2::uuid',
+      'FROM source_business_observations WHERE id = $1 AND workspace_id = $2::uuid',
+      'FROM candidate_business_match_evidence WHERE id = $1 AND workspace_id = $2::uuid',
+      'FROM business_resolution_decisions WHERE id = $1 AND workspace_id = $2::uuid',
+      'FROM canonical_business_aliases WHERE source_observation_id = $1 AND workspace_id = $2::uuid',
+      'FROM canonical_business_lineage_operations WHERE id = $1 AND workspace_id = $2::uuid',
+    ];
+    for (const fragment of scopedFallbacks) {
+      expect(persistence.split(fragment)).toHaveLength(2);
+    }
+  });
+
 });
