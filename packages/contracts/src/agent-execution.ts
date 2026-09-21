@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AgentBudgetSchema } from './ai';
+import { AgentBudgetSchema, ExecutableCapabilityKeySchema } from './ai';
 
 const IdentifierSchema = z.string().trim().min(1).max(128);
 const VersionSchema = z.string().trim().min(1).max(64);
@@ -12,8 +12,8 @@ export const AgentExecutionStepSchema = z.object({
   agentKey: AgentKeySchema,
   agentVersion: VersionSchema,
   dependencies: z.array(StepKeySchema).max(64),
-  toolKeys: z.array(IdentifierSchema).max(128),
-  commandKeys: z.array(IdentifierSchema).max(128),
+  toolKeys: z.array(ExecutableCapabilityKeySchema).max(128),
+  commandKeys: z.array(ExecutableCapabilityKeySchema).max(128),
   policyRefs: z.array(IdentifierSchema).min(1).max(128),
   canonicalRefs: z.array(IdentifierSchema).max(512),
   memoryRefs: z.array(IdentifierSchema).max(512),
@@ -36,8 +36,8 @@ export const AgentExecutionWorkPayloadSchema = z
     agentKey: AgentKeySchema,
     agentVersion: VersionSchema,
     dependencies: z.array(StepKeySchema).max(64),
-    toolKeys: z.array(IdentifierSchema).max(128),
-    commandKeys: z.array(IdentifierSchema).max(128),
+    toolKeys: z.array(ExecutableCapabilityKeySchema).max(128),
+    commandKeys: z.array(ExecutableCapabilityKeySchema).max(128),
     policyRefs: z.array(IdentifierSchema).min(1).max(128),
     canonicalRefs: z.array(IdentifierSchema).max(512),
     memoryRefs: z.array(IdentifierSchema).max(512),
