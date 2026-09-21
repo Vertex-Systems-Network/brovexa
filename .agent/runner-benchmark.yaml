@@ -52,12 +52,13 @@ tasks:
     execution: workflow_dispatch
     workflow: .github/workflows/m01-self-hosted-dispatch.yml
     reference_workflow: .github/workflows/ci-self-hosted.yml
-    command: "Dispatch GitHub Actions workflow: M01 Self-hosted Verification Dispatch"
+    command: "Dispatch M01 Self-hosted Verification Dispatch with ref=<exact current main SHA>"
     security_gate_classification: non_blocking_deferred_runner_check
     required_before: final-runner-batch-before-release-candidate
     prerequisites:
       - approved_self_hosted_windows_x64_runner_online
       - current_main_hosted_full_gate_green
+      - dispatch_ref_equals_exact_current_main_sha
       - no_unresolved_security_merge_blocker
     pass_criteria:
       - foundation_contract_pass
