@@ -4,7 +4,6 @@ import {
   AgentExecutionPlanError,
   AgentPersistenceConflictError,
   applyPendingMigrations,
-  bootstrapWorkspaceOwner,
   buildAndPersistAgentContext,
   createIdentityUser,
   createPgPool,
@@ -16,6 +15,7 @@ import {
   probeDatabase,
   transitionAgentRun,
 } from '../packages/db/dist/index.js';
+import { bootstrapWorkspaceOwner } from '../packages/db/dist/identity.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for agent execution plan verification.');
