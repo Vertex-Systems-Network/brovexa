@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   EntityResolutionPersistenceError,
   persistBusinessResolutionDecision,
+  persistCandidateBusinessMatchEvidence,
   persistCanonicalBusiness,
   persistCanonicalBusinessAlias,
   persistCanonicalBusinessLineageOperation,
@@ -14,6 +15,12 @@ import {
 const workspaceId = '11111111-1111-4111-8111-111111111111';
 const observedAt = new Date('2026-09-21T10:00:00.000Z');
 const evaluatedAt = new Date('2026-09-21T10:01:00.000Z');
+const thresholdPolicy = {
+  policyId: 'entity-resolution-default',
+  version: '1.0.0',
+  reviewMinimum: 0.6,
+  autoMatchMinimum: 0.9,
+} as const;
 
 function poolWith(query: ReturnType<typeof vi.fn>): Pool {
   return { query } as unknown as Pool;
@@ -72,7 +79,7 @@ describe('M03 entity-resolution persistence', () => {
     });
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining('workspace_id'),
-      ['business-1', workspaceId, 'Example Incorporated', 'active', null],
+      ['business-1', workspaceId, 'Example Incorporated', 'active', null, null],
     );
   });
 
@@ -119,6 +126,86 @@ describe('M03 entity-resolution persistence', () => {
     expect(invalidQuery).not.toHaveBeenCalled();
   });
 
+  it('binds candidate evidence to persisted observation signals and their provenance', async () => {
+    const query = vi.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          source_reference_ids: ['ref-1'],
+          identity_signals: [
+            {
+              signalId: 'signal-1',
+              sourceReferenceIds: ['ref-1'],
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      persistCandidateBusinessMatchEvidence(poolWith(query), {
+        evidenceId: 'evidence-bad-ref',
+        workspaceId,
+        sourceObservationId: 'obs-1',
+        candidateCanonicalBusinessId: 'business-1',
+        observationSignalIds: ['signal-1'],
+        sourceReferenceIds: ['ref-2'],
+        method: 'deterministic',
+        inferenceRef: null,
+        effect: 'supports_match',
+        reasonCode: 'domain.exact',
+        confidence: 0.99,
+        recordedAt: evaluatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'MATCH_EVIDENCE_ID_CONFLICT' });
+
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires explicit approval for low-confidence, contradictory or structured-AI-assisted matches', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'evidence-ai',
+            candidate_canonical_business_id: 'business-1',
+            effect: 'supports_match',
+            method: 'structured_ai',
+            confidence: 0.95,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            candidate_canonical_business_id: 'business-1',
+            effect: 'supports_match',
+            method: 'structured_ai',
+            confidence: 0.95,
+          },
+        ],
+      });
+
+    await expect(
+      persistBusinessResolutionDecision(poolWith(query), {
+        decisionId: 'decision-ai',
+        workspaceId,
+        sourceObservationId: 'obs-1',
+        candidateCanonicalBusinessId: 'business-1',
+        decision: 'match_existing',
+        confidence: 0.95,
+        reviewState: 'not_required',
+        reviewDecisionRef: null,
+        reasonCodes: ['ai.support'],
+        evidenceIds: ['evidence-ai'],
+        thresholdPolicy,
+        evaluatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'RESOLUTION_DECISION_EVIDENCE_INVALID' });
+
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
   it('requires decision evidence from the same observation and selected canonical candidate', async () => {
     const query = vi
       .fn()
@@ -128,6 +215,18 @@ describe('M03 entity-resolution persistence', () => {
             id: 'evidence-1',
             candidate_canonical_business_id: 'business-1',
             effect: 'supports_match',
+            method: 'deterministic',
+            confidence: 0.99,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            candidate_canonical_business_id: 'business-1',
+            effect: 'supports_match',
+            method: 'deterministic',
+            confidence: 0.99,
           },
         ],
       })
@@ -144,6 +243,10 @@ describe('M03 entity-resolution persistence', () => {
             review_decision_ref: null,
             reason_codes: ['domain.exact'],
             evidence_ids: ['evidence-1'],
+            threshold_policy_id: thresholdPolicy.policyId,
+            threshold_policy_version: thresholdPolicy.version,
+            review_minimum: thresholdPolicy.reviewMinimum,
+            auto_match_minimum: thresholdPolicy.autoMatchMinimum,
             evaluated_at: evaluatedAt,
             created_at: new Date('2026-09-21T10:01:01.000Z'),
           },
@@ -161,6 +264,7 @@ describe('M03 entity-resolution persistence', () => {
       reviewDecisionRef: null,
       reasonCodes: ['domain.exact'],
       evidenceIds: ['evidence-1'],
+      thresholdPolicy,
       evaluatedAt,
     });
 
@@ -181,6 +285,7 @@ describe('M03 entity-resolution persistence', () => {
         reviewDecisionRef: null,
         reasonCodes: ['domain.exact'],
         evidenceIds: ['evidence-missing'],
+        thresholdPolicy,
         evaluatedAt,
       }),
     ).rejects.toMatchObject({ code: 'RESOLUTION_DECISION_EVIDENCE_INVALID' });
@@ -194,6 +299,7 @@ describe('M03 entity-resolution persistence', () => {
           candidate_canonical_business_id: 'business-1',
           decision: 'review_required',
           review_state: 'pending',
+          origin_decision_id: null,
         },
       ],
     });
@@ -208,10 +314,35 @@ describe('M03 entity-resolution persistence', () => {
       }),
     ).rejects.toMatchObject({ code: 'CANONICAL_ALIAS_DECISION_INVALID' });
 
-    expect(query).toHaveBeenCalledWith(expect.stringContaining('workspace_id = $2::uuid'), [
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('decision.workspace_id = $2::uuid'), [
       'decision-review',
       workspaceId,
+      'business-1',
     ]);
+  });
+
+  it('binds create_new aliases only to canonical businesses created by the same decision', async () => {
+    const query = vi.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          source_observation_id: 'obs-1',
+          candidate_canonical_business_id: null,
+          decision: 'create_new',
+          review_state: 'not_required',
+          origin_decision_id: 'different-decision',
+        },
+      ],
+    });
+
+    await expect(
+      persistCanonicalBusinessAlias(poolWith(query), {
+        workspaceId,
+        sourceObservationId: 'obs-1',
+        canonicalBusinessId: 'business-new',
+        decisionId: 'decision-create',
+        attachedAt: evaluatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'CANONICAL_ALIAS_DECISION_INVALID' });
   });
 
   it('requires every lineage identity and split parent to belong to the same workspace', async () => {
@@ -270,6 +401,11 @@ describe('0014 canonical entity-resolution migration contract', () => {
     expect(migration).toContain('business_resolution_decisions_append_only');
     expect(migration).toContain('canonical_business_lineage_operations_append_only');
     expect(migration).toContain('canonical_business_aliases_decision_state_guard');
+    expect(migration).toContain('canonical_business_aliases_origin_decision_guard');
+    expect(migration).toContain('candidate_business_match_evidence_provenance_guard');
+    expect(migration).toContain('business_resolution_decisions_review_policy_guard');
+    expect(migration).toContain('canonical_business_lineage_operations_evidence_guard');
+    expect(migration).toContain('threshold_policy_id text NOT NULL');
     expect(migration).toContain("operation_type = 'split'");
     expect(migration).toContain('reversible boolean NOT NULL DEFAULT true');
     expect(migration).not.toContain('http://');
