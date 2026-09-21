@@ -139,6 +139,36 @@ main_integration:
   github_branch_protection_external_setting_required: true
 
 
+readme_progress:
+  path: README.md
+  required_each_supervisor_continuation: true
+  reconcile_before_final_response: true
+  update_on_material_progress: true
+  no_noop_commit_when_no_material_change: true
+  no_materially_newer_chat_state_than_readme: true
+  supervisor_owns_progress_composition: true
+  self_update_merge_does_not_recurse: true
+  required_fields:
+    - reconciliation_date
+    - exact_integrated_main_sha
+    - synchronization_epoch
+    - live_registry_revision
+    - current_work_packet_and_state
+    - current_pr_and_exact_head_when_applicable
+    - current_ci_state_when_applicable
+    - current_module_progress
+  material_progress_events:
+    - implementation_commit
+    - pull_request_open_or_head_change
+    - ci_material_transition
+    - completion_signal
+    - review_decision
+    - merge
+    - resulting_main_verification
+    - synchronization_epoch_change
+    - slot_assignment_or_release
+    - lease_transition
+    - milestone_state_change
 compact_state:
   current_state_path: .agent/state/CURRENT-STATE.yaml
   last_checkpoint_path: .agent/state/LAST-CHECKPOINT.md

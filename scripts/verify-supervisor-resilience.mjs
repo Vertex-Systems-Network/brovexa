@@ -27,6 +27,7 @@ const checkpoint = await readFile(resolve(root, '.agent/state/LAST-CHECKPOINT.md
 const journal = await readFile(resolve(root, '.agent/state/EXECUTION-JOURNAL.md'), 'utf8');
 const supervisor = await readFile(resolve(root, '.agent/supervisor.yaml'), 'utf8');
 const aiPlan = await readFile(resolve(root, 'docs/AI_NATIVE_PLAN.md'), 'utf8');
+const rootReadme = await readFile(resolve(root, 'README.md'), 'utf8');
 const agentReadme = await readFile(resolve(root, '.agent/README.md'), 'utf8');
 const leasePolicy = await readFile(resolve(root, 'docs/AGENT_BRANCH_LEASES.md'), 'utf8');
 const prVerifier = await readFile(resolve(root, 'scripts/verify-pr-agent-lease.mjs'), 'utf8');
@@ -57,6 +58,11 @@ for (const expected of [
   'verifier: scripts/verify-pr-handoff-preflight.mjs',
   'canonical_parser: scripts/pr-handoff-contract.mjs',
   'future_head_before_event_required_when_head_changes: true',
+  'required_each_supervisor_continuation: true',
+  'reconcile_before_final_response: true',
+  'update_on_material_progress: true',
+  'no_materially_newer_chat_state_than_readme: true',
+  'self_update_merge_does_not_recurse: true',
 ]) requireText(supervisor, expected, '.agent/supervisor.yaml');
 
 for (const step of [
@@ -71,6 +77,15 @@ for (const step of [
 ]) requireText(supervisor, `- ${step}`, '.agent/supervisor.yaml');
 
 requireText(aiPlan, '## Supervisor durable resume and PR preflight', 'docs/AI_NATIVE_PLAN.md');
+requireText(aiPlan, '## Mandatory README progress reconciliation', 'docs/AI_NATIVE_PLAN.md');
+requireText(rootReadme, '### Live AI-Native execution snapshot', 'README.md');
+for (const expected of [
+  '**Exact integrated main:**',
+  '**Synchronization epoch:**',
+  '**Live registry revision at reconciliation:**',
+  '**Current product packet:**',
+  '**M03 execution progress:**',
+]) requireText(rootReadme, expected, 'README.md');
 requireText(agentReadme, '.agent/state/CURRENT-STATE.yaml', '.agent/README.md');
 requireText(leasePolicy, 'scripts/verify-pr-handoff-preflight.mjs', 'docs/AGENT_BRANCH_LEASES.md');
 requireText(prVerifier, "from './pr-handoff-contract.mjs'", 'scripts/verify-pr-agent-lease.mjs');

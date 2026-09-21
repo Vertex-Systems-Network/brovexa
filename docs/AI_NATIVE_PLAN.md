@@ -139,6 +139,32 @@ Before creating any implementation or governance PR, validate the canonical hand
 
 No new feature packet starts while an actionable governance/integration PR is unresolved.
 
+## Mandatory README progress reconciliation
+
+The root `README.md` development-progress block is a durable part of the AI-Native control plane, not optional documentation.
+
+For **every Supervisor development continuation / continue / resume**:
+
+1. reconcile compact state, exact current `main`, OPEN issues, OPEN PRs, live registry/leases, Runner benchmark and active CI first;
+2. read the root `README.md` progress snapshot before the final response;
+3. if the continuation performs or observes any material repository progress, update `README.md` in that same continuation through a bounded Supervisor-owned changeset before reporting completion/progress;
+4. material progress includes implementation commits, PR open/head change, CI material transition, completion signal, review decision, merge, resulting-main verification, synchronization epoch change, slot assignment/release, lease transition, or milestone state change;
+5. if no material state changed, verify that README already reflects current durable truth; do not create a meaningless timestamp-only/no-op commit;
+6. never report a materially newer progress percentage/state in chat while knowingly leaving README materially stale.
+
+Each material README progress update must include, where applicable:
+
+- reconciliation date;
+- exact integrated `main` SHA;
+- synchronization epoch;
+- live registry revision;
+- current work packet/module and state;
+- current implementation PR + exact head;
+- current CI state/run;
+- current module progress bar/percentage;
+- evidence-backed phase table update when a phase materially changes.
+
+README progress is evidence-based. Do not inflate broader product completion merely because one current packet advances. A README-only progress-governance merge does not recursively require another README commit solely because that documentation merge creates a new merge SHA/epoch; the next continuation must reconcile that resulting main before any newer progress is reported. Active feature agents do not need write access to `README.md`; the Supervisor owns progress composition so feature scopes remain isolated.
 ## Mandatory assignment sequence
 
 Before feature mutation:

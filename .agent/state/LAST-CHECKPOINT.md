@@ -2,23 +2,22 @@
 
 ## Source of truth
 
-Repository/runtime evidence outranks this compact checkpoint. Baseline main is `64eace3df1a03740c4cb1cce2ad90368f6ae5421`, synchronization epoch is **68**, registry revision at packet start is **158**, and the active Supervisor packet is `SUP-AI-NATIVE-RESILIENCE-001`.
+Repository/runtime evidence outranks this compact checkpoint. Baseline main is `1acc1304956c03c1f6daa45c9b7bca0b1f6d96d4`, synchronization epoch is **71**, live registry revision at reconciliation is **175**, and the active Supervisor packet is `SUP-AI-NATIVE-README-PROGRESS-001`.
 
-`M03-ER-002` is terminally integrated. PR #140 delivered durable entity-resolution persistence; PR #141 closed migration governance; resulting-main CI run `35642292095` passed quality/security, PostgreSQL 18 migration + RBAC, and Canonical worker + Valkey FULL GATEs.
+`M03-ER-004` is terminally integrated through PR #144. Resulting-main CI run `35654560539` passed the required FULL GATE lanes, the RUNTIME standing branch was synchronized to resulting main, and its lease was released.
 
 ## Current bounded packet
 
-Harden the AI-Native Supervisor flow without changing feature/runtime behavior:
+Close the progress-governance blocker without changing feature/runtime behavior:
 
-- add bounded compact durable state under `.agent/state/`;
-- make restart/resume ordering explicit and fail-closed;
-- share one canonical PR-handoff parser between preflight and hosted CI;
-- require PR body preflight before PR creation;
-- require future exact SHA metadata to be written before a ref move when a fresh synchronize event is needed.
+- reconcile the root README to current M03 execution truth;
+- require README reconciliation on every Supervisor continuation when material progress occurs;
+- enforce the policy through the Supervisor manifest and resilience verifier;
+- reconcile compact durable state so timeout/resume does not restart from stale epoch-68 evidence.
 
 ## Exact next action
 
-Create the exact-head governance PR, run required FULL GATE, merge with expected-head safety, verify resulting main, then reconcile epoch/registry and only afterward assign `M03-ER-003` to the MODULE slot.
+Require PR #145 exact-head FULL GATE, merge it with expected-head safety, verify resulting `main`, advance synchronization/registry state, then assign `M03-ER-005` through the CONTRACTS/DATABASE dependency-safe preflight.
 
 ## Safety boundaries
 
