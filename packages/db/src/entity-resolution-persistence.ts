@@ -458,8 +458,8 @@ export async function persistCanonicalBusiness(
 
   const existing = await pool.query<CanonicalBusinessRow>(
     `SELECT id, workspace_id, display_name, identity_state, superseded_by_canonical_business_id, origin_decision_id, created_at
-     FROM canonical_businesses WHERE id = $1`,
-    [input.id],
+     FROM canonical_businesses WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.id, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
@@ -539,8 +539,8 @@ export async function persistSourceBusinessObservation(
   const existing = await pool.query<ObservationRow & { envelope: Record<string, unknown> }>(
     `SELECT id, workspace_id, source_candidate_id, source_key, observed_at,
             source_reference_ids, identity_signals, envelope, created_at
-     FROM source_business_observations WHERE id = $1`,
-    [input.sourceObservationId],
+     FROM source_business_observations WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.sourceObservationId, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
@@ -658,8 +658,8 @@ export async function persistCandidateBusinessMatchEvidence(
     `SELECT id, workspace_id, source_observation_id, candidate_canonical_business_id,
             observation_signal_ids, source_reference_ids, method, inference_ref, effect,
             reason_code, confidence, recorded_at, envelope, created_at
-     FROM candidate_business_match_evidence WHERE id = $1`,
-    [input.evidenceId],
+     FROM candidate_business_match_evidence WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.evidenceId, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
@@ -833,8 +833,8 @@ export async function persistBusinessResolutionDecision(
             decision, confidence, review_state, review_decision_ref, reason_codes,
             evidence_ids, threshold_policy_id, threshold_policy_version, review_minimum,
             auto_match_minimum, evaluated_at, envelope, created_at
-     FROM business_resolution_decisions WHERE id = $1`,
-    [input.decisionId],
+     FROM business_resolution_decisions WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.decisionId, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
@@ -912,8 +912,8 @@ export async function persistCanonicalBusinessAlias(
 
   const existing = await pool.query<AliasRow>(
     `SELECT source_observation_id, workspace_id, canonical_business_id, decision_id, attached_at, created_at
-     FROM canonical_business_aliases WHERE source_observation_id = $1`,
-    [input.sourceObservationId],
+     FROM canonical_business_aliases WHERE source_observation_id = $1 AND workspace_id = $2::uuid`,
+    [input.sourceObservationId, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
@@ -1056,8 +1056,8 @@ export async function persistCanonicalBusinessLineageOperation(
             source_canonical_business_ids, restore_canonical_business_ids, parent_lineage_operation_id,
             evidence_ids, reason_codes, requested_by_actor_id, requested_at, review_request_id,
             review_state, reversible, envelope, created_at
-     FROM canonical_business_lineage_operations WHERE id = $1`,
-    [input.operationId],
+     FROM canonical_business_lineage_operations WHERE id = $1 AND workspace_id = $2::uuid`,
+    [input.operationId, input.workspaceId],
   );
   const row = existing.rows[0];
   if (
