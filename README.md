@@ -51,6 +51,7 @@ Canonical coordination model:
 - `docs/AI_NATIVE_PLAN.md` — versioned standing branch/module/slot definitions and merge strategy;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding;
 - `docs/AGENT_BRANCH_LEASES.md` — atomic one-live-instance-per-slot mutation contract;
+- `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml` — deferred special-Runner queue, batch policy and benchmark evidence;
 - `.agent/slots.yaml` — static slot definitions only;
 - GitHub issue **#50** — live integrated `main` SHA and synchronization epoch;
 - GitHub issue **#53** — live logical slot `OPEN` / `OCCUPIED`, assigned agent, start status and registry revision;
@@ -111,6 +112,14 @@ Before mutating a work branch, every agent instance—including Supervisor—mus
 Renewal and release are compare-and-swap operations using the current lease blob SHA. Leases do not expire silently; crash/stale takeover requires explicit audit and recovery. Full rules: `docs/AGENT_BRANCH_LEASES.md`.
 
 Hosted PR CI runs `scripts/verify-pr-agent-lease.mjs` and validates the live lease against PR branch, slot, logical agent, runtime instance, work packet, synchronized main/epoch and acquisition-head ancestry.
+
+### Deferred Runner benchmark
+
+Special-Runner checks that are safe to defer are registered in `.agent/runner-benchmark.yaml` and executed in one controlled milestone-close Runner batch. Required PR/resulting-main/security gates cannot be deferred. Feature handoffs carry Runner task IDs plus deferral justification; failed required Runner tasks block milestone/release close.
+
+Initial seeded task: `RUNNER-M01-WINDOWS-X64-001`.
+
+`pnpm run verify:parallel` includes the Runner benchmark governance verifier.
 
 ### Completion signal
 
@@ -197,6 +206,7 @@ A task is not `READY_FOR_INTEGRATION` while future-agent instructions are materi
 - Supervisor synchronization channel: GitHub issue `#50`
 - Branch-protection follow-up: GitHub issue `#54`
 - Parallel governance verifier: `pnpm run verify:parallel`
+- Deferred Runner benchmark: `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml`
 - Current checkpoint: `docs/CHECKPOINT.md`
 - Project plan: `docs/PROJECT_PLAN.md`
 - Engineering constitution: `docs/ENGINEERING_CONSTITUTION.md`

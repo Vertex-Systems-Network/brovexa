@@ -16,6 +16,7 @@ Canonical companion sources:
 - `docs/AI_NATIVE_PLAN.md` — standing branches/modules/merge plan;
 - `docs/NEW_AGENT_ONBOARDING.md` — main-first onboarding protocol;
 - `docs/AGENT_BRANCH_LEASES.md` — atomic live-instance branch lease protocol;
+- `docs/RUNNER_BENCHMARK.md` / `.agent/runner-benchmark.yaml` — deferred special-Runner queue and final-batch evidence;
 - `.agent/slots.yaml` — static slot definitions;
 - GitHub issue #53 — live logical slot occupancy/agent assignment;
 - Git branch `coordination/leases` — live mutating instance per occupied slot;
@@ -173,6 +174,37 @@ Independent nodes may merge earlier when there is no dependency/interface/migrat
 
 Migration numbers are serialized resources. Before creating a migration, the DB/Supervisor owner reserves it in `.agent/migrations.yaml`. Two agents never independently choose one number. Integrated migrations are immutable.
 
+## Deferred Runner benchmark and final batch
+
+Canonical policy: `docs/RUNNER_BENCHMARK.md`.
+
+Canonical machine queue: `.agent/runner-benchmark.yaml`.
+
+Runner-dependent checks are accumulated instead of being rediscovered ad hoc. A work packet that discovers a self-hosted/OS/hardware/device/special-environment check must either run it now when it is a current required gate, or register/request a stable Runner benchmark task when it is safe to defer.
+
+Deferral is prohibited for current required PR/resulting-main/security gates. An unavailable required gate makes the packet `BLOCKED`; it does not become a deferred Runner benchmark entry.
+
+Feature-agent flow:
+
+1. complete ordinary tests/gates;
+2. classify remaining special-Runner checks;
+3. add/request benchmark IDs before handoff;
+4. record IDs and deferral rationale in PR metadata;
+5. keep the work packet's feature completion distinct from the deferred Runner task's own result.
+
+Supervisor flow:
+
+1. own/de-duplicate the shared queue;
+2. preserve stable task IDs and prior results;
+3. at milestone close freeze applicable `DEFERRED` tasks;
+4. require normal hosted FULL GATE/security evidence first;
+5. move eligible tasks to `READY_FOR_BATCH`;
+6. execute them in one controlled Runner-batch window, serializing exclusive/sensitive runners when needed;
+7. record `PASS`/`FAIL`/`BLOCKED`, current main SHA, evidence and benchmark metadata;
+8. block milestone/release finalization on required failures or release-blocking unavailable tasks.
+
+`pnpm run verify:parallel` includes `scripts/verify-runner-benchmark.mjs`.
+
 ## Completion signal — head-bound
 
 Every finished work packet announces exactly:
@@ -277,7 +309,7 @@ No work packet is ready while future-agent instructions are materially stale.
 
 ## Handoff
 
-Every handoff includes task ID, agent/role/status, agent instance ID, assigned slot ID, lease ID/path, base/head SHA, branch/PR, synced main/epoch, changed paths, contract/migration/dependency impact, verification, security impact, shared-file requests, limitations, instruction-drift result, and completion-signal state.
+Every handoff includes task ID, agent/role/status, agent instance ID, assigned slot ID, lease ID/path, base/head SHA, branch/PR, synced main/epoch, changed paths, contract/migration/dependency impact, verification, security impact, shared-file requests, Runner benchmark task IDs/deferral justification, limitations, instruction-drift result, and completion-signal state.
 
 ## Throughput metrics
 
