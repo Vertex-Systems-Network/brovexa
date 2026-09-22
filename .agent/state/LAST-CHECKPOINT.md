@@ -2,20 +2,20 @@
 
 ## Source of truth
 
-Repository/runtime evidence outranks this compact checkpoint. Baseline main is `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`, synchronization epoch is **73**, live registry revision at reconciliation is **181**, and the active Supervisor packet is `SUP-M03-ER-005-DB-RESERVATION`.
+Repository/runtime evidence outranks this compact checkpoint. Baseline main is `d34ad3c72b918c4cd6f2f0718f2097ffa0090002`, synchronization epoch is **75**, and live registry revision at reconciliation is **187**.
 
-`M03-ER-005-CONTRACTS` is terminally integrated through PR #146. Exact-head CI `35659382058` and resulting-main CI `35660438181` both passed the required FULL GATE lanes. CONTRACTS is synchronized/released. All idle standing branches are synchronized to epoch 73.
+`M03-ER-005-DATABASE` is terminally integrated through PR #148. Exact-head CI `35671622132` and resulting-main CI `35672036712` both passed quality/security, PostgreSQL 18 + tenant/RBAC, and Canonical worker + Valkey FULL GATE lanes. DATABASE standing branch is synchronized and its live lease is released.
 
 ## Current bounded packet
 
-Reserve migration `0015_entity_enrichment_evidence_persistence` exclusively for `M03-ER-005-DATABASE`, reconcile progress/instructions, and integrate the Persistent Supervisor epoch-parser plus native-protection documentation fixes already prepared on the Supervisor branch.
+`SUP-M03-ER-005-CLOSEOUT` reconciles migration `0015_entity_enrichment_evidence_persistence` from `IMPLEMENTED` to `INTEGRATED`, updates README/project/checkpoint truth, and makes `M03-ER-006` the only remaining planned M03 packet.
 
-No DATABASE mutation begins until the reservation is integrated. Contact-data persistence must preserve the integrated contracts: allowed source admission, tenant/canonical-business binding, approved provenance, storage class, retention/deletion/refresh obligations, separate display/export eligibility, and outreach authorization remaining outside this packet.
+ER-005 now includes integrated provider-neutral domain/contact contracts plus tenant-safe persistence, idempotent workspace replay, DB-level provenance/value guards and one-way policy purge semantics. It does not activate providers, network credentials or outreach.
 
 ## Exact next action
 
-Run exact-head FULL GATE for the Supervisor reservation/governance PR, merge with expected-head safety, verify resulting `main`, advance synchronization state, then assign `M03-ER-005-DATABASE`, acquire its atomic lease, and implement migration/schema/persistence/tests.
+Run exact-head FULL GATE on the closeout PR, merge with expected-head safety, verify resulting main, advance synchronization state, then assign/lease `M03-ER-006` on VERIFY and implement independent adversarial verification.
 
 ## Safety boundaries
 
-No provider/network activation, no credentialed contact-enrichment provider, no outreach authorization, no production mutation, no auth weakening, no force push, no direct main push, and no deferral of required PR/resulting-main/security gates.
+No provider/network activation, credentialed contact-enrichment provider, outreach authorization, production mutation, auth weakening, force push, direct main push or required-gate deferral.

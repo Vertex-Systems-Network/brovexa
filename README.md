@@ -6,23 +6,23 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-09-22**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment is ACTIVE:** `M03-ER-001` through `M03-ER-004` plus the CONTRACTS half of `M03-ER-005` are integrated. PR #146 established provider-neutral domain verification and approved contact-data evidence boundaries with allowed source admission, retention/deletion/refresh obligations, display/export eligibility and no implied outreach authorization. `M03-ER-005-DATABASE` is the next dependency-safe slice after migration `0015` reservation; `M03-ER-006` remains downstream. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment is in final verification:** `M03-ER-001` through `M03-ER-005` are integrated. PR #148 completed tenant-safe domain/contact evidence persistence with migration `0015`, workspace-scoped idempotency, DB-level provenance/value guards, retention/deletion purge semantics and no implied outreach authorization. `M03-ER-006` independent adversarial verification is the only remaining planned M03 packet. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`
-- **Synchronization epoch:** `73`
-- **Live registry revision at reconciliation:** `181`
-- **Current product packet:** `M03-ER-005-DATABASE` / `MIGRATION RESERVATION`
-- **Current integration path:** Supervisor migration-reservation/governance changeset → DATABASE assignment
-- **Current resulting-main CI:** `35660438181` — SUCCESS
-- **Current Supervisor packet:** `SUP-M03-ER-005-DB-RESERVATION`
-- **Next dependency-safe packet:** `M03-ER-005-DATABASE` — assign immediately after migration `0015` reservation integrates
-- **M03 execution progress:** **~75%**
+- **Exact integrated main:** `d34ad3c72b918c4cd6f2f0718f2097ffa0090002`
+- **Synchronization epoch:** `75`
+- **Live registry revision at reconciliation:** `187`
+- **Current product packet:** `M03-ER-006` / `READY AFTER CLOSEOUT`
+- **Current integration path:** Supervisor ER-005 closeout → VERIFY assignment → independent adversarial verification
+- **Current resulting-main CI:** `35672036712` — SUCCESS
+- **Current Supervisor packet:** `SUP-M03-ER-005-CLOSEOUT`
+- **Next dependency-safe packet:** `M03-ER-006` — assign to VERIFY after this closeout integrates
+- **M03 execution progress:** **~90%**
 
-`███████▌░░ 75%`
+`█████████░ 90%`
 
-M03 progress is based on the durable packet DAG: `M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated; `M03-ER-005-DATABASE` and `M03-ER-006` remain. Contract integration moves M03 to ~75%; persistence remains required before ER-005 is terminal.
+M03 progress is based on the durable packet DAG: `M03-ER-001` through `M03-ER-005` are integrated; only `M03-ER-006` independent adversarial verification remains before the planned M03 packet sequence can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
@@ -36,7 +36,7 @@ M03 progress is based on the durable packet DAG: `M03-ER-001` through `M03-ER-00
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
 | M02A | Global Acquisition Studio & Background Research | Provider-neutral packet sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001/002/003/004 + ER-005 CONTRACTS INTEGRATED; DB/ER-006 pending | **75%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001 through ER-005 INTEGRATED; ER-006 verification pending | **90%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
