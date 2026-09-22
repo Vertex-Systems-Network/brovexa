@@ -87,6 +87,18 @@ describe('M03-ER-006 persistence adversarial invariants', () => {
     expect(pool.query).toHaveBeenCalledTimes(1);
   });
 
+  it('requires the forward 0016 migration to enforce freshness at the durable SQL boundary', async () => {
+    const migration = await readFile(
+      resolve(process.cwd(), 'migrations/0016_entity_enrichment_freshness_guard.up.sql'),
+      'utf8',
+    );
+
+    expect(migration).toContain('NEW.evaluated_at < evidence.observed_at');
+    expect(migration).toContain('evidence.refresh_after_seconds IS NOT NULL');
+    expect(migration).toContain('make_interval');
+    expect(migration).toContain('business_domain_verification_decisions_policy_guard');
+  });
+
   it('rolls 0015 back in dependency-safe reverse table order', async () => {
     const rollback = await readFile(
       resolve(process.cwd(), 'migrations/down/0015_entity_enrichment_evidence_persistence.down.sql'),
