@@ -29,7 +29,7 @@ export class EntityEnrichmentPersistenceError extends Error {
   }
 }
 
-export type EnrichmentStorageClass = 'REFERENCE_ONLY' | 'NORMALIZED_FACT' | 'EVIDENCE_MINIMAL';
+export type EntityEnrichmentStorageClass = 'REFERENCE_ONLY' | 'NORMALIZED_FACT' | 'EVIDENCE_MINIMAL';
 export type DomainEvidenceKind = 'source_claim' | 'official_website' | 'registry_record' | 'dns_control';
 export type DomainEvidenceEffect = 'supports_domain' | 'contradicts_domain';
 export type DomainVerificationDecision = 'verified' | 'review_required' | 'rejected';
@@ -58,7 +58,7 @@ export interface PersistBusinessDomainEvidenceInput {
   sourcePolicySnapshot: PolicySnapshot;
   sourceAdmissionDecisionRef: string;
   sourceAdmissionDecision: 'allow';
-  storageClass: EnrichmentStorageClass;
+  storageClass: EntityEnrichmentStorageClass;
   retention: EvidenceRetentionPolicy;
   observedAt: Date;
   recordedAt: Date;
@@ -96,7 +96,7 @@ export interface PersistContactDataEligibilityDecisionInput {
   territory: { mode: TerritoryMode; countryCodes: readonly string[] };
   fieldName: string;
   dataClassification: ContactDataClassification;
-  storageClass: EnrichmentStorageClass;
+  storageClass: EntityEnrichmentStorageClass;
   retention: EvidenceRetentionPolicy;
   decision: ContactEligibilityDecision;
   displayAllowed: boolean;
@@ -126,7 +126,7 @@ export interface PurgeEntityEnrichmentEvidenceInput {
   purgeReasonCode: string;
 }
 
-export interface PersistenceResult<T> { created: boolean; record: T; }
+export interface EntityEnrichmentPersistenceResult<T> { created: boolean; record: T; }
 export interface PurgeResult { changed: boolean; evidenceId: string; workspaceId: string; purgedAt: Date; purgeReasonCode: string; }
 
 export interface PersistedBusinessDomainEvidence extends PersistBusinessDomainEvidenceInput {
@@ -147,7 +147,7 @@ interface DomainEvidenceRow {
   id:string; workspace_id:string; canonical_business_id:string; normalized_domain:string|null;
   kind:DomainEvidenceKind; effect:DomainEvidenceEffect; source_key:string; source_reference_ids:string[];
   source_policy_id:string; source_policy_version:string; source_admission_decision_ref:string; source_admission_decision:'allow';
-  storage_class:EnrichmentStorageClass; retention_ttl_seconds:number|string|null; deletion_required:boolean; refresh_after_seconds:number|string|null;
+  storage_class:EntityEnrichmentStorageClass; retention_ttl_seconds:number|string|null; deletion_required:boolean; refresh_after_seconds:number|string|null;
   observed_at:Date; recorded_at:Date; purged_at:Date|null; purge_reason_code:string|null; created_at:Date;
 }
 interface DomainDecisionRow {
@@ -160,7 +160,7 @@ interface EligibilityRow {
   connector_version:string; source_request_id:string; source_admission_decision_ref:string; source_admission_decision:'allow';
   source_reference_ids:string[]; source_policy_id:string; source_policy_version:string; compliance_policy_id:string; compliance_policy_version:string;
   purpose:string; territory_mode:TerritoryMode; country_codes:string[]; field_name:string; data_classification:ContactDataClassification;
-  storage_class:EnrichmentStorageClass; retention_ttl_seconds:number|string|null; deletion_required:boolean; refresh_after_seconds:number|string|null;
+  storage_class:EntityEnrichmentStorageClass; retention_ttl_seconds:number|string|null; deletion_required:boolean; refresh_after_seconds:number|string|null;
   decision:ContactEligibilityDecision; display_allowed:boolean; export_allowed:boolean; reason_codes:string[]; evaluated_at:Date; created_at:Date;
 }
 interface ContactEvidenceRow {
@@ -205,7 +205,7 @@ function toDecision(row:DomainDecisionRow):PersistedBusinessDomainVerificationDe
 function toEligibility(row:EligibilityRow):PersistedContactDataEligibilityDecision { return { eligibilityId:row.id,workspaceId:row.workspace_id,canonicalBusinessId:row.canonical_business_id,channel:row.channel,sourceKey:row.source_key,connectorKey:row.connector_key,connectorVersion:row.connector_version,sourceRequestId:row.source_request_id,sourceAdmissionDecisionRef:row.source_admission_decision_ref,sourceAdmissionDecision:'allow',sourceReferenceIds:Object.freeze([...row.source_reference_ids]),sourcePolicySnapshot:Object.freeze({policyId:row.source_policy_id,policyVersion:row.source_policy_version}),compliancePolicySnapshot:Object.freeze({policyId:row.compliance_policy_id,policyVersion:row.compliance_policy_version}),purpose:row.purpose,territory:Object.freeze({mode:row.territory_mode,countryCodes:Object.freeze([...row.country_codes])}),fieldName:row.field_name,dataClassification:row.data_classification,storageClass:row.storage_class,retention:Object.freeze({retentionTtlSeconds:normalizePgSeconds(row.retention_ttl_seconds,'retention_ttl_seconds'),deletionRequired:row.deletion_required,refreshAfterSeconds:normalizePgSeconds(row.refresh_after_seconds,'refresh_after_seconds')}),decision:row.decision,displayAllowed:row.display_allowed,exportAllowed:row.export_allowed,reasonCodes:Object.freeze([...row.reason_codes]),evaluatedAt:row.evaluated_at,createdAt:row.created_at }; }
 function toContact(row:ContactEvidenceRow):PersistedApprovedBusinessContactEvidence { if(row.purged_at!==null||row.normalized_value===null) fail('EVIDENCE_PURGE_INVALID','Purged contact evidence cannot be materialized as active contract evidence.'); return { contactEvidenceId:row.id,workspaceId:row.workspace_id,canonicalBusinessId:row.canonical_business_id,channel:row.channel,normalizedValue:row.normalized_value,sourceKey:row.source_key,sourceReferenceIds:Object.freeze([...row.source_reference_ids]),eligibilityId:row.eligibility_id,outreachAuthorization:'not_evaluated',observedAt:row.observed_at,recordedAt:row.recorded_at,deletionRequired:row.deletion_required,purgedAt:null,purgeReasonCode:null,createdAt:row.created_at }; }
 
-export async function persistBusinessDomainEvidence(pool:Pool,input:PersistBusinessDomainEvidenceInput):Promise<PersistenceResult<PersistedBusinessDomainEvidence>> {
+export async function persistBusinessDomainEvidence(pool:Pool,input:PersistBusinessDomainEvidenceInput):Promise<EntityEnrichmentPersistenceResult<PersistedBusinessDomainEvidence>> {
   assertWorkspace(input.workspaceId); assertIdentifier(input.evidenceId,'evidenceId'); assertIdentifier(input.canonicalBusinessId,'canonicalBusinessId'); assertDomain(input.normalizedDomain);
   if(!['source_claim','official_website','registry_record','dns_control'].includes(input.kind)) fail('ENTITY_ENRICHMENT_INPUT_INVALID','kind is invalid.');
   if(!['supports_domain','contradicts_domain'].includes(input.effect)) fail('ENTITY_ENRICHMENT_INPUT_INVALID','effect is invalid.');
@@ -225,7 +225,7 @@ export async function persistBusinessDomainEvidence(pool:Pool,input:PersistBusin
   return {created:false,record:toDomain(row)};
 }
 
-export async function persistBusinessDomainVerificationDecision(pool:Pool,input:PersistBusinessDomainVerificationDecisionInput):Promise<PersistenceResult<PersistedBusinessDomainVerificationDecision>> {
+export async function persistBusinessDomainVerificationDecision(pool:Pool,input:PersistBusinessDomainVerificationDecisionInput):Promise<EntityEnrichmentPersistenceResult<PersistedBusinessDomainVerificationDecision>> {
   assertWorkspace(input.workspaceId); assertIdentifier(input.verificationId,'verificationId'); assertIdentifier(input.canonicalBusinessId,'canonicalBusinessId'); assertDomain(input.normalizedDomain); assertConfidence(input.confidence);
   const evidenceIds=array(input.evidenceIds,'evidenceIds',{max:256}); const reasons=array(input.reasonCodes,'reasonCodes',{max:64}); assertDate(input.evaluatedAt,'evaluatedAt');
   if(!['verified','review_required','rejected'].includes(input.decision)||!['deterministic','human_review'].includes(input.method)) fail('ENTITY_ENRICHMENT_INPUT_INVALID','domain decision or method is invalid.');
@@ -248,7 +248,7 @@ export async function persistBusinessDomainVerificationDecision(pool:Pool,input:
   return {created:false,record:toDecision(row)};
 }
 
-export async function persistContactDataEligibilityDecision(pool:Pool,input:PersistContactDataEligibilityDecisionInput):Promise<PersistenceResult<PersistedContactDataEligibilityDecision>> {
+export async function persistContactDataEligibilityDecision(pool:Pool,input:PersistContactDataEligibilityDecisionInput):Promise<EntityEnrichmentPersistenceResult<PersistedContactDataEligibilityDecision>> {
   assertWorkspace(input.workspaceId); assertIdentifier(input.eligibilityId,'eligibilityId'); assertIdentifier(input.canonicalBusinessId,'canonicalBusinessId'); assertSourceKey(input.sourceKey);
   if(!connectorKeyPattern.test(input.connectorKey)||!versionPattern.test(input.connectorVersion)) fail('ENTITY_ENRICHMENT_INPUT_INVALID','connector identity/version is invalid.');
   assertIdentifier(input.sourceRequestId,'sourceRequestId'); assertIdentifier(input.sourceAdmissionDecisionRef,'sourceAdmissionDecisionRef'); if(input.sourceAdmissionDecision!=='allow') fail('ENTITY_ENRICHMENT_INPUT_INVALID','source admission must be allow.');
@@ -271,7 +271,7 @@ export async function persistContactDataEligibilityDecision(pool:Pool,input:Pers
   return {created:false,record:toEligibility(row)};
 }
 
-export async function persistApprovedBusinessContactEvidence(pool:Pool,input:PersistApprovedBusinessContactEvidenceInput):Promise<PersistenceResult<PersistedApprovedBusinessContactEvidence>> {
+export async function persistApprovedBusinessContactEvidence(pool:Pool,input:PersistApprovedBusinessContactEvidenceInput):Promise<EntityEnrichmentPersistenceResult<PersistedApprovedBusinessContactEvidence>> {
   assertWorkspace(input.workspaceId); assertIdentifier(input.contactEvidenceId,'contactEvidenceId'); assertIdentifier(input.canonicalBusinessId,'canonicalBusinessId'); assertIdentifier(input.eligibilityId,'eligibilityId'); assertSourceKey(input.sourceKey);
   const value=assertContactValue(input.channel,input.normalizedValue); const refs=array(input.sourceReferenceIds,'sourceReferenceIds',{max:64}); assertDate(input.observedAt,'observedAt'); assertDate(input.recordedAt,'recordedAt'); if(input.recordedAt.getTime()<input.observedAt.getTime()) fail('ENTITY_ENRICHMENT_INPUT_INVALID','recordedAt cannot precede observedAt.'); if(input.outreachAuthorization!=='not_evaluated') fail('ENTITY_ENRICHMENT_INPUT_INVALID','outreach authorization is outside this persistence boundary.');
   const eligibility=await pool.query<EligibilityRow>(`SELECT * FROM contact_data_eligibility_decisions WHERE id=$1 AND workspace_id=$2::uuid`,[input.eligibilityId,input.workspaceId]); const e=eligibility.rows[0];
