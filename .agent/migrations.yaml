@@ -1,7 +1,7 @@
 version: 1
 policy: serialized-reservation
 
-latest_integrated_migration: "0014_canonical_entity_resolution_persistence"
+latest_integrated_migration: "0015_entity_enrichment_evidence_persistence"
 next_unreserved_number: "0016"
 
 rules:
@@ -55,4 +55,4 @@ reservations:
     task_id: M03-ER-005-DATABASE
     branch: agent/database-persistence
     owner: AGENT-DATABASE
-    status: IMPLEMENTED
+    status: INTEGRATED

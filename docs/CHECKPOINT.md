@@ -10,9 +10,9 @@ Updated: 2026-09-22
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** ACTIVE IMPLEMENTATION. `M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated through PRs #133, #140/#141, #143, #144 and #146. The CONTRACTS slice adds provider-neutral domain verification plus approved contact-data evidence boundaries. `M03-ER-005-DATABASE` is next after migration `0015` reservation; `M03-ER-006` independent adversarial verification remains downstream. Live mutation still requires issue #53 assignment plus atomic slot lease.
+- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION. `M03-ER-001` through `M03-ER-005` are integrated through PRs #133, #140/#141, #143, #144, #146 and #148. ER-005 now includes domain/contact contracts plus migration `0015` persistence, tenant/provenance guards, workspace-scoped idempotency and retention/deletion purge semantics. `M03-ER-006` independent adversarial verification is the only remaining planned M03 packet. Live mutation still requires issue #53 assignment plus atomic slot lease.
 
-The latest reconciled integration snapshot is epoch **73** after PR #146 at main `3a0ac38058dcfdcbc8292a6dbe3437b137b02344`, with resulting-main CI `35660438181` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
+The latest reconciled integration snapshot is epoch **75** after PR #148 at main `d34ad3c72b918c4cd6f2f0718f2097ffa0090002`, with resulting-main CI `35672036712` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
 
 ## Live-state authority
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`M03-ER-001` through `M03-ER-004` and `M03-ER-005-CONTRACTS` are integrated. Migration `0014_canonical_entity_resolution_persistence` is integrated with `M03-ER-002`. This changeset reserves `0015_entity_enrichment_evidence_persistence` exclusively for `M03-ER-005-DATABASE`; `0016` becomes the next unreserved number. The DATABASE slice must preserve tenant isolation, idempotency, approved provenance and explicit retention/deletion semantics before `M03-ER-005` can become terminal.
+`M03-ER-001` through `M03-ER-005` are integrated. Migration `0014_canonical_entity_resolution_persistence` and `0015_entity_enrichment_evidence_persistence` are integrated; `0016` remains the next unreserved number. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` is now the only downstream M03 packet.
 
 ## Security / authorization boundary
 
@@ -183,9 +183,9 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate the Supervisor migration-reservation/governance changeset with exact-head FULL GATE, expected-head merge and resulting-main verification.
-2. Advance issue #50/#53 state and keep all idle standing branches synchronized to the new main.
-3. Assign/lease `M03-ER-005-DATABASE` only after migration `0015_entity_enrichment_evidence_persistence` is integrated as RESERVED.
-4. Implement tenant-safe domain evidence, verification decision, ContactDataEligibility and approved contact-evidence persistence with retention/deletion/refresh semantics, idempotency, rollback guards and no outreach authorization.
-5. Start `M03-ER-006` on VERIFY only after the ER-005 persistence slice is integrated.
-6. Preserve exact-head FULL GATE, expected-head merge, resulting-main certification and post-merge synchronization for every packet.
+1. Integrate this ER-005 closeout changeset with exact-head FULL GATE, expected-head merge and resulting-main verification.
+2. Advance issue #50/#53 state and keep all standing branches synchronized.
+3. Assign `M03-ER-006` to VERIFY only after the closeout is integrated.
+4. Independently verify tenant isolation, replay/idempotency, cross-workspace provenance rejection, bare-claim/contradiction domain-policy boundaries, contact display/export fail-closed behavior, purge lifecycle, rollback and no-outreach guarantees.
+5. Close the planned M03 packet sequence only after VERIFY passes exact-head and resulting-main gates.
+6. Preserve provider/network/credential/outreach activation as separate explicit gates.
