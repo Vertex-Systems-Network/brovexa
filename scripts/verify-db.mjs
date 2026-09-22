@@ -490,12 +490,14 @@ async function verifyM03EntityEnrichmentFreshnessGuards(testPool, workspaceId) {
       'INSERT INTO canonical_businesses (id, workspace_id, display_name) VALUES ($1, $2::uuid, $3)',
       [businessId, workspaceId, 'M03 Freshness Business'],
     );
+    // 0015's malformed source-key regex is tracked in #154. Use its legacy-accepted
+    // shape here only to isolate the 0016 freshness guard in this verifier.
     await client.query(
       `INSERT INTO business_domain_evidence
        (id, workspace_id, canonical_business_id, normalized_domain, kind, effect, source_key, source_reference_ids,
         source_policy_id, source_policy_version, source_admission_decision_ref, source_admission_decision, storage_class,
         retention_ttl_seconds, deletion_required, refresh_after_seconds, observed_at, recorded_at)
-       VALUES ($1, $2::uuid, $3, 'example.test', 'official_website', 'supports_domain', 'source.test', $4::jsonb,
+       VALUES ($1, $2::uuid, $3, 'example.test', 'official_website', 'supports_domain', 'source\\.test', $4::jsonb,
                'policy.public-web', '1.0.0', $5, 'allow', 'EVIDENCE_MINIMAL', 2592000, true, $6, $7, $7)`,
       [evidenceId, workspaceId, businessId, JSON.stringify([prefix + '-ref']), prefix + '-admission', refreshAfterSeconds, observedAt],
     );
