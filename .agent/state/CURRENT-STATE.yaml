@@ -1,18 +1,18 @@
 version: 1
 kind: supervisor-compact-state
 status: VERIFYING
-baseline_main_sha: "3a0ac38058dcfdcbc8292a6dbe3437b137b02344"
-sync_epoch: 73
-registry_revision: 181
-current_work_packet: "SUP-M03-ER-005-DB-RESERVATION"
+baseline_main_sha: "d34ad3c72b918c4cd6f2f0718f2097ffa0090002"
+sync_epoch: 75
+registry_revision: 187
+current_work_packet: "SUP-M03-ER-005-CLOSEOUT"
 supervisor_branch: "supervisor/integration-control"
 supervisor_lease_id: "lease-supervisor-20260921-sec134-closeout-8c71f4"
-last_completed_packet: "M03-ER-005-CONTRACTS"
-last_completed_main_sha: "3a0ac38058dcfdcbc8292a6dbe3437b137b02344"
+last_completed_packet: "M03-ER-005-DATABASE"
+last_completed_main_sha: "d34ad3c72b918c4cd6f2f0718f2097ffa0090002"
 runner_benchmark_deferred_count: 2
 open_pull_requests: []
-current_objective: "Integrate migration 0015 reservation and Supervisor control-plane drift fixes, then assign M03-ER-005-DATABASE without widening provider/network/outreach authority."
-exact_next_action: "Submit the Supervisor reservation/governance changeset for exact-head FULL GATE and merge; after resulting-main certification, assign DATABASE, acquire its lease, and implement tenant-safe domain/contact evidence persistence."
+current_objective: "Close M03-ER-005 durable state and make M03-ER-006 independently assignable on VERIFY without widening provider/network/outreach authority."
+exact_next_action: "Submit and integrate the ER-005 closeout changeset with exact-head and resulting-main FULL GATE; then reserve VERIFY in issue #53, acquire its atomic lease, and implement M03-ER-006 adversarial verification."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main
