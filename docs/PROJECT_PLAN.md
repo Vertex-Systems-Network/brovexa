@@ -63,7 +63,7 @@ Linear: ABD-218
 
 Canonical identity, deterministic + structured-AI matching, confidence/review thresholds, reversible merge/split, domain verification and approved contact enrichment.
 
-State: **ACTIVE IMPLEMENTATION**. `M03-ER-001` through `M03-ER-004` plus `M03-ER-005-CONTRACTS` are integrated. The next slice is `M03-ER-005-DATABASE`, using Supervisor-reserved migration `0015_entity_enrichment_evidence_persistence`; `M03-ER-006` independent adversarial verification follows only after ER-005 persistence integrates. Implementation remains contracts-first, deterministic-first, provenance-aware, tenant-scoped and retention/deletion aware. No production model/provider/contact-enrichment or outreach activation is implied.
+State: **FINAL VERIFICATION**. `M03-ER-001` through `M03-ER-005` are integrated. PR #148 completed reserved migration `0015_entity_enrichment_evidence_persistence` plus tenant-safe domain/contact evidence persistence, DB-level provenance/value guards, workspace-scoped idempotency and one-way policy purge semantics. `M03-ER-006` independent adversarial verification is the only remaining planned M03 packet. Implementation remains deterministic-first, provenance-aware, tenant-scoped and retention/deletion aware. No production model/provider/contact-enrichment or outreach activation is implied.
 
 ## M04 — Website & Digital Presence Intelligence
 Linear: ABD-219
