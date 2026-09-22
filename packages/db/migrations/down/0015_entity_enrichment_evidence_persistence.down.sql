@@ -1,3 +1,13 @@
+DROP TRIGGER IF EXISTS approved_business_contact_evidence_value_policy_guard ON approved_business_contact_evidence;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS contact_data_eligibility_decisions_value_policy_guard ON contact_data_eligibility_decisions;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS business_domain_verification_decisions_value_policy_guard ON business_domain_verification_decisions;
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS business_domain_evidence_value_policy_guard ON business_domain_evidence;
+--> statement-breakpoint
+DROP FUNCTION IF EXISTS brovexa_internal.guard_entity_enrichment_value_policy();
+--> statement-breakpoint
 DROP TRIGGER IF EXISTS contact_data_eligibility_decisions_append_only ON contact_data_eligibility_decisions;
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS business_domain_verification_decisions_append_only ON business_domain_verification_decisions;

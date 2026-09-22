@@ -188,6 +188,758 @@ CREATE TABLE approved_business_contact_evidence (
 CREATE INDEX approved_business_contact_evidence_business_channel_idx
   ON approved_business_contact_evidence (workspace_id, canonical_business_id, channel, recorded_at DESC, id);
 --> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_entity_enrichment_value_policy()
+RETURNS trigger LANGUAGE plpgsql AS $
+DECLARE
+  array_count integer;
+  distinct_count integer;
+BEGIN
+  IF TG_TABLE_NAME = 'business_domain_evidence' THEN
+    IF NEW.purged_at IS NULL THEN
+      SELECT count(*), count(DISTINCT value)
+        INTO array_count, distinct_count
+      FROM jsonb_array_elements_text(NEW.source_reference_ids) AS item(value);
+      IF array_count < 1 OR array_count <> distinct_count THEN
+        RAISE EXCEPTION 'Domain evidence source references must be non-empty and unique.'
+          USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_source_reference_uniqueness_guard';
+      END IF;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'business_domain_verification_decisions' THEN
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.evidence_ids) AS item(value);
+    IF array_count < 1 OR array_count <> distinct_count THEN
+      RAISE EXCEPTION 'Domain verification evidence IDs must be non-empty and unique.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_evidence_uniqueness_guard';
+    END IF;
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.reason_codes) AS item(value);
+    IF array_count < 1 OR array_count <> distinct_count THEN
+      RAISE EXCEPTION 'Domain verification reason codes must be non-empty and unique.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_reason_uniqueness_guard';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'contact_data_eligibility_decisions' THEN
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.source_reference_ids) AS item(value);
+    IF array_count < 1 OR array_count <> distinct_count THEN
+      RAISE EXCEPTION 'Contact eligibility source references must be non-empty and unique.'
+        USING ERRCODE = '23514', CONSTRAINT = 'contact_data_eligibility_decisions_source_reference_uniqueness_guard';
+    END IF;
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.reason_codes) AS item(value);
+    IF array_count < 1 OR array_count <> distinct_count THEN
+      RAISE EXCEPTION 'Contact eligibility reason codes must be non-empty and unique.'
+        USING ERRCODE = '23514', CONSTRAINT = 'contact_data_eligibility_decisions_reason_uniqueness_guard';
+    END IF;
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.country_codes) AS item(value);
+    IF array_count <> distinct_count OR EXISTS (
+      SELECT 1 FROM jsonb_array_elements_text(NEW.country_codes) AS country(code)
+      WHERE country.code !~ '^[A-Z]{2}
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE referenced_count integer;
+BEGIN
+  SELECT count(DISTINCT evidence.id) INTO referenced_count
+  FROM business_domain_evidence AS evidence
+  WHERE evidence.workspace_id = NEW.workspace_id
+    AND evidence.canonical_business_id = NEW.canonical_business_id
+    AND evidence.normalized_domain = NEW.normalized_domain
+    AND evidence.purged_at IS NULL
+    AND NEW.evidence_ids ? evidence.id;
+  IF referenced_count <> jsonb_array_length(NEW.evidence_ids) THEN
+    RAISE EXCEPTION 'Every domain decision evidence ID must exist for the same workspace, canonical business and domain.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_evidence_binding_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NOT EXISTS (
+    SELECT 1 FROM business_domain_evidence AS evidence
+    WHERE evidence.workspace_id = NEW.workspace_id
+      AND evidence.canonical_business_id = NEW.canonical_business_id
+      AND evidence.normalized_domain = NEW.normalized_domain
+      AND evidence.purged_at IS NULL
+      AND NEW.evidence_ids ? evidence.id
+      AND evidence.effect = 'supports_domain'
+  ) THEN
+    RAISE EXCEPTION 'A verified domain requires supporting evidence.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_support_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NEW.method = 'deterministic' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'supports_domain'
+        AND evidence.kind <> 'source_claim'
+    ) THEN
+      RAISE EXCEPTION 'Deterministic domain verification requires independent evidence beyond a source claim.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_independent_guard';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'contradicts_domain'
+    ) THEN
+      RAISE EXCEPTION 'Contradictory domain evidence requires human review.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_contradiction_guard';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_policy_guard
+BEFORE INSERT ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_verification_decision();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_eligibility()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE eligibility contact_data_eligibility_decisions%ROWTYPE;
+BEGIN
+  SELECT * INTO eligibility FROM contact_data_eligibility_decisions
+  WHERE id = NEW.eligibility_id AND workspace_id = NEW.workspace_id;
+  IF eligibility.id IS NULL
+     OR eligibility.decision <> 'allow'
+     OR eligibility.source_admission_decision <> 'allow'
+     OR eligibility.canonical_business_id <> NEW.canonical_business_id
+     OR eligibility.channel <> NEW.channel
+     OR eligibility.source_key <> NEW.source_key THEN
+    RAISE EXCEPTION 'Contact evidence requires a matching allowed ContactDataEligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_eligibility_guard';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements_text(NEW.source_reference_ids) AS requested(reference_id)
+    WHERE NOT eligibility.source_reference_ids ? requested.reference_id
+  ) THEN
+    RAISE EXCEPTION 'Contact evidence provenance must be a subset of approved eligibility references.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_provenance_guard';
+  END IF;
+  IF NEW.deletion_required IS DISTINCT FROM eligibility.deletion_required THEN
+    RAISE EXCEPTION 'Contact evidence deletion policy must match its eligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_deletion_policy_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_eligibility_guard
+BEFORE INSERT ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_eligibility();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Domain evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_domain IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.effect IS DISTINCT FROM OLD.effect
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.source_policy_id IS DISTINCT FROM OLD.source_policy_id
+     OR NEW.source_policy_version IS DISTINCT FROM OLD.source_policy_version
+     OR NEW.source_admission_decision_ref IS DISTINCT FROM OLD.source_admission_decision_ref
+     OR NEW.source_admission_decision IS DISTINCT FROM OLD.source_admission_decision
+     OR NEW.storage_class IS DISTINCT FROM OLD.storage_class OR NEW.retention_ttl_seconds IS DISTINCT FROM OLD.retention_ttl_seconds
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required OR NEW.refresh_after_seconds IS DISTINCT FROM OLD.refresh_after_seconds
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Domain evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON business_domain_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Contact evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_value IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id OR NEW.channel IS DISTINCT FROM OLD.channel
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.eligibility_id IS DISTINCT FROM OLD.eligibility_id
+     OR NEW.outreach_authorization IS DISTINCT FROM OLD.outreach_authorization
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Contact evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle();
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_append_only
+BEFORE UPDATE OR DELETE ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('business_domain_verification_decisions_append_only');
+--> statement-breakpoint
+CREATE TRIGGER contact_data_eligibility_decisions_append_only
+BEFORE UPDATE OR DELETE ON contact_data_eligibility_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('contact_data_eligibility_decisions_append_only');
+    ) THEN
+      RAISE EXCEPTION 'Contact eligibility country codes must be unique ISO-style uppercase alpha-2 values.'
+        USING ERRCODE = '23514', CONSTRAINT = 'contact_data_eligibility_decisions_country_code_guard';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'approved_business_contact_evidence' AND NEW.purged_at IS NULL THEN
+    SELECT count(*), count(DISTINCT value)
+      INTO array_count, distinct_count
+    FROM jsonb_array_elements_text(NEW.source_reference_ids) AS item(value);
+    IF array_count < 1 OR array_count <> distinct_count THEN
+      RAISE EXCEPTION 'Contact evidence source references must be non-empty and unique.'
+        USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_source_reference_uniqueness_guard';
+    END IF;
+    IF length(btrim(NEW.normalized_value)) < 1 OR length(NEW.normalized_value) > 2048 THEN
+      RAISE EXCEPTION 'Contact evidence normalized value must contain between 1 and 2048 characters.'
+        USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_value_length_guard';
+    END IF;
+    IF NEW.channel = 'email'
+       AND (NEW.normalized_value <> lower(NEW.normalized_value)
+            OR NEW.normalized_value !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE referenced_count integer;
+BEGIN
+  SELECT count(DISTINCT evidence.id) INTO referenced_count
+  FROM business_domain_evidence AS evidence
+  WHERE evidence.workspace_id = NEW.workspace_id
+    AND evidence.canonical_business_id = NEW.canonical_business_id
+    AND evidence.normalized_domain = NEW.normalized_domain
+    AND evidence.purged_at IS NULL
+    AND NEW.evidence_ids ? evidence.id;
+  IF referenced_count <> jsonb_array_length(NEW.evidence_ids) THEN
+    RAISE EXCEPTION 'Every domain decision evidence ID must exist for the same workspace, canonical business and domain.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_evidence_binding_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NOT EXISTS (
+    SELECT 1 FROM business_domain_evidence AS evidence
+    WHERE evidence.workspace_id = NEW.workspace_id
+      AND evidence.canonical_business_id = NEW.canonical_business_id
+      AND evidence.normalized_domain = NEW.normalized_domain
+      AND evidence.purged_at IS NULL
+      AND NEW.evidence_ids ? evidence.id
+      AND evidence.effect = 'supports_domain'
+  ) THEN
+    RAISE EXCEPTION 'A verified domain requires supporting evidence.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_support_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NEW.method = 'deterministic' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'supports_domain'
+        AND evidence.kind <> 'source_claim'
+    ) THEN
+      RAISE EXCEPTION 'Deterministic domain verification requires independent evidence beyond a source claim.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_independent_guard';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'contradicts_domain'
+    ) THEN
+      RAISE EXCEPTION 'Contradictory domain evidence requires human review.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_contradiction_guard';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_policy_guard
+BEFORE INSERT ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_verification_decision();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_eligibility()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE eligibility contact_data_eligibility_decisions%ROWTYPE;
+BEGIN
+  SELECT * INTO eligibility FROM contact_data_eligibility_decisions
+  WHERE id = NEW.eligibility_id AND workspace_id = NEW.workspace_id;
+  IF eligibility.id IS NULL
+     OR eligibility.decision <> 'allow'
+     OR eligibility.source_admission_decision <> 'allow'
+     OR eligibility.canonical_business_id <> NEW.canonical_business_id
+     OR eligibility.channel <> NEW.channel
+     OR eligibility.source_key <> NEW.source_key THEN
+    RAISE EXCEPTION 'Contact evidence requires a matching allowed ContactDataEligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_eligibility_guard';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements_text(NEW.source_reference_ids) AS requested(reference_id)
+    WHERE NOT eligibility.source_reference_ids ? requested.reference_id
+  ) THEN
+    RAISE EXCEPTION 'Contact evidence provenance must be a subset of approved eligibility references.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_provenance_guard';
+  END IF;
+  IF NEW.deletion_required IS DISTINCT FROM eligibility.deletion_required THEN
+    RAISE EXCEPTION 'Contact evidence deletion policy must match its eligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_deletion_policy_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_eligibility_guard
+BEFORE INSERT ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_eligibility();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Domain evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_domain IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.effect IS DISTINCT FROM OLD.effect
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.source_policy_id IS DISTINCT FROM OLD.source_policy_id
+     OR NEW.source_policy_version IS DISTINCT FROM OLD.source_policy_version
+     OR NEW.source_admission_decision_ref IS DISTINCT FROM OLD.source_admission_decision_ref
+     OR NEW.source_admission_decision IS DISTINCT FROM OLD.source_admission_decision
+     OR NEW.storage_class IS DISTINCT FROM OLD.storage_class OR NEW.retention_ttl_seconds IS DISTINCT FROM OLD.retention_ttl_seconds
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required OR NEW.refresh_after_seconds IS DISTINCT FROM OLD.refresh_after_seconds
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Domain evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON business_domain_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Contact evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_value IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id OR NEW.channel IS DISTINCT FROM OLD.channel
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.eligibility_id IS DISTINCT FROM OLD.eligibility_id
+     OR NEW.outreach_authorization IS DISTINCT FROM OLD.outreach_authorization
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Contact evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle();
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_append_only
+BEFORE UPDATE OR DELETE ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('business_domain_verification_decisions_append_only');
+--> statement-breakpoint
+CREATE TRIGGER contact_data_eligibility_decisions_append_only
+BEFORE UPDATE OR DELETE ON contact_data_eligibility_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('contact_data_eligibility_decisions_append_only');) THEN
+      RAISE EXCEPTION 'Email contact evidence must be normalized lowercase email.'
+        USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_email_guard';
+    END IF;
+    IF NEW.channel = 'phone' AND NEW.normalized_value !~ '^\+[1-9][0-9]{7,14}
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE referenced_count integer;
+BEGIN
+  SELECT count(DISTINCT evidence.id) INTO referenced_count
+  FROM business_domain_evidence AS evidence
+  WHERE evidence.workspace_id = NEW.workspace_id
+    AND evidence.canonical_business_id = NEW.canonical_business_id
+    AND evidence.normalized_domain = NEW.normalized_domain
+    AND evidence.purged_at IS NULL
+    AND NEW.evidence_ids ? evidence.id;
+  IF referenced_count <> jsonb_array_length(NEW.evidence_ids) THEN
+    RAISE EXCEPTION 'Every domain decision evidence ID must exist for the same workspace, canonical business and domain.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_evidence_binding_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NOT EXISTS (
+    SELECT 1 FROM business_domain_evidence AS evidence
+    WHERE evidence.workspace_id = NEW.workspace_id
+      AND evidence.canonical_business_id = NEW.canonical_business_id
+      AND evidence.normalized_domain = NEW.normalized_domain
+      AND evidence.purged_at IS NULL
+      AND NEW.evidence_ids ? evidence.id
+      AND evidence.effect = 'supports_domain'
+  ) THEN
+    RAISE EXCEPTION 'A verified domain requires supporting evidence.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_support_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NEW.method = 'deterministic' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'supports_domain'
+        AND evidence.kind <> 'source_claim'
+    ) THEN
+      RAISE EXCEPTION 'Deterministic domain verification requires independent evidence beyond a source claim.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_independent_guard';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'contradicts_domain'
+    ) THEN
+      RAISE EXCEPTION 'Contradictory domain evidence requires human review.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_contradiction_guard';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_policy_guard
+BEFORE INSERT ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_verification_decision();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_eligibility()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE eligibility contact_data_eligibility_decisions%ROWTYPE;
+BEGIN
+  SELECT * INTO eligibility FROM contact_data_eligibility_decisions
+  WHERE id = NEW.eligibility_id AND workspace_id = NEW.workspace_id;
+  IF eligibility.id IS NULL
+     OR eligibility.decision <> 'allow'
+     OR eligibility.source_admission_decision <> 'allow'
+     OR eligibility.canonical_business_id <> NEW.canonical_business_id
+     OR eligibility.channel <> NEW.channel
+     OR eligibility.source_key <> NEW.source_key THEN
+    RAISE EXCEPTION 'Contact evidence requires a matching allowed ContactDataEligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_eligibility_guard';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements_text(NEW.source_reference_ids) AS requested(reference_id)
+    WHERE NOT eligibility.source_reference_ids ? requested.reference_id
+  ) THEN
+    RAISE EXCEPTION 'Contact evidence provenance must be a subset of approved eligibility references.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_provenance_guard';
+  END IF;
+  IF NEW.deletion_required IS DISTINCT FROM eligibility.deletion_required THEN
+    RAISE EXCEPTION 'Contact evidence deletion policy must match its eligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_deletion_policy_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_eligibility_guard
+BEFORE INSERT ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_eligibility();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Domain evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_domain IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.effect IS DISTINCT FROM OLD.effect
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.source_policy_id IS DISTINCT FROM OLD.source_policy_id
+     OR NEW.source_policy_version IS DISTINCT FROM OLD.source_policy_version
+     OR NEW.source_admission_decision_ref IS DISTINCT FROM OLD.source_admission_decision_ref
+     OR NEW.source_admission_decision IS DISTINCT FROM OLD.source_admission_decision
+     OR NEW.storage_class IS DISTINCT FROM OLD.storage_class OR NEW.retention_ttl_seconds IS DISTINCT FROM OLD.retention_ttl_seconds
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required OR NEW.refresh_after_seconds IS DISTINCT FROM OLD.refresh_after_seconds
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Domain evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON business_domain_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Contact evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_value IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id OR NEW.channel IS DISTINCT FROM OLD.channel
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.eligibility_id IS DISTINCT FROM OLD.eligibility_id
+     OR NEW.outreach_authorization IS DISTINCT FROM OLD.outreach_authorization
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Contact evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle();
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_append_only
+BEFORE UPDATE OR DELETE ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('business_domain_verification_decisions_append_only');
+--> statement-breakpoint
+CREATE TRIGGER contact_data_eligibility_decisions_append_only
+BEFORE UPDATE OR DELETE ON contact_data_eligibility_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('contact_data_eligibility_decisions_append_only'); THEN
+      RAISE EXCEPTION 'Phone contact evidence must use E.164.'
+        USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_phone_guard';
+    END IF;
+    IF NEW.channel IN ('website_form','social_profile')
+       AND NEW.normalized_value !~ '^https?://[^/@[:space:]]+(?:[/:?#][^[:space:]]*)?
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE referenced_count integer;
+BEGIN
+  SELECT count(DISTINCT evidence.id) INTO referenced_count
+  FROM business_domain_evidence AS evidence
+  WHERE evidence.workspace_id = NEW.workspace_id
+    AND evidence.canonical_business_id = NEW.canonical_business_id
+    AND evidence.normalized_domain = NEW.normalized_domain
+    AND evidence.purged_at IS NULL
+    AND NEW.evidence_ids ? evidence.id;
+  IF referenced_count <> jsonb_array_length(NEW.evidence_ids) THEN
+    RAISE EXCEPTION 'Every domain decision evidence ID must exist for the same workspace, canonical business and domain.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_evidence_binding_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NOT EXISTS (
+    SELECT 1 FROM business_domain_evidence AS evidence
+    WHERE evidence.workspace_id = NEW.workspace_id
+      AND evidence.canonical_business_id = NEW.canonical_business_id
+      AND evidence.normalized_domain = NEW.normalized_domain
+      AND evidence.purged_at IS NULL
+      AND NEW.evidence_ids ? evidence.id
+      AND evidence.effect = 'supports_domain'
+  ) THEN
+    RAISE EXCEPTION 'A verified domain requires supporting evidence.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_support_guard';
+  END IF;
+  IF NEW.decision = 'verified' AND NEW.method = 'deterministic' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'supports_domain'
+        AND evidence.kind <> 'source_claim'
+    ) THEN
+      RAISE EXCEPTION 'Deterministic domain verification requires independent evidence beyond a source claim.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_independent_guard';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM business_domain_evidence AS evidence
+      WHERE evidence.workspace_id = NEW.workspace_id
+        AND evidence.canonical_business_id = NEW.canonical_business_id
+        AND evidence.normalized_domain = NEW.normalized_domain
+        AND evidence.purged_at IS NULL
+        AND NEW.evidence_ids ? evidence.id
+        AND evidence.effect = 'contradicts_domain'
+    ) THEN
+      RAISE EXCEPTION 'Contradictory domain evidence requires human review.'
+        USING ERRCODE = '23514', CONSTRAINT = 'business_domain_verification_decisions_contradiction_guard';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_policy_guard
+BEFORE INSERT ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_verification_decision();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_eligibility()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE eligibility contact_data_eligibility_decisions%ROWTYPE;
+BEGIN
+  SELECT * INTO eligibility FROM contact_data_eligibility_decisions
+  WHERE id = NEW.eligibility_id AND workspace_id = NEW.workspace_id;
+  IF eligibility.id IS NULL
+     OR eligibility.decision <> 'allow'
+     OR eligibility.source_admission_decision <> 'allow'
+     OR eligibility.canonical_business_id <> NEW.canonical_business_id
+     OR eligibility.channel <> NEW.channel
+     OR eligibility.source_key <> NEW.source_key THEN
+    RAISE EXCEPTION 'Contact evidence requires a matching allowed ContactDataEligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_eligibility_guard';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements_text(NEW.source_reference_ids) AS requested(reference_id)
+    WHERE NOT eligibility.source_reference_ids ? requested.reference_id
+  ) THEN
+    RAISE EXCEPTION 'Contact evidence provenance must be a subset of approved eligibility references.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_provenance_guard';
+  END IF;
+  IF NEW.deletion_required IS DISTINCT FROM eligibility.deletion_required THEN
+    RAISE EXCEPTION 'Contact evidence deletion policy must match its eligibility decision.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_deletion_policy_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_eligibility_guard
+BEFORE INSERT ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_eligibility();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Domain evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_domain IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.effect IS DISTINCT FROM OLD.effect
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.source_policy_id IS DISTINCT FROM OLD.source_policy_id
+     OR NEW.source_policy_version IS DISTINCT FROM OLD.source_policy_version
+     OR NEW.source_admission_decision_ref IS DISTINCT FROM OLD.source_admission_decision_ref
+     OR NEW.source_admission_decision IS DISTINCT FROM OLD.source_admission_decision
+     OR NEW.storage_class IS DISTINCT FROM OLD.storage_class OR NEW.retention_ttl_seconds IS DISTINCT FROM OLD.retention_ttl_seconds
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required OR NEW.refresh_after_seconds IS DISTINCT FROM OLD.refresh_after_seconds
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Domain evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'business_domain_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON business_domain_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_domain_evidence_lifecycle();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Contact evidence cannot be physically deleted; use policy purge.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_delete_guard';
+  END IF;
+  IF OLD.purged_at IS NOT NULL OR OLD.deletion_required IS NOT TRUE
+     OR NEW.purged_at IS NULL OR NEW.purge_reason_code IS NULL
+     OR NEW.normalized_value IS NOT NULL OR NEW.source_reference_ids <> '[]'::jsonb
+     OR NEW.id IS DISTINCT FROM OLD.id OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+     OR NEW.canonical_business_id IS DISTINCT FROM OLD.canonical_business_id OR NEW.channel IS DISTINCT FROM OLD.channel
+     OR NEW.source_key IS DISTINCT FROM OLD.source_key OR NEW.eligibility_id IS DISTINCT FROM OLD.eligibility_id
+     OR NEW.outreach_authorization IS DISTINCT FROM OLD.outreach_authorization
+     OR NEW.deletion_required IS DISTINCT FROM OLD.deletion_required
+     OR NEW.observed_at IS DISTINCT FROM OLD.observed_at OR NEW.recorded_at IS DISTINCT FROM OLD.recorded_at
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'Contact evidence only permits a one-way policy purge transition.'
+      USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_purge_transition_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_lifecycle_guard
+BEFORE UPDATE OR DELETE ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_contact_evidence_lifecycle();
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_append_only
+BEFORE UPDATE OR DELETE ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('business_domain_verification_decisions_append_only');
+--> statement-breakpoint
+CREATE TRIGGER contact_data_eligibility_decisions_append_only
+BEFORE UPDATE OR DELETE ON contact_data_eligibility_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.reject_append_only_lifecycle_mutation('contact_data_eligibility_decisions_append_only'); THEN
+      RAISE EXCEPTION 'URL contact evidence must be credential-free HTTP(S).'
+        USING ERRCODE = '23514', CONSTRAINT = 'approved_business_contact_evidence_url_guard';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$;
+--> statement-breakpoint
+CREATE TRIGGER business_domain_evidence_value_policy_guard
+BEFORE INSERT OR UPDATE ON business_domain_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_entity_enrichment_value_policy();
+--> statement-breakpoint
+CREATE TRIGGER business_domain_verification_decisions_value_policy_guard
+BEFORE INSERT ON business_domain_verification_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_entity_enrichment_value_policy();
+--> statement-breakpoint
+CREATE TRIGGER contact_data_eligibility_decisions_value_policy_guard
+BEFORE INSERT ON contact_data_eligibility_decisions
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_entity_enrichment_value_policy();
+--> statement-breakpoint
+CREATE TRIGGER approved_business_contact_evidence_value_policy_guard
+BEFORE INSERT OR UPDATE ON approved_business_contact_evidence
+FOR EACH ROW EXECUTE FUNCTION brovexa_internal.guard_entity_enrichment_value_policy();
+--> statement-breakpoint
 CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_verification_decision()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE referenced_count integer;
