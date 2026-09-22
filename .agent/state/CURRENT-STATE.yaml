@@ -1,18 +1,19 @@
 version: 1
 kind: supervisor-compact-state
 status: VERIFYING
-baseline_main_sha: "d34ad3c72b918c4cd6f2f0718f2097ffa0090002"
-sync_epoch: 75
-registry_revision: 187
-current_work_packet: "SUP-M03-ER-005-CLOSEOUT"
+baseline_main_sha: "e760fa797545533517b6de84cc675c4060e3e36e"
+sync_epoch: 77
+registry_revision: 193
+current_work_packet: "SUP-M03-ER-006-SECURITY-RECONCILE"
 supervisor_branch: "supervisor/integration-control"
-supervisor_lease_id: "lease-supervisor-20260921-sec134-closeout-8c71f4"
-last_completed_packet: "M03-ER-005-DATABASE"
-last_completed_main_sha: "d34ad3c72b918c4cd6f2f0718f2097ffa0090002"
+supervisor_lease_id: "lease-supervisor-20260923-m03er006-security-r77a1"
+last_completed_packet: "M03-ER-006-FRESHNESS-FIX"
+last_completed_main_sha: "e760fa797545533517b6de84cc675c4060e3e36e"
 runner_benchmark_deferred_count: 2
-open_pull_requests: []
-current_objective: "Close M03-ER-005 durable state and make M03-ER-006 independently assignable on VERIFY without widening provider/network/outreach authority."
-exact_next_action: "Submit and integrate the ER-005 closeout changeset with exact-head and resulting-main FULL GATE; then reserve VERIFY in issue #53, acquire its atomic lease, and implement M03-ER-006 adversarial verification."
+open_pull_requests:
+  - "#150"
+current_objective: "Close the persistence-layer stale-domain-evidence bypass exposed during M03-ER-006 without weakening adversarial verification or widening provider/network/outreach authority."
+exact_next_action: "Integrate the 0016 reservation/current-state reconciliation; synchronize DATABASE; enforce freshness in persistence API plus durable SQL guard; then rerun unchanged VERIFY assertions."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main

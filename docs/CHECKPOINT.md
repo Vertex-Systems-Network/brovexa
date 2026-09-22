@@ -10,9 +10,9 @@ Updated: 2026-09-22
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION. `M03-ER-001` through `M03-ER-005` are integrated through PRs #133, #140/#141, #143, #144, #146 and #148. ER-005 now includes domain/contact contracts plus migration `0015` persistence, tenant/provenance guards, workspace-scoped idempotency and retention/deletion purge semantics. `M03-ER-006` independent adversarial verification is the only remaining planned M03 packet. Live mutation still requires issue #53 assignment plus atomic slot lease.
+- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION. `M03-ER-001` through `M03-ER-005` are integrated, and PR #151 integrated the contract-layer stale-evidence fail-closed fix. Independent verification PR #150 subsequently exposed a persistence-layer freshness bypass: direct durable domain-verification persistence does not yet enforce evidence observation ordering / `refreshAfterSeconds`. DATABASE owns `M03-ER-006-FRESHNESS-PERSISTENCE-FIX`; migration `0016_entity_enrichment_freshness_guard` is reserved for the durable guard. ER-006 remains blocked until that fix is integrated and its unchanged adversarial assertions pass.
 
-The latest reconciled integration snapshot is epoch **75** after PR #148 at main `d34ad3c72b918c4cd6f2f0718f2097ffa0090002`, with resulting-main CI `35672036712` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
+The latest reconciled integration snapshot is epoch **77** after PR #151 at main `e760fa797545533517b6de84cc675c4060e3e36e`, with resulting-main CI `35769464173` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
 
 ## Live-state authority
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`M03-ER-001` through `M03-ER-005` are integrated. Migration `0014_canonical_entity_resolution_persistence` and `0015_entity_enrichment_evidence_persistence` are integrated; `0016` remains the next unreserved number. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` is now the only downstream M03 packet.
+`M03-ER-001` through `M03-ER-005` are integrated. Migration `0014_canonical_entity_resolution_persistence` and `0015_entity_enrichment_evidence_persistence` are integrated; `0016_entity_enrichment_freshness_guard` is reserved for the persistence freshness defect found by ER-006. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` remains the downstream closeout packet after the persistence fix.
 
 ## Security / authorization boundary
 
@@ -183,9 +183,9 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate this ER-005 closeout changeset with exact-head FULL GATE, expected-head merge and resulting-main verification.
-2. Advance issue #50/#53 state and keep all standing branches synchronized.
-3. Assign `M03-ER-006` to VERIFY only after the closeout is integrated.
-4. Independently verify tenant isolation, replay/idempotency, cross-workspace provenance rejection, bare-claim/contradiction domain-policy boundaries, contact display/export fail-closed behavior, purge lifecycle, rollback and no-outreach guarantees.
-5. Close the planned M03 packet sequence only after VERIFY passes exact-head and resulting-main gates.
+1. Integrate the bounded Supervisor reconciliation / migration-reservation changeset with exact-head FULL GATE and expected-head merge.
+2. Synchronize DATABASE to that resulting main/epoch and implement `M03-ER-006-FRESHNESS-PERSISTENCE-FIX` without modifying integrated migration `0015`.
+3. Enforce evidence observation ordering and deterministic `refreshAfterSeconds` freshness in both the persistence API and durable SQL boundary, with focused rollback/regression coverage.
+4. Integrate the DATABASE fix only after exact-head FULL GATE, then synchronize VERIFY and rerun PR #150's unchanged adversarial assertions.
+5. Close M03 only after ER-006 exact-head and resulting-main FULL GATE are green, with zero unresolved security/review drift.
 6. Preserve provider/network/credential/outreach activation as separate explicit gates.
