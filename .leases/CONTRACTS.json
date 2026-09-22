@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/contracts-policy",
+  "slot_id": "CONTRACTS",
+  "agent_id": "AGENT-CONTRACTS",
+  "agent_instance_id": "contracts-chatgpt-20260922-m03er006-freshness-c76a1",
+  "work_packet_id": "M03-ER-006-FRESHNESS-FIX",
+  "lease_id": "lease-contracts-20260922-m03er006-freshness-c76a1",
+  "synced_main_sha": "ac4c78173f7ef120259474b0fe81c086c8a8aba0",
+  "sync_epoch": 76,
+  "acquired_branch_head_sha": "97f871ff5ae1b66fd59facfb7e865f54116f47e4",
+  "acquired_at": "2026-09-22T18:29:00Z",
+  "renewed_at": "2026-09-22T18:29:00Z"
+}
