@@ -193,6 +193,33 @@ export const BusinessDomainVerificationEvaluationSchema = z
       .filter((evidence): evidence is BusinessDomainEvidence => evidence !== undefined);
 
     if (evaluation.decision.decision === 'verified') {
+      const evaluatedAtMs = Date.parse(evaluation.decision.evaluatedAt);
+      const staleReferencedEvidence = referencedEvidence.filter((evidence) => {
+        const observedAtMs = Date.parse(evidence.observedAt);
+        if (evaluatedAtMs < observedAtMs) {
+          addIssue(
+            ctx,
+            ['decision', 'evaluatedAt'],
+            'Domain verification cannot be evaluated before referenced evidence was observed.',
+          );
+          return false;
+        }
+        return (
+          evidence.retention.refreshAfterSeconds !== null &&
+          (evaluatedAtMs - observedAtMs) / 1000 > evidence.retention.refreshAfterSeconds
+        );
+      });
+      if (
+        evaluation.decision.method === 'deterministic' &&
+        staleReferencedEvidence.length > 0
+      ) {
+        addIssue(
+          ctx,
+          ['decision', 'evidenceIds'],
+          'Deterministic domain verification cannot reuse stale evidence beyond its refresh window; fresh evidence or explicit human review is required.',
+        );
+      }
+
       const hasSupport = referencedEvidence.some((evidence) => evidence.effect === 'supports_domain');
       if (!hasSupport) {
         addIssue(ctx, ['decision', 'evidenceIds'], 'A verified domain requires supporting evidence.');
