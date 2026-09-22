@@ -180,6 +180,101 @@ describe('BusinessDomainVerificationEvaluationSchema', () => {
   });
 });
 
+describe('domain evidence freshness enforcement', () => {
+  it('accepts deterministic verification while referenced evidence is inside its refresh window', () => {
+    const parsed = BusinessDomainVerificationEvaluationSchema.parse({
+      version: '1.0.0',
+      workspaceId: 'workspace.1',
+      canonicalBusinessId: 'business.1',
+      normalizedDomain: 'example.com',
+      evidence: [
+        {
+          ...domainEvidence,
+          retention: {
+            retentionTtlSeconds: null,
+            deletionRequired: false,
+            refreshAfterSeconds: 3600,
+          },
+        },
+      ],
+      decision: {
+        ...verifiedDomainDecision,
+        evaluatedAt: '2026-09-22T00:30:00.000Z',
+      },
+    });
+
+    expect(parsed.decision.decision).toBe('verified');
+  });
+
+  it('fails closed when deterministic verification reuses stale domain evidence', () => {
+    expect(() =>
+      BusinessDomainVerificationEvaluationSchema.parse({
+        version: '1.0.0',
+        workspaceId: 'workspace.1',
+        canonicalBusinessId: 'business.1',
+        normalizedDomain: 'example.com',
+        evidence: [
+          {
+            ...domainEvidence,
+            retention: {
+              retentionTtlSeconds: null,
+              deletionRequired: false,
+              refreshAfterSeconds: 3600,
+            },
+          },
+        ],
+        decision: {
+          ...verifiedDomainDecision,
+          evaluatedAt: '2026-09-22T02:00:00.000Z',
+        },
+      }),
+    ).toThrow(/stale evidence|refresh window|human review/i);
+  });
+
+  it('permits explicit human review to resolve stale evidence while retaining durable review provenance', () => {
+    const parsed = BusinessDomainVerificationEvaluationSchema.parse({
+      version: '1.0.0',
+      workspaceId: 'workspace.1',
+      canonicalBusinessId: 'business.1',
+      normalizedDomain: 'example.com',
+      evidence: [
+        {
+          ...domainEvidence,
+          retention: {
+            retentionTtlSeconds: null,
+            deletionRequired: false,
+            refreshAfterSeconds: 3600,
+          },
+        },
+      ],
+      decision: {
+        ...verifiedDomainDecision,
+        method: 'human_review',
+        reviewDecisionRef: 'review.domain.stale.1',
+        evaluatedAt: '2026-09-22T02:00:00.000Z',
+      },
+    });
+
+    expect(parsed.decision.reviewDecisionRef).toBe('review.domain.stale.1');
+  });
+
+  it('rejects verification timestamps that precede referenced evidence observation', () => {
+    expect(() =>
+      BusinessDomainVerificationEvaluationSchema.parse({
+        version: '1.0.0',
+        workspaceId: 'workspace.1',
+        canonicalBusinessId: 'business.1',
+        normalizedDomain: 'example.com',
+        evidence: [domainEvidence],
+        decision: {
+          ...verifiedDomainDecision,
+          evaluatedAt: '2026-09-21T23:59:00.000Z',
+        },
+      }),
+    ).toThrow(/before referenced evidence was observed/i);
+  });
+});
+
 describe('ContactDataEligibilityDecisionSchema', () => {
   it('fails closed on export while contact data is blocked or still awaiting review', () => {
     expect(() =>
