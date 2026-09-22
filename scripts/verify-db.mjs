@@ -60,6 +60,10 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS approved_business_contact_evidence');
+  await pool.query('DROP TABLE IF EXISTS contact_data_eligibility_decisions');
+  await pool.query('DROP TABLE IF EXISTS business_domain_verification_decisions');
+  await pool.query('DROP TABLE IF EXISTS business_domain_evidence');
   await pool.query('ALTER TABLE IF EXISTS canonical_businesses DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk');
   await pool.query('DROP TABLE IF EXISTS canonical_business_lineage_operations');
   await pool.query('DROP TABLE IF EXISTS canonical_business_aliases');
