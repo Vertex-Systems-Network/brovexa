@@ -79,7 +79,13 @@ describe('entity enrichment persistence validation', () => {
 
   it('rejects deterministic verification backed only by a source claim', async () => {
     const query = vi.fn().mockResolvedValueOnce({
-      rows: [{ id: 'domain-evidence.1', kind: 'source_claim', effect: 'supports_domain' }],
+      rows: [{
+        id: 'domain-evidence.1',
+        kind: 'source_claim',
+        effect: 'supports_domain',
+        observed_at: observedAt,
+        refresh_after_seconds: '604800',
+      }],
     });
     await expect(
       persistBusinessDomainVerificationDecision(poolWith(query), {
@@ -97,6 +103,115 @@ describe('entity enrichment persistence validation', () => {
       }),
     ).rejects.toMatchObject({ code: 'DOMAIN_DECISION_EVIDENCE_INVALID' });
     expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects stale deterministic domain verification before insert', async () => {
+    const staleEvaluatedAt = new Date('2026-09-22T02:00:00.000Z');
+    const query = vi.fn().mockResolvedValueOnce({
+      rows: [{
+        id: 'domain-evidence.1',
+        kind: 'official_website',
+        effect: 'supports_domain',
+        observed_at: observedAt,
+        refresh_after_seconds: '3600',
+      }],
+    });
+
+    await expect(
+      persistBusinessDomainVerificationDecision(poolWith(query), {
+        verificationId: 'verification.stale.1',
+        workspaceId,
+        canonicalBusinessId: 'business.1',
+        normalizedDomain: 'example.com',
+        decision: 'verified',
+        method: 'deterministic',
+        confidence: 0.99,
+        evidenceIds: ['domain-evidence.1'],
+        reasonCodes: ['domain_independent_support'],
+        reviewDecisionRef: null,
+        evaluatedAt: staleEvaluatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'DOMAIN_DECISION_EVIDENCE_INVALID' });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects verified domain evaluation before referenced evidence observation', async () => {
+    const futureObservedAt = new Date('2026-09-22T02:00:00.000Z');
+    const earlyEvaluatedAt = new Date('2026-09-22T01:00:00.000Z');
+    const query = vi.fn().mockResolvedValueOnce({
+      rows: [{
+        id: 'domain-evidence.1',
+        kind: 'official_website',
+        effect: 'supports_domain',
+        observed_at: futureObservedAt,
+        refresh_after_seconds: '3600',
+      }],
+    });
+
+    await expect(
+      persistBusinessDomainVerificationDecision(poolWith(query), {
+        verificationId: 'verification.future.1',
+        workspaceId,
+        canonicalBusinessId: 'business.1',
+        normalizedDomain: 'example.com',
+        decision: 'verified',
+        method: 'human_review',
+        confidence: 0.99,
+        evidenceIds: ['domain-evidence.1'],
+        reasonCodes: ['domain_reviewed'],
+        reviewDecisionRef: 'review.domain.1',
+        evaluatedAt: earlyEvaluatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'DOMAIN_DECISION_EVIDENCE_INVALID' });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows stale evidence only through explicit human review provenance', async () => {
+    const staleEvaluatedAt = new Date('2026-09-22T02:00:00.000Z');
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'domain-evidence.1',
+          kind: 'official_website',
+          effect: 'supports_domain',
+          observed_at: observedAt,
+          refresh_after_seconds: '3600',
+        }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'verification.reviewed.1',
+          workspace_id: workspaceId,
+          canonical_business_id: 'business.1',
+          normalized_domain: 'example.com',
+          decision: 'verified',
+          method: 'human_review',
+          confidence: 0.99,
+          evidence_ids: ['domain-evidence.1'],
+          reason_codes: ['domain_reviewed'],
+          review_decision_ref: 'review.domain.1',
+          evaluated_at: staleEvaluatedAt,
+          created_at: staleEvaluatedAt,
+        }],
+      });
+
+    const result = await persistBusinessDomainVerificationDecision(poolWith(query), {
+      verificationId: 'verification.reviewed.1',
+      workspaceId,
+      canonicalBusinessId: 'business.1',
+      normalizedDomain: 'example.com',
+      decision: 'verified',
+      method: 'human_review',
+      confidence: 0.99,
+      evidenceIds: ['domain-evidence.1'],
+      reasonCodes: ['domain_reviewed'],
+      reviewDecisionRef: 'review.domain.1',
+      evaluatedAt: staleEvaluatedAt,
+    });
+    expect(result.created).toBe(true);
+    expect(result.record.reviewDecisionRef).toBe('review.domain.1');
+    expect(query).toHaveBeenCalledTimes(2);
   });
 
   it('fails closed when review-required contact data tries to enable display or export', async () => {
@@ -269,6 +384,24 @@ describe('0015 entity enrichment evidence migration contract', () => {
     expect(migration).toContain("outreach_authorization = 'not_evaluated'");
     expect(migration).not.toContain('http://');
     expect(migration).not.toContain('https://');
+  });
+
+  it('adds and rolls back the 0016 durable domain freshness guard', async () => {
+    const migration = await readFile(
+      resolve(process.cwd(), 'migrations/0016_entity_enrichment_freshness_guard.up.sql'),
+      'utf8',
+    );
+    const rollback = await readFile(
+      resolve(process.cwd(), 'migrations/down/0016_entity_enrichment_freshness_guard.down.sql'),
+      'utf8',
+    );
+
+    expect(migration).toContain('NEW.evaluated_at < evidence.observed_at');
+    expect(migration).toContain('evidence.refresh_after_seconds IS NOT NULL');
+    expect(migration).toContain('make_interval');
+    expect(migration).toContain('business_domain_verification_decisions_freshness_guard');
+    expect(rollback).toContain('CREATE OR REPLACE FUNCTION brovexa_internal.guard_domain_verification_decision()');
+    expect(rollback).toContain('business_domain_verification_decisions_policy_guard');
   });
 
   it('keeps replay and purge lookups workspace-scoped', async () => {
