@@ -306,3 +306,10 @@ Every agent handoff includes at least:
 - completion signal status.
 
 See `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md`, and `docs/AGENT_BRANCH_LEASES.md` for the full operating model.
+
+
+## VSN organization next-action handoff
+
+Before every user-facing development handoff, read and follow `.ai/NEXT-ACTION-OPTIONS.md`.
+
+If the user sends only this repository's GitHub URL, perform the policy's read-only bootstrap and return shuffled numbered next-action options. A URL-only message never authorizes a repository mutation. A later numeric selection must revalidate live repository state before acting.
