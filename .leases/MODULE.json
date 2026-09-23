@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/module-infrastructure",
+  "slot_id": "MODULE",
+  "agent_id": "AGENT-MODULE",
+  "agent_instance_id": "module-chatgpt-20260924-org-options-r79a1",
+  "work_packet_id": "ORG-NEXT-ACTION-OPTIONS-001",
+  "lease_id": "lease-module-20260924-org-options-r79a1",
+  "synced_main_sha": "b1ca033611d39b372f5d8df2a6119028b1647d12",
+  "sync_epoch": 79,
+  "acquired_branch_head_sha": "b1ca033611d39b372f5d8df2a6119028b1647d12",
+  "acquired_at": "2026-09-23T20:14:17Z",
+  "renewed_at": "2026-09-23T20:14:17Z"
+}
