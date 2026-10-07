@@ -6,18 +6,19 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-10-08**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005` plus the persistence freshness hardening in PR #153 / migration `0016` are integrated. The remaining known M03 defect is issue #154: the durable source/connector key regex constraints do not match the TypeScript persistence contract, so a forward migration is required before ER-006 can be declared complete. Separately, `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is hardening the workspace so technical blockers/errors do not wait on user confirmation and README progress remains synchronized. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005` plus the persistence freshness hardening in PR #153 / migration `0016` are integrated. The remaining known M03 defect is issue #154: the durable source/connector key regex constraints do not match the TypeScript persistence contract, so a forward migration is required before ER-006 can be declared complete. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `3748d1c74612a261fcd407b8c44110af74c7e41b`
-- **Synchronization epoch:** `80`
-- **Live registry revision at reconciliation:** `197`
+- **Exact integrated main:** `ffcee0382f3a88a9000b1d429b98fe0998e751a4`
+- **Synchronization epoch:** `81`
+- **Live registry revision at reconciliation:** `199`
 - **Current product packet:** `M03-ER-006` / `BLOCKED_ON_DURABLE_KEY_CONSTRAINT_FIX`
 - **Current integration path:** freshness hardening #153 / `0016` integrated → issue #154 forward-fix on `0017` → unchanged ER-006 verification
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
-- **Current Supervisor packet:** `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` / `VERIFYING`
-- **Next dependency-safe product packet after this governance merge:** reserve/implement `0017` for issue #154, then rerun ER-006
+- **Current Supervisor packet:** `SUP-README-PROGRESS-RECONCILE-001` / `WORKING`
+- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors no longer require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
+- **Next dependency-safe product packet:** reserve/implement `0017` for issue #154, then rerun ER-006
 - **M03 execution progress:** **~90%**
 
 `█████████░ 90%`
