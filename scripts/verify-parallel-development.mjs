@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '..');
 
 const requiredFiles = [
   'AGENTS.md',
+  '.ai/NEXT-ACTION-OPTIONS.md',
   'README.md',
   'docs/PROJECT_PLAN.md',
   'docs/CHECKPOINT.md',
@@ -90,6 +91,7 @@ for (const path of requiredFiles) {
 }
 
 const agents = await read('AGENTS.md');
+const nextActionOptions = await read('.ai/NEXT-ACTION-OPTIONS.md');
 const readme = await read('README.md');
 const plan = await read('docs/PROJECT_PLAN.md');
 const checkpoint = await read('docs/CHECKPOINT.md');
@@ -156,6 +158,20 @@ requireText(aiNativePlan, 'Standing slot definitions', 'docs/AI_NATIVE_PLAN.md')
 requireText(aiNativePlan, 'latest valid Supervisor broadcast comment', 'docs/AI_NATIVE_PLAN.md');
 requireText(onboarding, 'Brovexa New Agent Onboarding', 'docs/NEW_AGENT_ONBOARDING.md');
 requireText(onboarding, '.agent/slots.yaml', 'docs/NEW_AGENT_ONBOARDING.md');
+
+requireText(nextActionOptions, 'Autonomous workspace continuation', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'presentation only', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'Do not pause to ask the user which technical next action to take.', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(agents, 'Autonomous continuous execution — mandatory', 'AGENTS.md');
+requireText(agents, 'This no-slot response is never a global workspace stop condition', 'AGENTS.md');
+requireText(aiNativePlan, 'Autonomous continuous-execution loop', 'docs/AI_NATIVE_PLAN.md');
+requireText(protocol, 'Autonomous continuation across blockers', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
+requireText(onboarding, 'This no-slot path is not a global Supervisor stop.', 'docs/NEW_AGENT_ONBOARDING.md');
+requireText(supervisor, 'next_action_options_are_execution_gate: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'technical_confirmation_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'blocked_lane_is_global_stop: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'ask_user_only_when_no_safe_work_remains: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'readme_progress_reconcile_at_material_batch_boundary: true', '.agent/supervisor.yaml');
 
 const completionSignal = 'Work Done and Submitted';
 const syncAlert = 'New changes have been merged — please merge these changes into your branch first, then resume your own work.';
