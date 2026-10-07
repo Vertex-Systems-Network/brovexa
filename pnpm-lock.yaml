@@ -3523,7 +3523,7 @@ snapshots:
       '@img/sharp-win32-arm64': 0.35.5
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
-      '@types/node': 25.9.1
+      '@types/node': 24.13.0
     optional: true
 
   side-channel-list@1.0.1:
