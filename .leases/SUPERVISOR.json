@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "supervisor/integration-control",
+  "slot_id": "SUPERVISOR",
+  "agent_id": "SUPERVISOR",
+  "agent_instance_id": "supervisor-chatgpt-20261008-continuous-flow-r80a1",
+  "work_packet_id": "SUP-AI-NATIVE-CONTINUOUS-FLOW-001",
+  "lease_id": "lease-supervisor-20261008-continuous-flow-r80a1",
+  "synced_main_sha": "b1ca033611d39b372f5d8df2a6119028b1647d12",
+  "sync_epoch": 79,
+  "acquired_branch_head_sha": "b1ca033611d39b372f5d8df2a6119028b1647d12",
+  "acquired_at": "2026-10-07T20:45:00Z",
+  "renewed_at": "2026-10-07T20:45:00Z"
+}
