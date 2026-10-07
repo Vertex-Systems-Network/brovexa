@@ -2,7 +2,7 @@ version: 1
 policy: serialized-reservation
 
 latest_integrated_migration: "0016_entity_enrichment_freshness_guard"
-next_unreserved_number: "0017"
+next_unreserved_number: "0018"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -62,3 +62,9 @@ reservations:
     branch: agent/database-persistence
     owner: AGENT-DATABASE
     status: INTEGRATED
+  - number: "0017"
+    name: entity_enrichment_source_connector_key_constraints
+    task_id: M03-ER-006-KEY-CONSTRAINT-FIX
+    branch: agent/database-persistence
+    owner: AGENT-DATABASE
+    status: RESERVED
