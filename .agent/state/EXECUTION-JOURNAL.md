@@ -32,3 +32,9 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Clarified that no-slot and lease-collision stops are lane-local, not global workspace stops.
 - Reconciled migration `0016_entity_enrichment_freshness_guard` as integrated; `0017` remains the next unreserved migration for issue #154.
 - README progress synchronization remains mandatory at material batch boundaries.
+
+## 2026-10-08 — exact-head FULL GATE dependency repair
+
+- Initial PR #158 exact-head governance checks passed, then `pnpm audit --audit-level high` surfaced pre-existing critical/high advisories in Next.js 16.3.3, proxy-addr 2.0.7, source-map-js 1.2.1, and sharp 0.35.4.
+- The security gate was not bypassed or suppressed. The branch now uses Next.js 16.3.6 and exact transitive overrides proxy-addr 2.0.8, source-map-js 1.2.2, and sharp 0.35.5 with the matching Sharp 0.35.5 / libvips 1.3.4 platform lock graph.
+- A PR synchronize run captured stale pre-update handoff metadata and correctly failed the exact-head lease gate. Recovery uses the repository's future-head-metadata-first pattern: create this commit object unattached, publish its exact SHA in the PR handoff, then move the branch ref non-destructively with expected-head protection.
