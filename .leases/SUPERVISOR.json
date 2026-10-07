@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "supervisor/integration-control",
+  "slot_id": "SUPERVISOR",
+  "agent_id": "SUPERVISOR",
+  "agent_instance_id": "supervisor-chatgpt-20261008-m03-key-reservation-r82a1",
+  "work_packet_id": "SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION",
+  "lease_id": "lease-supervisor-20261008-m03-key-reservation-r82a1",
+  "synced_main_sha": "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c",
+  "sync_epoch": 82,
+  "acquired_branch_head_sha": "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c",
+  "acquired_at": "2026-10-07T21:45:00Z",
+  "renewed_at": "2026-10-07T21:45:00Z"
+}
