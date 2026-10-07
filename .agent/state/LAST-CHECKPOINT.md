@@ -2,20 +2,22 @@
 
 ## Source of truth
 
-Repository/runtime evidence outranks this compact checkpoint. Baseline main is `e760fa797545533517b6de84cc675c4060e3e36e`, synchronization epoch is **77**, and live registry revision at reconciliation is **193**.
+Repository/runtime evidence outranks this compact checkpoint. Baseline main is `3748d1c74612a261fcd407b8c44110af74c7e41b`, synchronization epoch is **80**, and live registry revision at reconciliation is **197**.
 
-PR #151 (`M03-ER-006-FRESHNESS-FIX`) is integrated. Exact-head CI `35768486884` and resulting-main CI `35769464173` passed all three required FULL GATE lanes. Deterministic contract evaluation now fails closed on stale evidence beyond `refreshAfterSeconds` and on evaluation timestamps before evidence observation.
+PR #153 integrated `0016_entity_enrichment_freshness_guard`; its resulting-main CI `35816903364` and Persistent Supervisor run `35912907068` were successful. PR #157 then integrated the organization next-action handoff contract; exact-head CI `35914760657` was successful.
 
-## Active security blocker
+## AI-Native flow defect and repair
 
-Independent verification PR #150 is preserved on VERIFY. Its current security-review head added direct persistence adversarial assertions after manual review found that `persistBusinessDomainVerificationDecision` and the durable SQL decision guard can still accept stale deterministic domain verification when callers bypass the contract evaluation schema.
+The interactive handoff added by PR #157 required 1-3 numbered next actions after every development response and made a later numeric selection the trigger for the next mutation. That is incompatible with standing autonomous-workspace authority because it can turn a presentation choice into a development stop.
 
-The adversarial test is intentionally not weakened. DATABASE owns `M03-ER-006-FRESHNESS-PERSISTENCE-FIX`; migration `0016_entity_enrichment_freshness_guard` is reserved by the current Supervisor reconciliation changeset because integrated migration `0015` is immutable.
+`SUP-AI-NATIVE-CONTINUOUS-FLOW-001` changes that behavior: technical blockers/errors are self-repaired or converted into an evidence-backed blocked packet while another safe lane continues; no-slot/lease collisions are lane-local rather than global; stale leases use the existing audited recovery path; next-action options are informational in autonomous mode; true human-only external gates are recorded as `WAITING_EXTERNAL` while other safe work continues.
+
+Migration `0016` is also reconciled from stale `IMPLEMENTED` state to `INTEGRATED`, so the next unreserved migration remains `0017`.
 
 ## Exact next action
 
-Integrate this bounded reservation/state reconciliation, synchronize DATABASE to the new main/epoch, implement persistence API + SQL freshness enforcement and focused regression/rollback coverage, then synchronize VERIFY and rerun PR #150 unchanged.
+Integrate the autonomous-flow governance/state reconciliation through exact-head FULL GATE and expected-head merge. After resulting-main verification, continue M03 automatically: reserve `0017` for issue #154's source/connector key-constraint forward fix, implement/verify it, then rerun ER-006.
 
 ## Safety boundaries
 
-No provider/network activation, production credentials, autonomous/bulk outreach, destructive production mutation, auth weakening, force push, direct main push, required-gate deferral, or test weakening.
+No branch-protection bypass, no force push, no direct main push, no test/security weakening, no production provider/network credential activation, no autonomous/bulk outreach, and no destructive production mutation.
