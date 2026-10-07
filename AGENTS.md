@@ -21,6 +21,23 @@ Before planning or changing code, every agent must:
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
 
+## Autonomous continuous execution — mandatory
+
+When the user has already granted standing autonomous-development authority or explicitly asked the workspace to continue without technical confirmation, the Supervisor must operate in autonomous continuation mode:
+
+1. reconcile exact `main`, open Issues/PRs, issue #50/#53, live leases, compact state, active CI and Runner obligations;
+2. choose the highest-priority dependency-safe action from repository evidence and execute it without asking the user to choose a technical option;
+3. on technical failure, inspect evidence, repair/retry within scope, rerun verification, and continue; never ask the user to approve a code/CI/test/config/documentation repair already authorized by repository governance;
+4. when one lane is blocked or legitimately occupied, preserve it and continue another safe ready packet rather than stopping the whole workspace;
+5. for a stale lease, perform the explicit recovery audit from `docs/AGENT_BRANCH_LEASES.md` autonomously when evidence is sufficient; otherwise leave the lease untouched and move to other safe work;
+6. for a true human-only external dependency, record `WAITING_EXTERNAL` with evidence and continue other authorized work. Ask the user only when the missing external input is required and no other safe repository work remains;
+7. after every material batch boundary, reconcile the root README progress snapshot/bar before the user-facing handoff;
+8. continue within the active workspace turn/session until no dependency-safe authorized work remains or a hard tool/context/runtime limit prevents further execution.
+
+The 1/2/3 next-action handoff in `.ai/NEXT-ACTION-OPTIONS.md` is not an execution gate in this mode. The canonical safe action is self-selected and started automatically; options may still be shown as informational handoff metadata after progress is made.
+
+This mode does not authorize bypassing branch protection, exact-head gates, security/compliance controls, production/provider activation boundaries, destructive-operation approval, or preservation of concurrent agents' work.
+
 ## New Agent Onboarding — mandatory
 
 A newly arriving agent **always starts from the exact current `main` branch/head**. It does not begin from a standing module branch and does not start feature work before Supervisor assignment.
@@ -42,11 +59,11 @@ Onboarding decisions are serialized by the Supervisor so two arrivals cannot cla
 
 New-agent arrival never creates extra capacity on demand. A new module/branch must be planned and bootstrapped before it can exist as an assignable slot.
 
-If **no assignable live `OPEN` slot exists**, the Supervisor stops the new agent immediately and responds exactly:
+If **no assignable live `OPEN` slot exists**, the Supervisor stops **that newly arriving worker only** and responds exactly:
 
 **Go Home Come Back Next Time**
 
-In that case there is **no module assignment, no module-branch checkout, no work packet, no feature edit, and no agent PR**.
+In that case there is **no module assignment, no module-branch checkout, no work packet, no feature edit, and no agent PR for that arrival**. This no-slot response is never a global workspace stop condition: the Supervisor must continue its current packet, review/integration queue, recovery work, or another already-authorized dependency-safe packet without asking the user.
 
 A slot returns to `OPEN` only after the Supervisor confirms no active work packet/unmerged work remains, the live instance lease has been safely released, the idle standing branch is synchronized to current `main`, and issue #53 is updated/re-read to confirm release.
 
@@ -102,7 +119,7 @@ Logical slot ownership and live branch-write ownership are separate.
 
 Before the first mutation to any agent or Supervisor work branch, the instance must atomically acquire `.leases/<SLOT_ID>.json` on `coordination/leases` as defined by `docs/AGENT_BRANCH_LEASES.md`.
 
-Each runtime/session uses a unique `agent_instance_id` and `lease_id`. If the slot lease already exists, the new instance **must stop and must not write that branch**, even when it uses the same logical `agent_id`.
+Each runtime/session uses a unique `agent_instance_id` and `lease_id`. If the slot lease already exists, the new instance **must stop writing that branch**, even when it uses the same logical `agent_id`. That branch-level stop is not a workspace-level stop: the Supervisor audits stale ownership for recovery or continues another dependency-safe lane without user confirmation.
 
 Lease renewal and release use the current lease blob SHA as compare-and-swap protection. Leases do not expire silently. Stale/crashed leases require an explicit recovery audit before deletion/takeover.
 
