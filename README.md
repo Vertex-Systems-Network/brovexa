@@ -4,25 +4,25 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 ## Development progress
 
-Updated: **2026-09-23**
+Updated: **2026-10-08**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005` are integrated. PR #151 fixed the contract-layer stale-domain-evidence boundary and resulting-main FULL GATE is green. Independent verification PR #150 then exposed a second security gap: the persistence API / durable DB boundary can still accept stale deterministic domain verification. `M03-ER-006-FRESHNESS-PERSISTENCE-FIX` is therefore active on DATABASE with migration `0016` reserved before final ER-006 verification can close. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005` plus the persistence freshness hardening in PR #153 / migration `0016` are integrated. The remaining known M03 defect is issue #154: the durable source/connector key regex constraints do not match the TypeScript persistence contract, so a forward migration is required before ER-006 can be declared complete. Separately, `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is hardening the workspace so technical blockers/errors do not wait on user confirmation and README progress remains synchronized. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `e760fa797545533517b6de84cc675c4060e3e36e`
-- **Synchronization epoch:** `77`
-- **Live registry revision at reconciliation:** `193`
-- **Current product packet:** `M03-ER-006` / `BLOCKED_ON_PERSISTENCE_FRESHNESS_FIX`
-- **Current integration path:** contract freshness fix #151 integrated → persistence freshness hardening (`0016`) → unchanged independent verification
-- **Current resulting-main CI:** `35769464173` — SUCCESS
-- **Current Supervisor packet:** `SUP-M03-ER-006-SECURITY-RECONCILE`
-- **Next dependency-safe packet:** `M03-ER-006-FRESHNESS-PERSISTENCE-FIX` on DATABASE, then ER-006 rerun
+- **Exact integrated main:** `3748d1c74612a261fcd407b8c44110af74c7e41b`
+- **Synchronization epoch:** `80`
+- **Live registry revision at reconciliation:** `197`
+- **Current product packet:** `M03-ER-006` / `BLOCKED_ON_DURABLE_KEY_CONSTRAINT_FIX`
+- **Current integration path:** freshness hardening #153 / `0016` integrated → issue #154 forward-fix on `0017` → unchanged ER-006 verification
+- **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
+- **Current Supervisor packet:** `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` / `VERIFYING`
+- **Next dependency-safe product packet after this governance merge:** reserve/implement `0017` for issue #154, then rerun ER-006
 - **M03 execution progress:** **~90%**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and intentionally remains at ~90%: ER-001 through ER-005 plus the contract freshness correction are integrated, but independent verification found a persistence-layer freshness bypass that must be fixed and re-verified before M03 can close.
+M03 progress is evidence-based and intentionally remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated, but issue #154's durable key-constraint mismatch still requires a forward fix plus unchanged ER-006 verification before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
@@ -36,7 +36,7 @@ M03 progress is evidence-based and intentionally remains at ~90%: ER-001 through
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
 | M02A | Global Acquisition Studio & Background Research | Provider-neutral packet sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001 through ER-005 + contract freshness fix INTEGRATED; persistence freshness hardening active; ER-006 verification pending | **90%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001 through ER-005 + freshness persistence guard INTEGRATED; issue #154 forward-fix + ER-006 verification pending | **90%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
@@ -101,6 +101,10 @@ Default isolation rule:
 Live-writer invariant:
 
 `one occupied slot = at most one live mutating agent instance`
+
+### Autonomous workspace continuation
+
+With standing autonomous-development authority, the Supervisor does **not** wait for 1/2/3 selection or technical confirmation. It self-selects the canonical safe action, repairs/retries technical failures, treats no-slot/lease blockers as lane-local, records true external human-only blockers as `WAITING_EXTERNAL`, and continues another dependency-safe packet while authorized work remains. README progress is reconciled at every material batch boundary. Safety, branch protection, exact-head CI, production/provider authorization and destructive-operation gates remain unchanged.
 
 ### New Agent Onboarding
 

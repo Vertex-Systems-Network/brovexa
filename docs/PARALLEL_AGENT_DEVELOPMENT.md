@@ -255,6 +255,14 @@ Hosted CI runs on both pull requests and `push` to `main`. A main-push provenanc
 
 This is defense in depth. GitHub branch protection/ruleset remains the external preventive layer and should require PRs/status checks, block force pushes/deletions, and prevent ordinary direct updates. Issue #54 tracks that repository setting.
 
+## Autonomous continuation across blockers
+
+The no-slot and lease-collision rules protect a specific worker lane; they do not authorize a global workspace stop. Under standing autonomous user authority, the Main-repository Supervisor must continue with the next dependency-safe authorized action without asking the user to choose or confirm technical work.
+
+For technical failures, the Supervisor/owning agent diagnoses repository/CI evidence, performs bounded repair/retry, reruns required verification, and either completes the packet or records an evidence-backed blocked state before selecting another ready packet. Stale lease recovery is performed through the explicit recovery audit/CAS contract without user confirmation when the evidence is sufficient; otherwise that lane remains untouched while other safe work proceeds.
+
+Human-only external requirements remain fail-closed and are recorded as `WAITING_EXTERNAL`, but they stop the whole workspace only when no other dependency-safe authorized work exists. Numbered next-action options are informational in autonomous mode and must not be used as a technical execution gate.
+
 ## Verification independence
 
 Implementation agents prove expected behavior; verification/security agents try to break it. Relevant adversarial checks include invalid transitions, replay/idempotency, concurrency/stale state, duplicate live writers, tenant leakage, authorization/policy/budget bypass, append-only mutation, migration rollback, malformed input, dependency drift, network/credential bypass, queue failure/recovery, provenance integrity, IPv4/IPv6 private/reserved destinations, mixed resolution answers, redirect rebinding, and telemetry leakage.

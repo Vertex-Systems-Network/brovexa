@@ -6,6 +6,9 @@ packages:
 # Keep this exact so future releases require a separate dependency review.
 overrides:
   multer: 2.3.0
+  proxy-addr: 2.0.8
+  sharp: 0.35.5
+  source-map-js: 1.2.2
 
 # pnpm 11 defaults minimumReleaseAge to 1440 minutes. zod@4.5.4 is an
 # explicitly reviewed, exact-version bootstrap exception; do not broaden this
