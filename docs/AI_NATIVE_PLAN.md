@@ -21,9 +21,11 @@ Default repository concurrency:
 - one occupied slot = at most one live mutating agent instance;
 - idle specialty slots from the completed M02 network cycle remain available only when a bounded packet actually matches their ownership.
 
-New arrivals never invent slots or branches. If issue #53 has no assignable `OPEN` slot, the Supervisor responds exactly:
+New arrivals never invent slots or branches. If issue #53 has no assignable `OPEN` slot, the Supervisor rejects only that arrival and responds exactly:
 
 **Go Home Come Back Next Time**
+
+This response is worker-onboarding scope only. It must never halt the Supervisor's current work, PR/review queue, recovery work, or another dependency-safe authorized packet.
 
 ### Standing slot definitions
 
@@ -138,6 +140,22 @@ Compact state is a restart accelerator, not a competing source of truth. Reposit
 Before creating any implementation or governance PR, validate the canonical handoff body with `scripts/verify-pr-handoff-preflight.mjs`, which shares `scripts/pr-handoff-contract.mjs` with hosted PR CI. The preflight must match exact branch/head, synced main SHA/epoch, slot, instance and lease. For a fresh synchronize event, create the future commit first, update handoff metadata to that future SHA, then move the branch ref non-destructively.
 
 No new feature packet starts while an actionable governance/integration PR is unresolved.
+
+## Autonomous continuous-execution loop
+
+When standing user authority requests continuous autonomous development, the Supervisor runs a non-blocking execution loop inside the active workspace turn/session:
+
+`RECONCILE → SELECT CANONICAL SAFE ACTION → EXECUTE → VERIFY → PERSIST STATE/README → RECONCILE AGAIN → NEXT SAFE ACTION`
+
+The loop ends only when no dependency-safe authorized repository work remains or a hard tool/context/runtime limit prevents additional execution. A status report, a recoverable technical error, an occupied lane, a stale coordination record, or a numbered next-action handoff is not by itself a stop condition.
+
+Technical blockers are handled without user confirmation: diagnose from logs/repository evidence, patch within ownership, rerun the relevant gate, and continue. Deterministic repeated failure should be converted into an evidence-backed defect/blocked packet and the Supervisor must immediately select another safe ready packet when one exists.
+
+True human-only external gates remain fail-closed. Missing credentials/secrets, legal/business decisions, destructive production authorization, or unavailable external access are recorded as `WAITING_EXTERNAL`; the Supervisor then continues other safe work. User input is requested only when that external dependency is required and no other safe work remains.
+
+Lease/slot safety is preserved. Existing active ownership is never overwritten silently; stale lease recovery uses the explicit audit/CAS process, and an unrecoverable occupied lane is skipped while other safe work continues.
+
+The organization 1/2/3 handoff contract is presentation-only under autonomous continuation. The Supervisor self-selects the recommended/canonical safe action and does not wait for a numeric reply before continuing.
 
 ## Mandatory README progress reconciliation
 
