@@ -96,7 +96,7 @@ A lease is per slot, not merely per branch name. A second session claiming the s
 
 ## No-slot path
 
-If there is no assignable live `OPEN` slot, the Supervisor stops onboarding immediately and responds exactly:
+If there is no assignable live `OPEN` slot, the Supervisor stops onboarding **for that arriving worker only** and responds exactly:
 
 **Go Home Come Back Next Time**
 
@@ -110,6 +110,8 @@ The rejection has no work side effects:
 - no agent implementation PR.
 
 A new arrival never expands capacity on demand. Additional module slots/branches must be planned, bootstrapped, and merged as governance changes before issue #53 may expose them.
+
+This no-slot path is not a global Supervisor stop. Under autonomous continuation, the Supervisor immediately resumes its own packet, pending review/integration/recovery work, or another dependency-safe authorized packet. It does not ask the user for a technical next-action choice merely because the new worker could not be assigned.
 
 ## Explicit M02 ten-worker cycle
 
