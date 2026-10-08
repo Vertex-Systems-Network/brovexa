@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/database-persistence",
+  "slot_id": "DATABASE",
+  "agent_id": "AGENT-DB",
+  "agent_instance_id": "codex-20261008-m03er006-key-constraint-fix-7f51e0",
+  "work_packet_id": "M03-ER-006-KEY-CONSTRAINT-FIX",
+  "lease_id": "lease-codex-20261008-m03er006-7f51e0",
+  "synced_main_sha": "8c26e2301ccf2a97efdfff60e9d7c7af6516bd89",
+  "sync_epoch": 83,
+  "acquired_branch_head_sha": "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c",
+  "acquired_at": "2026-10-08T17:24:00Z",
+  "renewed_at": "2026-10-08T17:24:00Z"
+}
