@@ -9,14 +9,15 @@ Before planning or changing code, every agent must:
 1. Read `README.md`.
 2. Read `AGENTS.md` completely.
 3. Read `docs/PROJECT_PLAN.md`.
-4. Read `docs/CHECKPOINT.md` for the latest integrated state.
+4. Read `docs/ENGINEERING_CONSTITUTION.md` for project-level authority, safety and stop-the-line scope.
+6. Read `docs/CHECKPOINT.md` for the latest integrated state.
 5. Read `docs/PARALLEL_AGENT_DEVELOPMENT.md`.
-6. Read `docs/AI_NATIVE_PLAN.md` for standing branch/module/merge assignments.
-7. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
-8. Read `docs/AGENT_BRANCH_LEASES.md` before mutating any agent/Supervisor work branch.
-9. Read `docs/RUNNER_BENCHMARK.md` and inspect `.agent/runner-benchmark.yaml` for deferred special-Runner work.
-10. Read the relevant milestone/module documents for the assigned workstream.
-11. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
+7. Read `docs/AI_NATIVE_PLAN.md` for standing branch/module/merge assignments.
+8. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
+9. Read `docs/AGENT_BRANCH_LEASES.md` before mutating any agent/Supervisor work branch.
+10. Read `docs/RUNNER_BENCHMARK.md` and inspect `.agent/runner-benchmark.yaml` for deferred special-Runner work.
+11. Read the relevant milestone/module documents for the assigned workstream.
+12. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
 12. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml`, and `.agent/supervisor.yaml`.
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
