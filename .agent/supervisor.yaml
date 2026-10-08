@@ -86,6 +86,9 @@ autonomous_continuation:
   packet_boundary_requires_user_reprompt: false
   self_select_canonical_safe_action: true
   technical_confirmation_required: false
+  implementation_choice_requires_user_input: false
+  architecture_choice_policy: choose_safest_repo_consistent_default_document_and_continue
+  stale_or_conflicting_repo_evidence_policy: reconcile_authoritative_sources_then_continue_or_skip_lane
   prohibit_status_only_stop_while_safe_work_exists: true
   continue_until_no_safe_work_or_hard_runtime_limit: true
   blocked_lane_is_global_stop: false
