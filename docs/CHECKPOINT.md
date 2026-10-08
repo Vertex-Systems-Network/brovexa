@@ -184,8 +184,8 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 ## Next safe actions
 
 1. Integrate PR #160's bounded Supervisor migration-reservation + autonomous-governance reconciliation only after fresh exact-head FULL GATE and expected-head merge.
-2. Synchronize/assign DATABASE to the resulting main/epoch and implement `M03-ER-006-KEY-CONSTRAINT-FIX` in reserved migration `0017` without mutating integrated migrations `0015` or `0016`.
+2. Issue #154 and migration `0017` are fixed and integrated by PR #161; verify the merged resulting-main status and keep the persistent-supervisor degraded signal lane-local.
 3. Replace the four affected durable source/connector key regex constraints with literal-dot-compatible forms and add PostgreSQL positive/negative regression plus rollback coverage.
-4. Integrate the DATABASE fix only after exact-head FULL GATE, then synchronize VERIFY while preserving its real unmerged adversarial work and rerun the unchanged ER-006 assertions.
+4. Preserve VERIFY lease/work ownership; after synchronization is resolved by its holder, rerun unchanged ER-006 adversarial assertions and the resulting-main FULL GATE.
 5. Close M03 only after issue #154 is fixed and ER-006 exact-head + resulting-main FULL GATE are green, with zero unresolved security/review drift.
 6. Preserve provider/network/credential/outreach/production activation as separate explicit gates; no engineering decision is delegated back to the user.
