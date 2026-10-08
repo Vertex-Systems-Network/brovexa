@@ -20,6 +20,7 @@ Updated: **2026-10-08**
 - **Current governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE required before merge
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
+- **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
 - **Next dependency-safe product packet:** integrate the `0017` reservation, assign synchronized DATABASE, implement issue #154 with PostgreSQL regression/rollback coverage, then rerun preserved ER-006 verification
 - **M03 execution progress:** **~90%**
 
