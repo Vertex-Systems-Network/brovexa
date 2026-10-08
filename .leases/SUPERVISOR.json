@@ -8,8 +8,8 @@
   "work_packet_id": "SUP-M03-POST-MERGE-STATE-RECONCILE-001",
   "lease_id": "lease-codex-20261008-brovexa-supervisor-22e57",
   "synced_main_sha": "78b66d42949a9e36ddeddb2672bfe55025bc7f7d",
-  "sync_epoch": 85,
+  "sync_epoch": 84,
   "acquired_branch_head_sha": "78b66d42949a9e36ddeddb2672bfe55025bc7f7d",
   "acquired_at": "2026-10-08T17:59:00Z",
-  "renewed_at": "2026-10-08T17:59:00Z"
+  "renewed_at": "2026-10-08T18:02:00Z"
 }
