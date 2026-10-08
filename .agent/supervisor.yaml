@@ -39,7 +39,7 @@ new_agent_onboarding:
   increment_registry_revision: true
   versioned_docs_do_not_track_live_occupancy: true
   no_open_slot_response: "Go Home Come Back Next Time"
-  no_open_slot_action: STOP_WITHOUT_ASSIGNMENT_OR_WORK
+  no_open_slot_action: STOP_ARRIVING_WORKER_ONLY_CONTINUE_SUPERVISOR
   arrival_must_not_expand_capacity: true
 
 branch_leases:
@@ -81,6 +81,9 @@ runner_benchmark:
 autonomous_continuation:
   standing_user_authority_enables: true
   next_action_options_are_execution_gate: false
+  url_only_entry_is_execution_gate: false
+  url_only_with_standing_authority: autonomous_reconcile_and_continue
+  packet_boundary_requires_user_reprompt: false
   self_select_canonical_safe_action: true
   technical_confirmation_required: false
   prohibit_status_only_stop_while_safe_work_exists: true
