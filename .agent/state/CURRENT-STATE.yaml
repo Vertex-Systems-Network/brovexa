@@ -10,9 +10,10 @@ supervisor_lease_id: "lease-codex-20261008-brovexa-doc-reconcile-b64c9"
 last_completed_packet: "SUP-M03-POST-MERGE-DOC-RECONCILE-002"
 last_completed_main_sha: "2da848babccf8cf15daeaaaa1b8bfada10a54c5b"
 runner_benchmark_deferred_count: 2
-open_pull_requests: []
+open_pull_requests:
+  - "#164"
 current_objective: "Reconcile root progress and compact state after PR #163; preserve M03 at ~90% pending the active VERIFY lease holder's three unmerged ER-006 adversarial test files."
-exact_next_action: "Validate the exact head and all required FULL GATE lanes for this docs PR; merge only with expected-head protection if green, then verify resulting-main CI and advance issue #50/#53."
+exact_next_action: "Validate PR #164 exact head and all required FULL GATE lanes; merge only with expected-head protection if green, then verify resulting-main CI and advance issue #50/#53."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main
