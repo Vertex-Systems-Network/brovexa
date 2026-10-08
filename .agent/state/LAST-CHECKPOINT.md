@@ -2,22 +2,33 @@
 
 ## Source of truth
 
-Repository/runtime evidence outranks this compact checkpoint. Baseline main is `3748d1c74612a261fcd407b8c44110af74c7e41b`, synchronization epoch is **80**, and live registry revision at reconciliation is **197**.
+Repository/runtime evidence outranks this compact checkpoint. Reconciled integrated main is `50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c`, synchronization epoch is **82**, and live registry revision at the current reservation packet is **202**.
 
-PR #153 integrated `0016_entity_enrichment_freshness_guard`; its resulting-main CI `35816903364` and Persistent Supervisor run `35912907068` were successful. PR #157 then integrated the organization next-action handoff contract; exact-head CI `35914760657` was successful.
+PR #158 integrated autonomous continuous execution. PR #159 reconciled README progress and passed exact-head CI `37689785112` plus Persistent Supervisor `37689785230`.
 
-## AI-Native flow defect and repair
+## Active packet
 
-The interactive handoff added by PR #157 required 1-3 numbered next actions after every development response and made a later numeric selection the trigger for the next mutation. That is incompatible with standing autonomous-workspace authority because it can turn a presentation choice into a development stop.
+`SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION` is VERIFYING in PR #160.
 
-`SUP-AI-NATIVE-CONTINUOUS-FLOW-001` changes that behavior: technical blockers/errors are self-repaired or converted into an evidence-backed blocked packet while another safe lane continues; no-slot/lease collisions are lane-local rather than global; stale leases use the existing audited recovery path; next-action options are informational in autonomous mode; true human-only external gates are recorded as `WAITING_EXTERNAL` while other safe work continues.
+The packet reserves migration `0017_entity_enrichment_source_connector_key_constraints` for issue #154 and also closes autonomous-flow drift found during the blocker audit:
 
-Migration `0016` is also reconciled from stale `IMPLEMENTED` state to `INTEGRATED`, so the next unreserved migration remains `0017`.
+- URL-only repository re-entry cannot force read-only/number-selection mode when standing autonomous authority exists;
+- routine implementation/architecture/tooling/test/migration choices are AI-owned and do not require user coding direction;
+- no-slot rejection is explicitly arriving-worker-only and never a global workspace stop;
+- PROJECT-level repository development across the documented roadmap does not require per-task/module/milestone/phase re-approval;
+- STOP-THE-LINE incidents stop the affected lane/operation, while unrelated safe work continues unless repository-wide integrity is untrusted;
+- the user is never assigned coding, CI, Git, migration, testing, logs, configuration, or documentation repair.
+
+A previous PR #160 exact-head run `37691098038` correctly failed because compact state used non-durable `WORKING`. The state was repaired to `VERIFYING`; the verifier was preserved and strengthened rather than bypassed.
+
+## Current product path
+
+M03 remains ~90%. Migrations `0015` and `0016` are integrated. Issue #154 is the remaining known durable key-contract mismatch; `0017` is reserved for its forward fix. VERIFY's real unmerged adversarial work remains preserved for the unchanged ER-006 rerun after the DATABASE fix.
 
 ## Exact next action
 
-Integrate the autonomous-flow governance/state reconciliation through exact-head FULL GATE and expected-head merge. After resulting-main verification, continue M03 automatically: reserve `0017` for issue #154's source/connector key-constraint forward fix, implement/verify it, then rerun ER-006.
+Require fresh exact-head FULL GATE for PR #160. If green, merge with expected-head protection, verify resulting main, advance issue #50 epoch / issue #53 coordination, then assign the synchronized DATABASE lane to implement migration `0017` with PostgreSQL positive/negative regression and rollback coverage. Do not ask the user for engineering direction.
 
 ## Safety boundaries
 
-No branch-protection bypass, no force push, no direct main push, no test/security weakening, no production provider/network credential activation, no autonomous/bulk outreach, and no destructive production mutation.
+No branch-protection bypass, force push, direct main push, test/security weakening, production provider/network credential activation, autonomous/bulk outreach, destructive production mutation, or silent legal/commercial assumption.
