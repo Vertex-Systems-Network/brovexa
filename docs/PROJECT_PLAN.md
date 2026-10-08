@@ -28,7 +28,7 @@ Each async stage must be independently retryable, idempotent, versioned, observa
 
 ## M00 — Product, Compliance & Architecture Baseline
 
-M00/ABD-215 readiness and explicit owner consent are satisfied for active development. Production/provider/legal/commercial gates remain separately authoritative.
+M00/ABD-215 readiness and explicit owner consent are satisfied for active development. As of 2026-10-08, repository-development authority is PROJECT-level across the documented roadmap: planned modules/milestones/phases do not require a fresh user prompt merely to continue engineering. Production/provider/legal/commercial, destructive, and other separately gated external actions remain separately authoritative.
 
 ## M01 — Platform Foundation & Developer Experience
 Linear: ABD-216
@@ -153,7 +153,7 @@ Default work invariant:
 
 `1 agent = 1 bounded work packet = 1 isolated/standing branch = 1 PR`
 
-New-agent onboarding, lease acquisition, head-bound completion signals, expected-head merge, resulting-main FULL GATE and post-merge synchronization are mandatory. After every accepted merge, the Supervisor broadcasts exactly: **New changes have been merged — please merge these changes into your branch first, then resume your own work.** If there is no assignable live slot, the exact response is **Go Home Come Back Next Time**.
+New-agent onboarding, lease acquisition, head-bound completion signals, expected-head merge, resulting-main FULL GATE and post-merge synchronization are mandatory. After every accepted merge, the Supervisor broadcasts exactly: **New changes have been merged — please merge these changes into your branch first, then resume your own work.** If there is no assignable live slot, the exact response is **Go Home Come Back Next Time** for that arriving worker only; the Supervisor continues current/review/recovery or another dependency-safe authorized packet.
 
 ## Main-branch integration integrity
 
@@ -183,6 +183,10 @@ Tests/invariants are never weakened merely to make CI green.
 - no silent production self-training from feedback
 - memory provenance/retention/conflict handling
 - human approval for high-impact external/irreversible actions
+
+## Autonomous development authority
+
+Per-module or per-milestone development re-approval is not required for work already represented by this project plan. Routine architecture, implementation, CI, Git, migration, testing, documentation, and dependency choices are resolved by the AI from repository evidence and contracts. The user is not assigned engineering work. Human input is reserved for genuinely new out-of-roadmap product/business decisions or separately gated external/legal/credential/production/destructive actions when no other safe repository work remains.
 
 ## Definition of Ready
 
