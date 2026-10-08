@@ -36,6 +36,8 @@ When the user has already granted standing autonomous-development authority or e
 
 The 1/2/3 next-action handoff in `.ai/NEXT-ACTION-OPTIONS.md` is not an execution gate in this mode. The canonical safe action is self-selected and started automatically; options may still be shown as informational handoff metadata after progress is made.
 
+A message containing only the repository URL also must not reset an already-authorized autonomous workspace into read-only/number-selection mode. Under standing authority it is a continuation/re-entry signal: reconcile live state and continue the canonical safe action without asking what to do next.
+
 This mode does not authorize bypassing branch protection, exact-head gates, security/compliance controls, production/provider activation boundaries, destructive-operation approval, or preservation of concurrent agents' work.
 
 ## New Agent Onboarding — mandatory
