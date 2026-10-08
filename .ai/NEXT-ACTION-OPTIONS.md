@@ -27,15 +27,12 @@ When the user has already granted standing autonomous-development authority, ask
 
 ## URL-only repository entry
 
-When the user's message contains only this repository's canonical GitHub URL (optionally with surrounding whitespace), treat it as a read-only development entry request.
+A URL-only message is **not** allowed to reintroduce a confirmation gate when standing autonomous-development authority already exists.
 
-1. Resolve the repository and default/protected branch.
-2. Read this repository's durable/current state and governing instructions.
-3. Reconcile open Issues first, then open PRs, then any repository-specific coordination/runner state required by local rules.
-4. Do **not** create a branch, commit, PR, merge, deployment, provider call, destructive action, or other mutation from the URL alone.
-5. Respond with 1 to 3 shuffled valid next-action options and mark the canonical one **Recommended**.
-6. The user's subsequent number selection initiates the normal fully revalidated development turn.
+- With standing autonomous authority: treat the repository URL as a continuation/re-entry signal. Resolve current repository state, reconcile Issues/PRs/coordination/CI, self-select the canonical dependency-safe action, and continue within the active workspace turn/session without waiting for a number or technical confirmation.
+- Without standing autonomous authority: use read-only entry behavior. Resolve the repository and governing state, do not mutate from the URL alone, and present 1 to 3 valid next-action options for the user to select.
+- In both modes, revalidate current repository evidence before mutation and preserve all security, branch-protection, production/provider, destructive-action, and authorization gates.
 
 ## Safety and local authority
 
-Repository-specific governance, security, exact-head CI, approval, migration, production/provider, release, and one-turn/one-milestone rules remain authoritative and may be stricter than this interaction contract. This file never grants execution authority and never permits bypassing an accepted actionable Issue/PR or deferred work boundary.
+Repository-specific governance, security, exact-head CI, approval, migration, production/provider, and release rules remain authoritative and may be stricter than this interaction contract. Scope/batch boundaries may limit what one packet changes, but under standing autonomous authority they do not require a user re-prompt before the Supervisor selects and starts the next dependency-safe authorized packet. This file never grants execution authority and never permits bypassing an accepted actionable Issue/PR or deferred work boundary.
