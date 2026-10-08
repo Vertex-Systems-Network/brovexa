@@ -16,8 +16,9 @@ Updated: **2026-10-08**
 - **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `MIGRATION_0017_RESERVED`
 - **Current integration path:** freshness hardening #153 / `0016` integrated → issue #154 forward-fix on `0017` → unchanged ER-006 verification
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
-- **Current Supervisor packet:** `SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION` / `WORKING`
-- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors no longer require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
+- **Current Supervisor packet:** `SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION` / `VERIFYING`
+- **Current governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE required before merge
+- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Next dependency-safe product packet:** integrate the `0017` reservation, assign synchronized DATABASE, implement issue #154 with PostgreSQL regression/rollback coverage, then rerun preserved ER-006 verification
 - **M03 execution progress:** **~90%**
 
