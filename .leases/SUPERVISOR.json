@@ -7,9 +7,9 @@
   "agent_instance_id": "codex-20261008-brovexa-supervisor-doc-reconcile-b64c9",
   "work_packet_id": "SUP-M03-POST-MERGE-DOC-RECONCILE-002",
   "lease_id": "lease-codex-20261008-brovexa-doc-reconcile-b64c9",
-  "synced_main_sha": "ecaf1874e9e634e224fbc255957eb9903679b3c4",
-  "sync_epoch": 85,
+  "synced_main_sha": "2da848babccf8cf15daeaaaa1b8bfada10a54c5b",
+  "sync_epoch": 86,
   "acquired_branch_head_sha": "ecaf1874e9e634e224fbc255957eb9903679b3c4",
   "acquired_at": "2026-10-08T18:20:00Z",
-  "renewed_at": "2026-10-08T18:20:00Z"
+  "renewed_at": "2026-10-08T18:24:00Z"
 }
