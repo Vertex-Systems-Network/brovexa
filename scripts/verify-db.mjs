@@ -482,6 +482,88 @@ async function verifyM03EntityResolutionGuards(testPool, workspaceId) {
   );
 }
 
+async function verifyM03EntityEnrichmentKeyConstraints(testPool, workspaceId) {
+  const businessId = 'm03-key-constraint-business';
+  await testPool.query(
+    'INSERT INTO canonical_businesses (id, workspace_id, display_name) VALUES ($1, $2::uuid, $3)',
+    [businessId, workspaceId, 'M03 Key Constraint Business'],
+  );
+
+  async function insertDomainEvidence(client, id, sourceKey) {
+    await client.query(
+      `INSERT INTO business_domain_evidence
+       (id, workspace_id, canonical_business_id, normalized_domain, kind, effect, source_key, source_reference_ids,
+        source_policy_id, source_policy_version, source_admission_decision_ref, source_admission_decision, storage_class,
+        retention_ttl_seconds, deletion_required, refresh_after_seconds, observed_at, recorded_at)
+       VALUES ($1, $2::uuid, $3, 'example.test', 'official_website', 'supports_domain', $4, '["domain-ref"]'::jsonb,
+               'policy.public-web', '1.0.0', $5, 'allow', 'EVIDENCE_MINIMAL', 2592000, true, 604800,
+               '2026-09-22T00:00:00Z', '2026-09-22T00:01:00Z')`,
+      [id, workspaceId, businessId, sourceKey, id + '-admission'],
+    );
+  }
+
+  async function insertEligibility(client, id, sourceKey, connectorKey) {
+    await client.query(
+      `INSERT INTO contact_data_eligibility_decisions
+       (id, workspace_id, canonical_business_id, channel, source_key, connector_key, connector_version,
+        source_request_id, source_admission_decision_ref, source_admission_decision, source_reference_ids,
+        source_policy_id, source_policy_version, compliance_policy_id, compliance_policy_version, purpose,
+        territory_mode, country_codes, field_name, data_classification, storage_class, retention_ttl_seconds,
+        deletion_required, refresh_after_seconds, decision, display_allowed, export_allowed, reason_codes, evaluated_at)
+       VALUES ($1, $2::uuid, $3, 'email', $4, $5, '1.0.0', $1 || '-request', $1 || '-admission', 'allow',
+               '["contact-ref"]'::jsonb, 'policy.public-web', '1.0.0', 'compliance.contact', '1.0.0',
+               'business_contact_discovery', 'global', '[]'::jsonb, 'contact_email', 'PERSONAL_BUSINESS_CONTACT',
+               'EVIDENCE_MINIMAL', 2592000, true, 604800, 'allow', true, false, '["policy-allow"]'::jsonb,
+               '2026-09-22T00:02:00Z')`,
+      [id, workspaceId, businessId, sourceKey, connectorKey],
+    );
+  }
+
+  async function insertContactEvidence(client, id, sourceKey, eligibilityId) {
+    await client.query(
+      `INSERT INTO approved_business_contact_evidence
+       (id, workspace_id, canonical_business_id, channel, normalized_value, source_key, source_reference_ids,
+        eligibility_id, outreach_authorization, deletion_required, observed_at, recorded_at)
+       VALUES ($1, $2::uuid, $3, 'email', 'business@example.test', $4, '["contact-ref"]'::jsonb,
+               $5, 'not_evaluated', true, '2026-09-22T00:00:00Z', '2026-09-22T00:01:00Z')`,
+      [id, workspaceId, businessId, sourceKey, eligibilityId],
+    );
+  }
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      await insertDomainEvidence(client, 'm03-domain-key-valid', 'source.test');
+      await insertEligibility(client, 'm03-eligibility-key-valid', 'source.test', 'connector.test');
+      await insertContactEvidence(client, 'm03-contact-key-valid', 'source.test', 'm03-eligibility-key-valid');
+      throw new Error('m03-key-constraint-valid-rows-rolled-back');
+    }),
+    /m03-key-constraint-valid-rows-rolled-back/,
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, (client) => insertDomainEvidence(client, 'm03-domain-key-invalid', 'source/invalid')),
+    expectPostgresConstraint('23514', 'business_domain_evidence_source_key_check'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-source-invalid', 'bad-source', 'connector.test')),
+    expectPostgresConstraint('23514', 'contact_data_eligibility_decisions_source_key_check'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-connector-invalid', 'source.test', 'bad-connector')),
+    expectPostgresConstraint('23514', 'contact_data_eligibility_decisions_connector_key_check'),
+  );
+
+  await assert.rejects(
+    withPgTransaction(testPool, async (client) => {
+      await insertEligibility(client, 'm03-contact-invalid-eligibility', 'source.test', 'connector.test');
+      await insertContactEvidence(client, 'm03-contact-key-invalid', 'bad-source', 'm03-contact-invalid-eligibility');
+    }),
+    expectPostgresConstraint('23514', 'approved_business_contact_evidence_source_key_check'),
+  );
+}
+
 async function verifyM03EntityEnrichmentFreshnessGuards(testPool, workspaceId) {
   async function seedDomainEvidence(client, prefix, observedAt, refreshAfterSeconds) {
     const businessId = prefix + '-business';
@@ -490,8 +572,6 @@ async function verifyM03EntityEnrichmentFreshnessGuards(testPool, workspaceId) {
       'INSERT INTO canonical_businesses (id, workspace_id, display_name) VALUES ($1, $2::uuid, $3)',
       [businessId, workspaceId, 'M03 Freshness Business'],
     );
-    // 0015's malformed source-key regex is tracked in #154. Use its legacy-accepted
-    // shape here only to isolate the 0016 freshness guard in this verifier.
     await client.query(
       `INSERT INTO business_domain_evidence
        (id, workspace_id, canonical_business_id, normalized_domain, kind, effect, source_key, source_reference_ids,
@@ -662,6 +742,7 @@ try {
   assert.equal(rolledBackRecord.rows[0]?.count, 0);
 
   await verifyM03EntityResolutionGuards(pool, workspaceId);
+  await verifyM03EntityEnrichmentKeyConstraints(pool, workspaceId);
   await verifyM03EntityEnrichmentFreshnessGuards(pool, workspaceId);
 
   await pool.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
