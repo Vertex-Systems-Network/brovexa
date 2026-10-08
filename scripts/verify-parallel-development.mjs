@@ -185,6 +185,23 @@ requireText(supervisor, 'architecture_choice_policy: choose_safest_repo_consiste
 requireText(supervisor, 'blocked_lane_is_global_stop: false', '.agent/supervisor.yaml');
 requireText(supervisor, 'ask_user_only_when_no_safe_work_remains: true', '.agent/supervisor.yaml');
 requireText(supervisor, 'readme_progress_reconcile_at_material_batch_boundary: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'repository_development_authority_scope: PROJECT', '.agent/supervisor.yaml');
+requireText(supervisor, 'documented_roadmap_is_pre_authorized: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'per_module_reapproval_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'per_milestone_reapproval_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'user_must_not_be_assigned_engineering_work: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'stop_the_line_scope: affected_lane_or_operation', '.agent/supervisor.yaml');
+requireText(supervisor, 'workspace_wide_freeze_only_if_repository_integrity_untrusted: true', '.agent/supervisor.yaml');
+requireText(plan, 'repository-development authority is PROJECT-level across the documented roadmap', 'docs/PROJECT_PLAN.md');
+requireText(plan, 'Per-module or per-milestone development re-approval is not required', 'docs/PROJECT_PLAN.md');
+requireText(agents, 'Never assign repository engineering work back to the user.', 'AGENTS.md');
+requireText(agentReadme, 'The user is never assigned repository engineering work', '.agent/README.md');
+requireText(slots, 'global_workspace_stop: false', '.agent/slots.yaml');
+requireText(slots, 'supervisor_continues_other_safe_work: true', '.agent/slots.yaml');
+requireText(workstreams, 'no_open_slot_global_workspace_stop: false', '.agent/workstreams.yaml');
+requireText(workstreams, 'supervisor_continues_after_rejection: true', '.agent/workstreams.yaml');
+requireText(ownership, 'continue_supervisor_after_new_agent_rejection', '.agent/ownership.yaml');
+requireText(dependencies, 'undefined technical dependency is a Supervisor-owned planning/reconciliation task', '.agent/dependencies.yaml');
 
 const completionSignal = 'Work Done and Submitted';
 const syncAlert = 'New changes have been merged — please merge these changes into your branch first, then resume your own work.';
