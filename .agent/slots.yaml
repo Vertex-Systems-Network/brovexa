@@ -25,6 +25,9 @@ assignment_authority:
 rejection:
   exact_phrase: "Go Home Come Back Next Time"
   when: no-open-slot-in-live-registry
+  scope: arriving-worker-only
+  global_workspace_stop: false
+  supervisor_continues_other_safe_work: true
   effects:
     - no-module-assignment
     - no-module-branch-checkout
@@ -60,7 +63,7 @@ rules:
   - The Supervisor updates issue #53 with the agent name, OCCUPIED status, start status, main SHA, sync epoch, and incremented registry revision before feature work begins.
   - The Supervisor re-reads issue #53 after the update and confirms the assignment before handing the branch/work packet to the agent.
   - One slot may have only one live assigned agent; onboarding decisions are serialized by the Supervisor.
-  - If all assignable live slots are OCCUPIED the Supervisor responds exactly with the rejection phrase and stops onboarding without creating work.
+  - If all assignable live slots are OCCUPIED the Supervisor responds exactly with the rejection phrase and stops onboarding for that arriving worker only; it immediately continues existing Supervisor/review/recovery or another dependency-safe authorized packet.
   - New-agent arrival does not create extra capacity or a new module branch. Extra slots must be planned and bootstrapped in a governance change before they can appear in issue #53.
   - The M02 ten-worker cycle is a deliberate preplanned exception above the generic soft maximum; it does not change the generic default and never permits more than twelve total live writers.
   - Releasing a slot is an explicit Supervisor live-registry transaction after the assigned agent has no active work packet or unmerged branch work for that slot.
