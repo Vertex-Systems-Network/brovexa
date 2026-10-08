@@ -68,3 +68,5 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Issue #53 registry baseline is main `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`, epoch 86, revision 214.
 - Supervisor lease was renewed by CAS for this follow-up packet. README, CHECKPOINT, compact state and issue #53 narrative are being reconciled.
 - M03 remains ~90%. Issue #154's migration 0017 fix is integrated; ER-006 rerun remains pending because VERIFY's active epoch-78 lease protects three unmerged adversarial test files.
+
+- Exact-head CI's first attempt failed only because it used the stale PR creation-event handoff SHA; the current handoff is corrected and the next synchronize event will validate the current head.
