@@ -339,4 +339,4 @@ See `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AG
 
 Before every user-facing development handoff, read and follow `.ai/NEXT-ACTION-OPTIONS.md`.
 
-If the user sends only this repository's GitHub URL, perform the policy's read-only bootstrap and return shuffled numbered next-action options. A URL-only message never authorizes a repository mutation. A later numeric selection must revalidate live repository state before acting.
+If the user sends only this repository's GitHub URL, follow `.ai/NEXT-ACTION-OPTIONS.md`: with standing autonomous-development authority it is a continuation/re-entry signal, so reconcile live repository state and continue the canonical dependency-safe action without waiting for a number or technical confirmation; without standing authority, use the read-only numbered-option bootstrap.
