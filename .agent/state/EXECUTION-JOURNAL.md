@@ -59,3 +59,14 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Supervisor completion signaling was made role-specific and automation-safe: Supervisor uses a head-bound PR-body submission; non-Supervisor agents retain the trusted fresh top-level comment requirement. Persistent Supervisor now evaluates the role-specific path instead of creating a hidden human-comment dependency.
 
 - No-user-engineering invariant phrase was normalized across machine verification and agent-state documentation after exact-head governance CI caught a capitalization drift; semantics were not weakened.
+
+
+## 2026-10-08 — SUP-M03-POST-MERGE-DOC-RECONCILE-003
+
+- PR #163 merged at main `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`, issue #50 epoch 86.
+- Exact-head FULL GATE `37823806455` passed all three required lanes; Persistent Supervisor heartbeat job succeeded while its audit remained DEGRADED from lane-local stale/divergent coordination state.
+- Issue #53 registry baseline is main `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`, epoch 86, revision 214.
+- Supervisor lease was renewed by CAS for this follow-up packet. README, CHECKPOINT, compact state and issue #53 narrative are being reconciled.
+- M03 remains ~90%. Issue #154's migration 0017 fix is integrated; ER-006 rerun remains pending because VERIFY's active epoch-78 lease protects three unmerged adversarial test files.
+
+- Exact-head CI's first attempt failed only because it used the stale PR creation-event handoff SHA; the current handoff is corrected and the next synchronize event will validate the current head.

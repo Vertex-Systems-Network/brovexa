@@ -1,19 +1,19 @@
 version: 1
 kind: supervisor-compact-state
 status: VERIFYING
-baseline_main_sha: "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c"
-sync_epoch: 82
-registry_revision: 202
-current_work_packet: "SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION"
+baseline_main_sha: "2da848babccf8cf15daeaaaa1b8bfada10a54c5b"
+sync_epoch: 86
+registry_revision: 214
+current_work_packet: "SUP-M03-POST-MERGE-DOC-RECONCILE-003"
 supervisor_branch: "supervisor/integration-control"
-supervisor_lease_id: "lease-supervisor-20261008-m03-key-reservation-r82a1"
-last_completed_packet: "SUP-README-PROGRESS-RECONCILE-001"
-last_completed_main_sha: "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c"
+supervisor_lease_id: "lease-codex-20261008-brovexa-doc-reconcile-b64c9"
+last_completed_packet: "SUP-M03-POST-MERGE-DOC-RECONCILE-002"
+last_completed_main_sha: "2da848babccf8cf15daeaaaa1b8bfada10a54c5b"
 runner_benchmark_deferred_count: 2
 open_pull_requests:
-  - "#160"
-current_objective: "Integrate migration 0017 reservation plus autonomous-flow blocker hardening, then hand issue #154 to DATABASE without user engineering prompts or widening provider/network/outreach authority."
-exact_next_action: "Require fresh exact-head FULL GATE for PR #160 after the blocker-audit repairs, merge with expected-head protection only if green, verify resulting main and epoch, then assign DATABASE for migration 0017 while preserving VERIFY unmerged adversarial work."
+  - "#164"
+current_objective: "Reconcile root progress and compact state after PR #163; preserve M03 at ~90% pending the active VERIFY lease holder's three unmerged ER-006 adversarial test files."
+exact_next_action: "Validate PR #164 exact head and all required FULL GATE lanes; merge only with expected-head protection if green, then verify resulting-main CI and advance issue #50/#53."
 source_precedence:
   - repository_runtime_evidence
   - exact_current_main

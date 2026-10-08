@@ -6,18 +6,18 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-10-08**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; resulting-main `persistent-supervisor` is DEGRADED because multiple OPEN branches contain preserved divergent history and MODULE/VERIFY have unresolved lane-local recovery/synchronization; the heartbeat job itself succeeds, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; PR #163's exact-head FULL GATE `37823806455` also passed all three lanes. The resulting-main Persistent Supervisor audit reports DEGRADED from lane-local coordination drift; its heartbeat job succeeds, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `ecaf1874e9e634e224fbc255957eb9903679b3c4`
-- **Synchronization epoch:** `85`
-- **Live registry revision at reconciliation:** `213`
+- **Exact integrated main:** `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`
+- **Synchronization epoch:** `86`
+- **Live registry revision at reconciliation:** `214`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
 - **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → preserve VERIFY's active lease and three unmerged adversarial test files until its holder safely synchronizes/releases → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
-- **Latest verified product gate:** PR #161 exact-head FULL GATE `37819268805` and PR #162 resulting-main FULL GATE `37822765589` — SUCCESS across all three lanes; Persistent Supervisor remains DEGRADED from lane-local preserved branch/lease drift
+- **Latest verified product gate:** PR #163 exact-head FULL GATE `37823806455` — SUCCESS across all three lanes. Its resulting-main Persistent Supervisor heartbeat succeeded and reports DEGRADED from lane-local preserved branch/lease drift.
 - **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
-- **Latest integrated governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE passed before merge
+- **Latest integrated governance PR:** #163 — README/checkpoint reconciliation after PR #162; exact-head FULL GATE `37823806455` passed all three lanes
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
 - **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
@@ -26,7 +26,7 @@ Updated: **2026-10-08**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 exact-head FULL GATE `37819268805` and PR #162 resulting-main FULL GATE `37822765589` passed. Persistent Supervisor DEGRADED is lane-local triage; the VERIFY holder's preserved branch contains three unmerged adversarial test files. Rerun ER-006 and resulting-main verification before M03 can close.
+M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 and PR #163 exact-head FULL GATEs passed all required lanes. Persistent Supervisor DEGRADED is lane-local triage; the VERIFY holder's active lease protects three unmerged adversarial test files. Rerun ER-006 and resulting-main verification before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
