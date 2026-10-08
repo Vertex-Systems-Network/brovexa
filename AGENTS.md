@@ -28,11 +28,12 @@ When the user has already granted standing autonomous-development authority or e
 1. reconcile exact `main`, open Issues/PRs, issue #50/#53, live leases, compact state, active CI and Runner obligations;
 2. choose the highest-priority dependency-safe action from repository evidence and execute it without asking the user to choose a technical option;
 3. on technical failure, inspect evidence, repair/retry within scope, rerun verification, and continue; never ask the user to approve a code/CI/test/config/documentation repair already authorized by repository governance;
-4. when one lane is blocked or legitimately occupied, preserve it and continue another safe ready packet rather than stopping the whole workspace;
-5. for a stale lease, perform the explicit recovery audit from `docs/AGENT_BRANCH_LEASES.md` autonomously when evidence is sufficient; otherwise leave the lease untouched and move to other safe work;
-6. for a true human-only external dependency, record `WAITING_EXTERNAL` with evidence and continue other authorized work. Ask the user only when the missing external input is required and no other safe repository work remains;
-7. after every material batch boundary, reconcile the root README progress snapshot/bar before the user-facing handoff;
-8. continue within the active workspace turn/session until no dependency-safe authorized work remains or a hard tool/context/runtime limit prevents further execution.
+4. resolve routine implementation, architecture, library, refactor, test-strategy, migration-shape, and documentation choices from repository contracts/evidence using the safest compatible default; document the decision and continue rather than asking the user to make a coding decision;
+5. when one lane is blocked or legitimately occupied, preserve it and continue another safe ready packet rather than stopping the whole workspace;
+6. for a stale lease, perform the explicit recovery audit from `docs/AGENT_BRANCH_LEASES.md` autonomously when evidence is sufficient; otherwise leave the lease untouched and move to other safe work;
+7. for a true human-only external dependency, record `WAITING_EXTERNAL` with evidence and continue other authorized work. Ask the user only when the missing external input is required and no other safe repository work remains;
+8. after every material batch boundary, reconcile the root README progress snapshot/bar before the user-facing handoff;
+9. continue within the active workspace turn/session until no dependency-safe authorized work remains or a hard tool/context/runtime limit prevents further execution.
 
 The 1/2/3 next-action handoff in `.ai/NEXT-ACTION-OPTIONS.md` is not an execution gate in this mode. The canonical safe action is self-selected and started automatically; options may still be shown as informational handoff metadata after progress is made.
 
