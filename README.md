@@ -6,27 +6,27 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-10-08**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005` and migrations `0016` are integrated. Issue #154's forward migration `0017` and PostgreSQL regression checks are implemented in PR #161; exact-head CI passed run `37818495876` across all three FULL GATE lanes, and M03 remains open pending integration and the preserved ER-006 verification. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; resulting-main status currently reports `persistent-supervisor` failure despite the heartbeat job succeeding, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%.  `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `8c26e2301ccf2a97efdfff60e9d7c7af6516bd89`
-- **Synchronization epoch:** `83`
-- **Live registry revision at reconciliation:** `205`
-- **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `implemented in PR #161; exact-head FULL GATE passed, integration pending`
-- **Current integration path:** migrations `0016` integrated → migration `0017` + PostgreSQL regression implementation → exact-head CI passed → merge → unchanged ER-006 verification
+- **Exact integrated main:** `78b66d42949a9e36ddeddb2672bfe55025bc7f7d`
+- **Synchronization epoch:** `85`
+- **Live registry revision at reconciliation:** `209`
+- **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
+- **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → resolve resulting-main supervisor status drift → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
-- **Current DATABASE packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `WORKING` on synchronized `agent/database-persistence`
+- **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
 - **Latest integrated governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE passed before merge
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
 - **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
-- **Next dependency-safe product packet:** merge PR #161 after exact-head FULL GATE success, then rerun preserved ER-006 verification
+- **Next dependency-safe product packet:** preserve VERIFY lane ownership and complete ER-006 after resulting-main status is reconciled
 - **M03 execution progress:** **~90%**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated. Migration `0017` and PostgreSQL regression/rollback coverage are implemented in PR #161; exact-head FULL GATE passed in run `37818495876`. Merge and preserved ER-006 verification remain before M03 can close.
+M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 exact-head FULL GATE `37819268805` passed. Resulting-main `persistent-supervisor` status needs reconciliation and the preserved ER-006 adversarial rerun remains before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
