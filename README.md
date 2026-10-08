@@ -10,23 +10,23 @@ Updated: **2026-10-08**
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `78b66d42949a9e36ddeddb2672bfe55025bc7f7d`
-- **Synchronization epoch:** `84`
-- **Live registry revision at reconciliation:** `210`
+- **Exact integrated main at this reconciliation:** `ecaf1874e9e634e224fbc255957eb9903679b3c4`
+- **Synchronization epoch:** `85`
+- **Live registry revision at reconciliation:** `213`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
-- **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → resolve resulting-main supervisor status drift → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
-- **Latest verified product gate:** PR #161 exact-head FULL GATE `37819268805` — SUCCESS across all three lanes; resulting-main Persistent Supervisor reports DEGRADED from lane-local stale/divergent coordination state
+- **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → preserve VERIFY's active lease and three unmerged adversarial test files until its holder safely synchronizes/releases → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
+- **Latest verified product gate:** PR #161 exact-head FULL GATE `37819268805` and PR #162 resulting-main FULL GATE `37822765589` — SUCCESS across all three lanes; Persistent Supervisor remains DEGRADED from lane-local preserved branch/lease drift
 - **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
 - **Latest integrated governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE passed before merge
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
 - **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
-- **Next dependency-safe product packet:** preserve VERIFY lane ownership and complete ER-006 after resulting-main status is reconciled
+- **Next dependency-safe product packet:** resume ER-006 after the active VERIFY lease holder safely synchronizes/releases its branch; its 3 unmerged adversarial test files are preserved, and no force-sync or lease takeover is allowed
 - **M03 execution progress:** **~90%**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 exact-head FULL GATE `37819268805` passed. Resulting-main `persistent-supervisor` status needs reconciliation and the preserved ER-006 adversarial rerun remains before M03 can close.
+M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 exact-head FULL GATE `37819268805` and PR #162 resulting-main FULL GATE `37822765589` passed. Persistent Supervisor DEGRADED is lane-local triage; the VERIFY holder's preserved branch contains three unmerged adversarial test files. Rerun ER-006 and resulting-main verification before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
