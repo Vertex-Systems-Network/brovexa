@@ -44,6 +44,8 @@ Never assign repository engineering work back to the user. Coding, debugging, CI
 
 This mode does not authorize bypassing branch protection, exact-head gates, security/compliance controls, production/provider activation boundaries, destructive-operation approval, or preservation of concurrent agents' work.
 
+Persistent Supervisor issue #129 `DEGRADED` is an observer/triage signal, not a global execution gate. Reconcile or repair the specific drift when safe, or preserve/skip the affected lane and continue another dependency-safe packet. Escalate to a workspace-wide mutation freeze only when evidence shows repository-wide integrity or authorization cannot be trusted.
+
 ## New Agent Onboarding — mandatory
 
 A newly arriving agent **always starts from the exact current `main` branch/head**. It does not begin from a standing module branch and does not start feature work before Supervisor assignment.
