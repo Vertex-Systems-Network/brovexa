@@ -193,6 +193,11 @@ requireText(supervisor, 'per_milestone_reapproval_required: false', '.agent/supe
 requireText(supervisor, 'user_must_not_be_assigned_engineering_work: true', '.agent/supervisor.yaml');
 requireText(supervisor, 'stop_the_line_scope: affected_lane_or_operation', '.agent/supervisor.yaml');
 requireText(supervisor, 'workspace_wide_freeze_only_if_repository_integrity_untrusted: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'persistent_supervisor_degraded_is_global_stop: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'persistent_supervisor_degraded_policy: triage_repair_or_skip_affected_lane_continue_safe_work', '.agent/supervisor.yaml');
+requireText(agents, 'Persistent Supervisor issue #129 `DEGRADED` is an observer/triage signal', 'AGENTS.md');
+requireText(aiNativePlan, 'A `DEGRADED` observer state is not itself a workspace stop condition.', 'docs/AI_NATIVE_PLAN.md');
+requireText(protocol, 'Persistent Supervisor `DEGRADED` status is triage evidence, not a global execution gate.', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
 requireText(plan, 'repository-development authority is PROJECT-level across the documented roadmap', 'docs/PROJECT_PLAN.md');
 requireText(plan, 'Per-module or per-milestone development re-approval is not required', 'docs/PROJECT_PLAN.md');
 requireText(agents, 'Never assign repository engineering work back to the user.', 'AGENTS.md');
