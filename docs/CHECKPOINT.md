@@ -10,9 +10,9 @@ Updated: 2026-10-08
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION (~90%). ER-001 through ER-005 and migrations 0016/0017 are integrated. PR #161 fixed issue #154 with PostgreSQL valid/invalid-key regression coverage and explicit rollback; exact-head FULL GATE run `37819268805` passed. Resulting-main commit status reports `persistent-supervisor` failure although the associated heartbeat job succeeded; diagnose/reconcile this lane-local status. Preserved ER-006 adversarial assertions remain pending.
+- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION (~90%). ER-001 through ER-005 and migrations 0016/0017 are integrated. PR #161 fixed issue #154 with PostgreSQL valid/invalid-key regression coverage and explicit rollback; exact-head FULL GATE run `37819268805` passed. Persistent Supervisor is DEGRADED because several OPEN branches contain preserved divergent history and MODULE/VERIFY have lane-local recovery/synchronization drift. The heartbeat job succeeds; this state is triage-only, not a global stop. Preserved ER-006 adversarial assertions remain pending. Preserved ER-006 adversarial assertions remain pending.
 
-The latest integrated main is `78b66d42949a9e36ddeddb2672bfe55025bc7f7d`, sync epoch 84 at broadcast and current Supervisor working epoch 85 / registry revision 209. PR #161 exact-head FULL GATE `37819268805` passed and migration 0017 is integrated. The resulting-main persistent-supervisor status context is failure while heartbeat job `113459173043` succeeded; reconcile this discrepancy. ER-006 rerun remains pending. Always resolve current issue #50/#53 and leases before mutation.
+The latest integrated main is `78b66d42949a9e36ddeddb2672bfe55025bc7f7d`, sync epoch 84; Supervisor is assigned at epoch 84 / registry revision 210. PR #161 exact-head FULL GATE `37819268805` passed and migration 0017 is integrated. Persistent Supervisor remains DEGRADED from stale OPEN slot baselines with divergent branch history and occupied MODULE/VERIFY recovery state. Repository instructions classify this as lane-local triage; no force-sync or lease takeover is authorized. ER-006 rerun remains pending. Always resolve current issue #50/#53 and leases before mutation.
 
 ## Live-state authority
 
@@ -183,9 +183,8 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate PR #160's bounded Supervisor migration-reservation + autonomous-governance reconciliation only after fresh exact-head FULL GATE and expected-head merge.
-2. Issue #154 and migration `0017` are fixed and integrated by PR #161; verify the merged resulting-main status and keep the persistent-supervisor degraded signal lane-local.
-3. Replace the four affected durable source/connector key regex constraints with literal-dot-compatible forms and add PostgreSQL positive/negative regression plus rollback coverage.
-4. Preserve VERIFY lease/work ownership; after synchronization is resolved by its holder, rerun unchanged ER-006 adversarial assertions and the resulting-main FULL GATE.
-5. Close M03 only after issue #154 is fixed and ER-006 exact-head + resulting-main FULL GATE are green, with zero unresolved security/review drift.
-6. Preserve provider/network/credential/outreach/production activation as separate explicit gates; no engineering decision is delegated back to the user.
+1. Issue #154 and migration `0017` are fixed and integrated by PR #161; its exact-head FULL GATE passed.
+2. Preserve occupied MODULE and VERIFY branch history and live ownership; do not force-sync divergent branches or take over their leases. Persistent Supervisor DEGRADED remains lane-local triage.
+3. After the VERIFY lease holder synchronizes its work safely, rerun the unchanged M03-ER-006 adversarial assertions and resulting-main FULL GATE.
+4. Close issue #154 and M03 only after the preserved ER-006 assertions and resulting-main gates pass with no unresolved product security or review findings.
+5. Keep provider/network/credential/outreach/production activation as separate explicit gates; resolve technical work from repository evidence without delegating coding decisions to the user.

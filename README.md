@@ -15,7 +15,7 @@ Updated: **2026-10-08**
 - **Live registry revision at reconciliation:** `210`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
 - **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → resolve resulting-main supervisor status drift → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
-- **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
+- **Latest verified product gate:** PR #161 exact-head FULL GATE `37819268805` — SUCCESS across all three lanes; resulting-main Persistent Supervisor reports DEGRADED from lane-local stale/divergent coordination state
 - **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
 - **Latest integrated governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE passed before merge
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
