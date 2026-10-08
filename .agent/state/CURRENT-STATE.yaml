@@ -1,6 +1,6 @@
 version: 1
 kind: supervisor-compact-state
-status: WORKING
+status: VERIFYING
 baseline_main_sha: "50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c"
 sync_epoch: 82
 registry_revision: 202
