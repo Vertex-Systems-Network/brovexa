@@ -52,6 +52,12 @@ function requireMatch(content, pattern, source, message) {
   }
 }
 
+function forbidText(content, forbidden, source) {
+  if (content.includes(forbidden)) {
+    throw new Error(`${source} must not contain stale blocker text: ${forbidden}`);
+  }
+}
+
 function parseScalar(value) {
   const trimmed = value.trim();
   if (trimmed === 'null') return null;
@@ -170,6 +176,8 @@ requireText(nextActionOptions, 'A URL-only message is **not** allowed to reintro
 requireText(nextActionOptions, 'With standing autonomous authority: treat the repository URL as a continuation/re-entry signal.', '.ai/NEXT-ACTION-OPTIONS.md');
 requireText(nextActionOptions, 'they do not require a user re-prompt before the Supervisor selects and starts the next dependency-safe authorized packet.', '.ai/NEXT-ACTION-OPTIONS.md');
 requireText(agents, 'Autonomous continuous execution — mandatory', 'AGENTS.md');
+forbidText(agents, "perform the policy's read-only bootstrap", 'AGENTS.md');
+forbidText(agents, 'A later numeric selection must revalidate live repository state before acting.', 'AGENTS.md');
 requireText(agents, 'resolve routine implementation, architecture, library, refactor, test-strategy, migration-shape, and documentation choices', 'AGENTS.md');
 requireText(agents, 'A message containing only the repository URL also must not reset an already-authorized autonomous workspace', 'AGENTS.md');
 requireText(agents, 'This no-slot response is never a global workspace stop condition', 'AGENTS.md');
