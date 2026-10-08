@@ -16,7 +16,7 @@ M03 remains at **~90%**. ER-001 through ER-005 and migrations 0016/0017 are inte
 
 VERIFY retains an active lease at epoch 78 and three unmerged adversarial test files. Preserve its branch and lease; no force-sync or takeover. DATABASE remains occupied with an active lease at epoch 84. MODULE is occupied without a lease and requires lane-local recovery. These conditions do not stop safe Supervisor documentation/integration work.
 
-## Next action
+## Exact next action
 
 Review the exact docs PR head and exact-head FULL GATE. If all required lanes pass, merge with expected-head protection, then verify resulting-main CI and broadcast the new main SHA/epoch. After that, continue the next dependency-safe action while preserving the VERIFY work and all authorization boundaries.
 
