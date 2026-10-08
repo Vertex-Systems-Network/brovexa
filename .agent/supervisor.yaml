@@ -116,7 +116,9 @@ autonomous_continuation:
 
 completion_signal:
   exact_phrase: "Work Done and Submitted"
-  canonical_event: top-level-pr-comment-exact-body
+  canonical_event: role-specific
+  non_supervisor_canonical_event: top-level-pr-comment-exact-body
+  supervisor_canonical_event: pr-body-supervisor-submission-current-exact-head
   meaning: READY_FOR_SUPERVISOR_REVIEW
   head_change_invalidates_prior_signal: true
   latest_signal_must_postdate_current_head: true
