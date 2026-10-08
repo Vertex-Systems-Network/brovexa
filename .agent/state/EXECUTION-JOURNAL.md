@@ -51,3 +51,5 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Prohibited assigning coding, CI, Git, migration, testing, logs, configuration or documentation repair back to the user.
 - Reconciled stale M03 checkpoint evidence from the old 0016 freshness packet to issue #154 / reserved migration 0017.
 - Preserved exact-head CI and security gates; prior PR #160 failure on invalid compact status was repaired by restoring durable VERIFYING state rather than weakening the verifier.
+
+- PR #160 fresh synchronize run on head `4066a0de2fe28fd3d9ec007b50ee356b7a6c4900` failed only because the event captured stale pre-update PR handoff head metadata. Applying the documented future-head-metadata-first recovery: create future commit unattached, publish that exact SHA in the PR body, then advance the branch ref with expected-head protection. This is an event-order repair, not a gate bypass.
