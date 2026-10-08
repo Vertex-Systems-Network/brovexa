@@ -29,6 +29,7 @@ roles:
       - serialize_slot_assignments
       - update_ai_native_plan_slot_occupancy
       - reject_new_agent_when_no_open_slot
+      - continue_supervisor_after_new_agent_rejection
       - dependency_graph
       - interface_freeze
       - shared_file_integration

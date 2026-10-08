@@ -25,6 +25,7 @@ const requiredFiles = [
   '.agent/runner-benchmark.yaml',
   '.github/PULL_REQUEST_TEMPLATE.md',
   '.github/workflows/ci.yml',
+  '.github/workflows/persistent-supervisor.yml',
   'scripts/verify-main-integration-provenance.mjs',
   'scripts/verify-runner-benchmark.mjs',
   'scripts/pr-handoff-contract.mjs',
@@ -48,6 +49,12 @@ function requireText(content, expected, source) {
 function requireMatch(content, pattern, source, message) {
   if (!pattern.test(content)) {
     throw new Error(`${source}: ${message}`);
+  }
+}
+
+function forbidText(content, forbidden, source) {
+  if (content.includes(forbidden)) {
+    throw new Error(`${source} must not contain stale blocker text: ${forbidden}`);
   }
 }
 
@@ -110,6 +117,7 @@ const supervisor = await read('.agent/supervisor.yaml');
 const runnerBenchmark = await read('.agent/runner-benchmark.yaml');
 const prTemplate = await read('.github/PULL_REQUEST_TEMPLATE.md');
 const ci = await read('.github/workflows/ci.yml');
+const persistentSupervisor = await read('.github/workflows/persistent-supervisor.yml');
 const mainProvenance = await read('scripts/verify-main-integration-provenance.mjs');
 const runnerVerifier = await read('scripts/verify-runner-benchmark.mjs');
 
@@ -136,6 +144,7 @@ for (const requiredRef of [
   requireText(agents, requiredRef, 'AGENTS.md');
 }
 
+requireText(agents, 'docs/ENGINEERING_CONSTITUTION.md', 'AGENTS.md');
 requireText(agents, 'docs/RUNNER_BENCHMARK.md', 'AGENTS.md');
 requireText(readme, 'docs/RUNNER_BENCHMARK.md', 'README.md');
 requireText(plan, 'docs/RUNNER_BENCHMARK.md', 'docs/PROJECT_PLAN.md');
@@ -162,16 +171,60 @@ requireText(onboarding, '.agent/slots.yaml', 'docs/NEW_AGENT_ONBOARDING.md');
 requireText(nextActionOptions, 'Autonomous workspace continuation', '.ai/NEXT-ACTION-OPTIONS.md');
 requireText(nextActionOptions, 'presentation only', '.ai/NEXT-ACTION-OPTIONS.md');
 requireText(nextActionOptions, 'Do not pause to ask the user which technical next action to take.', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'Routine coding/architecture/tooling/test/migration choices are AI-owned under this authority.', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'A URL-only message is **not** allowed to reintroduce a confirmation gate when standing autonomous-development authority already exists.', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'With standing autonomous authority: treat the repository URL as a continuation/re-entry signal.', '.ai/NEXT-ACTION-OPTIONS.md');
+requireText(nextActionOptions, 'they do not require a user re-prompt before the Supervisor selects and starts the next dependency-safe authorized packet.', '.ai/NEXT-ACTION-OPTIONS.md');
 requireText(agents, 'Autonomous continuous execution — mandatory', 'AGENTS.md');
+forbidText(agents, "perform the policy's read-only bootstrap", 'AGENTS.md');
+forbidText(agents, 'A later numeric selection must revalidate live repository state before acting.', 'AGENTS.md');
+requireText(agents, 'resolve routine implementation, architecture, library, refactor, test-strategy, migration-shape, and documentation choices', 'AGENTS.md');
+requireText(agents, 'A message containing only the repository URL also must not reset an already-authorized autonomous workspace', 'AGENTS.md');
 requireText(agents, 'This no-slot response is never a global workspace stop condition', 'AGENTS.md');
 requireText(aiNativePlan, 'Autonomous continuous-execution loop', 'docs/AI_NATIVE_PLAN.md');
+requireText(aiNativePlan, 'URL-only repository re-entry is also non-blocking when standing autonomous authority exists.', 'docs/AI_NATIVE_PLAN.md');
 requireText(protocol, 'Autonomous continuation across blockers', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
 requireText(onboarding, 'This no-slot path is not a global Supervisor stop.', 'docs/NEW_AGENT_ONBOARDING.md');
 requireText(supervisor, 'next_action_options_are_execution_gate: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'url_only_entry_is_execution_gate: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'url_only_with_standing_authority: autonomous_reconcile_and_continue', '.agent/supervisor.yaml');
+requireText(supervisor, 'packet_boundary_requires_user_reprompt: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'no_open_slot_action: STOP_ARRIVING_WORKER_ONLY_CONTINUE_SUPERVISOR', '.agent/supervisor.yaml');
 requireText(supervisor, 'technical_confirmation_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'implementation_choice_requires_user_input: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'architecture_choice_policy: choose_safest_repo_consistent_default_document_and_continue', '.agent/supervisor.yaml');
 requireText(supervisor, 'blocked_lane_is_global_stop: false', '.agent/supervisor.yaml');
 requireText(supervisor, 'ask_user_only_when_no_safe_work_remains: true', '.agent/supervisor.yaml');
 requireText(supervisor, 'readme_progress_reconcile_at_material_batch_boundary: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'repository_development_authority_scope: PROJECT', '.agent/supervisor.yaml');
+requireText(supervisor, 'documented_roadmap_is_pre_authorized: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'per_module_reapproval_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'per_milestone_reapproval_required: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'user_must_not_be_assigned_engineering_work: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'stop_the_line_scope: affected_lane_or_operation', '.agent/supervisor.yaml');
+requireText(supervisor, 'workspace_wide_freeze_only_if_repository_integrity_untrusted: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'canonical_event: role-specific', '.agent/supervisor.yaml');
+requireText(supervisor, 'non_supervisor_canonical_event: top-level-pr-comment-exact-body', '.agent/supervisor.yaml');
+requireText(supervisor, 'supervisor_canonical_event: pr-body-supervisor-submission-current-exact-head', '.agent/supervisor.yaml');
+requireText(agents, 'For the Supervisor, the canonical repository event is the PR body', 'AGENTS.md');
+requireText(prTemplate, 'For a **Supervisor-owned PR**', '.github/PULL_REQUEST_TEMPLATE.md');
+requireText(persistentSupervisor, 'const supervisorSubmission = Boolean(', '.github/workflows/persistent-supervisor.yml');
+requireText(persistentSupervisor, '!supervisorSubmission && exactSignals.length > signals.length', '.github/workflows/persistent-supervisor.yml');
+requireText(supervisor, 'persistent_supervisor_degraded_is_global_stop: false', '.agent/supervisor.yaml');
+requireText(supervisor, 'persistent_supervisor_degraded_policy: triage_repair_or_skip_affected_lane_continue_safe_work', '.agent/supervisor.yaml');
+requireText(agents, 'Persistent Supervisor issue #129 `DEGRADED` is an observer/triage signal', 'AGENTS.md');
+requireText(aiNativePlan, 'A `DEGRADED` observer state is not itself a workspace stop condition.', 'docs/AI_NATIVE_PLAN.md');
+requireText(protocol, 'Persistent Supervisor `DEGRADED` status is triage evidence, not a global execution gate.', 'docs/PARALLEL_AGENT_DEVELOPMENT.md');
+requireText(plan, 'repository-development authority is PROJECT-level across the documented roadmap', 'docs/PROJECT_PLAN.md');
+requireText(plan, 'Per-module or per-milestone development re-approval is not required', 'docs/PROJECT_PLAN.md');
+requireText(agents, 'Never assign repository engineering work back to the user.', 'AGENTS.md');
+requireText(agentReadme, 'The user is never assigned repository engineering work', '.agent/README.md');
+requireText(slots, 'global_workspace_stop: false', '.agent/slots.yaml');
+requireText(slots, 'supervisor_continues_other_safe_work: true', '.agent/slots.yaml');
+requireText(workstreams, 'no_open_slot_global_workspace_stop: false', '.agent/workstreams.yaml');
+requireText(workstreams, 'supervisor_continues_after_rejection: true', '.agent/workstreams.yaml');
+requireText(ownership, 'continue_supervisor_after_new_agent_rejection', '.agent/ownership.yaml');
+requireText(dependencies, 'undefined technical dependency is a Supervisor-owned planning/reconciliation task', '.agent/dependencies.yaml');
 
 const completionSignal = 'Work Done and Submitted';
 const syncAlert = 'New changes have been merged — please merge these changes into your branch first, then resume your own work.';

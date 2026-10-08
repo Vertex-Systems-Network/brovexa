@@ -10,20 +10,23 @@ Updated: **2026-10-08**
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `ffcee0382f3a88a9000b1d429b98fe0998e751a4`
-- **Synchronization epoch:** `81`
-- **Live registry revision at reconciliation:** `199`
-- **Current product packet:** `M03-ER-006` / `BLOCKED_ON_DURABLE_KEY_CONSTRAINT_FIX`
+- **Exact integrated main:** `50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c`
+- **Synchronization epoch:** `82`
+- **Live registry revision at reconciliation:** `202`
+- **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `MIGRATION_0017_RESERVED`
 - **Current integration path:** freshness hardening #153 / `0016` integrated → issue #154 forward-fix on `0017` → unchanged ER-006 verification
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
-- **Current Supervisor packet:** `SUP-README-PROGRESS-RECONCILE-001` / `WORKING`
-- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors no longer require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
-- **Next dependency-safe product packet:** reserve/implement `0017` for issue #154, then rerun ER-006
+- **Current Supervisor packet:** `SUP-M03-ER-006-KEY-CONSTRAINT-RESERVATION` / `VERIFYING`
+- **Current governance PR:** #160 — migration `0017` reservation + autonomous re-entry/engineering-choice hardening; exact-head FULL GATE required before merge
+- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
+- **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
+- **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
+- **Next dependency-safe product packet:** integrate the `0017` reservation, assign synchronized DATABASE, implement issue #154 with PostgreSQL regression/rollback coverage, then rerun preserved ER-006 verification
 - **M03 execution progress:** **~90%**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and intentionally remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated, but issue #154's durable key-constraint mismatch still requires a forward fix plus unchanged ER-006 verification before M03 can close.
+M03 progress is evidence-based and intentionally remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated; migration `0017` is reserved for issue #154, but the forward fix plus preserved ER-006 verification are still required before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**

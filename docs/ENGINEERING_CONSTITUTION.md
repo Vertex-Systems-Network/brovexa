@@ -113,7 +113,7 @@ Clearly necessary plan additions are classified:
 - `OPTIMIZATION`
 - `NEW PRODUCT SCOPE`
 
-`NEW PRODUCT SCOPE` requires an appropriate product/milestone approval unless already explicitly authorized.
+`NEW PRODUCT SCOPE` outside the documented/authorized project roadmap requires an appropriate product/business decision. Work that implements, completes, hardens, decomposes, or safely extends behavior already implied by the approved roadmap is not reclassified as new product scope merely because it reaches a new module or milestone.
 
 ## 8. Durable project memory
 
@@ -133,7 +133,7 @@ Create additional state files only when they own a distinct responsibility and r
 
 For every substantial new module or major feature use:
 
-**Understand → Research → Document → Self-Audit → Approval → Development**.
+Inside the documented/authorized roadmap use **Understand → Research → Document → Self-Audit → Development → Verify**. Insert a separate human approval step only for genuinely new out-of-roadmap product behavior or a separately gated external/irreversible action.
 
 Module specifications cover as applicable:
 - identity/purpose/objective/actors/dependencies/non-goals
@@ -223,17 +223,19 @@ Approval scope is one of:
 - `PHASE`
 - `PROJECT`
 
-When documentation is sufficient, state becomes `AWAITING_DEVELOPMENT_APPROVAL`.
+For work already inside the documented project roadmap and standing repository-development authority, sufficient documentation moves directly into bounded implementation/verification; there is no per-task, per-module, per-milestone, or per-phase development re-approval gate.
 
-Once a milestone is approved, normal reversible engineering decisions inside documented scope proceed autonomously. Ask again only for materially new product behavior, destructive data action, major breaking change, serious security/legal risk or privileged production action.
+Normal reversible engineering decisions inside documented scope proceed autonomously. Human input is reserved for materially new out-of-roadmap product behavior, destructive production/data action, a major externally visible breaking business decision, serious legal/compliance decision, credentials/secrets the agent cannot access, or privileged production/provider activation.
 
-Existing clearly authorized work does not require retroactive approval.
+Existing clearly authorized work does not require retroactive approval, and routine architecture/coding/tooling/test/migration decisions are never delegated back to the user.
 
 ## 18. Current authorization boundary
 
-The owner explicitly authorized implementation on 2026-08-30. Initial approval scope is **M01 — Platform Foundation & Developer Experience** plus completion of its necessary governance/readiness prerequisites.
+As of **2026-10-08**, the owner has granted **PROJECT-level repository-development authority across the documented Brovexa roadmap**. This supersedes the older M01-only development scope for repository planning, architecture, implementation, refactoring, migrations, tests, CI repair, documentation, PR/merge coordination, and other reversible development work governed by this repository.
 
-This does **not** authorize:
+No additional user prompt is required merely because work advances to a new documented module, milestone, phase, issue, PR, migration, or technical approach.
+
+This project-level repository-development authority still does **not** authorize:
 - payment-provider activation
 - production source connector enablement
 - unrestricted acquisition
@@ -241,9 +243,9 @@ This does **not** authorize:
 - daily Market Scout activation
 - production deployment
 - destructive data actions
-- unresolved legal/vendor decisions outside M01
+- unresolved legal/vendor/commercial decisions
 
-Those remain behind their own readiness/approval gates.
+Those remain behind their own readiness/authorization gates. When one is unavailable, record the affected packet as evidence-backed `WAITING_EXTERNAL`/`BLOCKED` and continue other dependency-safe repository work. Never ask the user to perform coding, CI, Git, migration, testing, logging, configuration, or documentation repair.
 
 ## 19. Security baseline
 
@@ -413,9 +415,9 @@ Do not perform broad feature refactors during incident containment.
 
 ## 37. STOP-THE-LINE
 
-Immediately stop affected work for unexpected data loss, cross-tenant leakage, credential exposure, destructive unknown commands, migration corruption, unexplained massive diffs, repository state that cannot be safely understood or critical security bypass.
+Immediately stop the **affected lane/operation** for unexpected data loss, cross-tenant leakage, credential exposure, destructive unknown commands, migration corruption, unexplained massive diffs, repository state that cannot be safely understood or critical security bypass.
 
-Preserve evidence and resume only after the risk is understood/contained.
+Preserve evidence, contain the risk, diagnose, repair/recover within authorized scope, and verify before that affected lane resumes. The Supervisor continues unrelated dependency-safe work when repository-wide integrity remains trustworthy. Use a workspace-wide mutation freeze only when the evidence shows repository-wide integrity/authorization cannot be trusted; even then, do not ask the user for coding direction—request only a genuinely external authorization/input the user can provide, if one is actually required.
 
 ## 38. UX/accessibility
 

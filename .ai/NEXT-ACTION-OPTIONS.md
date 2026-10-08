@@ -19,6 +19,7 @@ When the user has already granted standing autonomous-development authority, ask
 
 - Do not pause to ask the user which technical next action to take. Self-select the current canonical/recommended safe action from repository evidence and continue it in the same active workspace turn/session while tool/context/runtime budget remains.
 - A technical blocker, test failure, CI failure, merge conflict, stale coordination record, recoverable lease problem, formatting/lint/type error, dependency mismatch, documentation drift, or implementation defect must be diagnosed and repaired by the AI within existing repository authority. Do not ask the user to approve the repair.
+- Routine coding/architecture/tooling/test/migration choices are AI-owned under this authority. Choose the safest option consistent with repository contracts and evidence, document material tradeoffs, verify, and continue; do not reclassify ordinary engineering ambiguity as a human decision.
 - If the preferred lane is genuinely occupied or cannot be safely recovered, preserve its state and continue another dependency-safe authorized packet instead of stopping the whole workspace.
 - A stale lease is handled by the existing explicit Supervisor recovery audit; sufficient repository evidence permits recovery without user confirmation. If recovery evidence is insufficient, leave that lease untouched and continue other safe work.
 - If a true human-only external gate exists (for example missing credentials/secrets, a legal or business decision, destructive production authorization, or unavailable external access), record it as evidence-backed `WAITING_EXTERNAL` and immediately continue other authorized safe work. Ask the user only when that external input is required **and no other safe repository work remains**.
@@ -27,15 +28,12 @@ When the user has already granted standing autonomous-development authority, ask
 
 ## URL-only repository entry
 
-When the user's message contains only this repository's canonical GitHub URL (optionally with surrounding whitespace), treat it as a read-only development entry request.
+A URL-only message is **not** allowed to reintroduce a confirmation gate when standing autonomous-development authority already exists.
 
-1. Resolve the repository and default/protected branch.
-2. Read this repository's durable/current state and governing instructions.
-3. Reconcile open Issues first, then open PRs, then any repository-specific coordination/runner state required by local rules.
-4. Do **not** create a branch, commit, PR, merge, deployment, provider call, destructive action, or other mutation from the URL alone.
-5. Respond with 1 to 3 shuffled valid next-action options and mark the canonical one **Recommended**.
-6. The user's subsequent number selection initiates the normal fully revalidated development turn.
+- With standing autonomous authority: treat the repository URL as a continuation/re-entry signal. Resolve current repository state, reconcile Issues/PRs/coordination/CI, self-select the canonical dependency-safe action, and continue within the active workspace turn/session without waiting for a number or technical confirmation.
+- Without standing autonomous authority: use read-only entry behavior. Resolve the repository and governing state, do not mutate from the URL alone, and present 1 to 3 valid next-action options for the user to select.
+- In both modes, revalidate current repository evidence before mutation and preserve all security, branch-protection, production/provider, destructive-action, and authorization gates.
 
 ## Safety and local authority
 
-Repository-specific governance, security, exact-head CI, approval, migration, production/provider, release, and one-turn/one-milestone rules remain authoritative and may be stricter than this interaction contract. This file never grants execution authority and never permits bypassing an accepted actionable Issue/PR or deferred work boundary.
+Repository-specific governance, security, exact-head CI, approval, migration, production/provider, and release rules remain authoritative and may be stricter than this interaction contract. Scope/batch boundaries may limit what one packet changes, but under standing autonomous authority they do not require a user re-prompt before the Supervisor selects and starts the next dependency-safe authorized packet. This file never grants execution authority and never permits bypassing an accepted actionable Issue/PR or deferred work boundary.

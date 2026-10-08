@@ -263,6 +263,8 @@ For technical failures, the Supervisor/owning agent diagnoses repository/CI evid
 
 Human-only external requirements remain fail-closed and are recorded as `WAITING_EXTERNAL`, but they stop the whole workspace only when no other dependency-safe authorized work exists. Numbered next-action options are informational in autonomous mode and must not be used as a technical execution gate.
 
+Persistent Supervisor `DEGRADED` status is triage evidence, not a global execution gate. Coordination drift is repaired or isolated lane-by-lane; unrelated authorized work continues unless repository-wide integrity/authorization is itself untrusted.
+
 ## Verification independence
 
 Implementation agents prove expected behavior; verification/security agents try to break it. Relevant adversarial checks include invalid transitions, replay/idempotency, concurrency/stale state, duplicate live writers, tenant leakage, authorization/policy/budget bypass, append-only mutation, migration rollback, malformed input, dependency drift, network/credential bypass, queue failure/recovery, provenance integrity, IPv4/IPv6 private/reserved destinations, mixed resolution answers, redirect rebinding, and telemetry leakage.
