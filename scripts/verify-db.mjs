@@ -571,6 +571,9 @@ async function verifyM03EntityEnrichmentKeyConstraints(testPool, workspaceId) {
   await assert.rejects(
     withPgTransaction(testPool, async (client) => {
       await insertEligibility(client, 'm03-contact-invalid-eligibility', 'source.test', 'connector.test');
+      // Isolate this row check from the BEFORE INSERT eligibility guard, which
+      // correctly rejects a source key that differs from the eligible decision.
+      await client.query("SET LOCAL session_replication_role = 'replica'");
       await insertContactEvidence(client, 'm03-contact-key-invalid', 'sourceXtest', 'm03-contact-invalid-eligibility');
     }),
     expectPostgresConstraint('23514', 'approved_business_contact_evidence_source_key_check'),
