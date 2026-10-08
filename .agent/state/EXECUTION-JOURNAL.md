@@ -57,3 +57,5 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Persistent Supervisor DEGRADED was classified as triage-only/lane-scoped; stale coordination findings do not become a global execution stop unless repository-wide integrity/authorization is untrusted.
 
 - Supervisor completion signaling was made role-specific and automation-safe: Supervisor uses a head-bound PR-body submission; non-Supervisor agents retain the trusted fresh top-level comment requirement. Persistent Supervisor now evaluates the role-specific path instead of creating a hidden human-comment dependency.
+
+- No-user-engineering invariant phrase was normalized across machine verification and agent-state documentation after exact-head governance CI caught a capitalization drift; semantics were not weakened.
