@@ -87,6 +87,8 @@ autonomous_continuation:
   self_select_canonical_safe_action: true
   technical_confirmation_required: false
   implementation_choice_requires_user_input: false
+  user_must_not_be_assigned_engineering_work: true
+  user_engineering_work_examples: coding_ci_git_migrations_tests_logs_config_docs
   architecture_choice_policy: choose_safest_repo_consistent_default_document_and_continue
   stale_or_conflicting_repo_evidence_policy: reconcile_authoritative_sources_then_continue_or_skip_lane
   prohibit_status_only_stop_while_safe_work_exists: true
