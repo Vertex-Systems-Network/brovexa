@@ -25,6 +25,7 @@ const requiredFiles = [
   '.agent/runner-benchmark.yaml',
   '.github/PULL_REQUEST_TEMPLATE.md',
   '.github/workflows/ci.yml',
+  '.github/workflows/persistent-supervisor.yml',
   'scripts/verify-main-integration-provenance.mjs',
   'scripts/verify-runner-benchmark.mjs',
   'scripts/pr-handoff-contract.mjs',
@@ -110,6 +111,7 @@ const supervisor = await read('.agent/supervisor.yaml');
 const runnerBenchmark = await read('.agent/runner-benchmark.yaml');
 const prTemplate = await read('.github/PULL_REQUEST_TEMPLATE.md');
 const ci = await read('.github/workflows/ci.yml');
+const persistentSupervisor = await read('.github/workflows/persistent-supervisor.yml');
 const mainProvenance = await read('scripts/verify-main-integration-provenance.mjs');
 const runnerVerifier = await read('scripts/verify-runner-benchmark.mjs');
 
@@ -193,6 +195,13 @@ requireText(supervisor, 'per_milestone_reapproval_required: false', '.agent/supe
 requireText(supervisor, 'user_must_not_be_assigned_engineering_work: true', '.agent/supervisor.yaml');
 requireText(supervisor, 'stop_the_line_scope: affected_lane_or_operation', '.agent/supervisor.yaml');
 requireText(supervisor, 'workspace_wide_freeze_only_if_repository_integrity_untrusted: true', '.agent/supervisor.yaml');
+requireText(supervisor, 'canonical_event: role-specific', '.agent/supervisor.yaml');
+requireText(supervisor, 'non_supervisor_canonical_event: top-level-pr-comment-exact-body', '.agent/supervisor.yaml');
+requireText(supervisor, 'supervisor_canonical_event: pr-body-supervisor-submission-current-exact-head', '.agent/supervisor.yaml');
+requireText(agents, 'For the Supervisor, the canonical repository event is the PR body', 'AGENTS.md');
+requireText(prTemplate, 'For a **Supervisor-owned PR**', '.github/PULL_REQUEST_TEMPLATE.md');
+requireText(persistentSupervisor, 'const supervisorSubmission = Boolean(', '.github/workflows/persistent-supervisor.yml');
+requireText(persistentSupervisor, '!supervisorSubmission && exactSignals.length > signals.length', '.github/workflows/persistent-supervisor.yml');
 requireText(supervisor, 'persistent_supervisor_degraded_is_global_stop: false', '.agent/supervisor.yaml');
 requireText(supervisor, 'persistent_supervisor_degraded_policy: triage_repair_or_skip_affected_lane_continue_safe_work', '.agent/supervisor.yaml');
 requireText(agents, 'Persistent Supervisor issue #129 `DEGRADED` is an observer/triage signal', 'AGENTS.md');
