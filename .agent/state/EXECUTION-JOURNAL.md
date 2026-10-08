@@ -55,3 +55,5 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - PR #160 fresh synchronize run on head `4066a0de2fe28fd3d9ec007b50ee356b7a6c4900` failed only because the event captured stale pre-update PR handoff head metadata. Applying the documented future-head-metadata-first recovery: create future commit unattached, publish that exact SHA in the PR body, then advance the branch ref with expected-head protection. This is an event-order repair, not a gate bypass.
 
 - Persistent Supervisor DEGRADED was classified as triage-only/lane-scoped; stale coordination findings do not become a global execution stop unless repository-wide integrity/authorization is untrusted.
+
+- Supervisor completion signaling was made role-specific and automation-safe: Supervisor uses a head-bound PR-body submission; non-Supervisor agents retain the trusted fresh top-level comment requirement. Persistent Supervisor now evaluates the role-specific path instead of creating a hidden human-comment dependency.
