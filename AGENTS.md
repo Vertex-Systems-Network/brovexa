@@ -164,7 +164,9 @@ When any agent, including the Supervisor, finishes its assigned work packet, it 
 
 **Work Done and Submitted**
 
-For non-Supervisor agents, the canonical repository event is a **top-level PR comment whose entire body is exactly `Work Done and Submitted`**.
+For non-Supervisor agents, the canonical repository event is a **trusted top-level PR comment whose entire body is exactly `Work Done and Submitted`**.
+
+For the Supervisor, the canonical repository event is the PR body's **Supervisor submission** containing the exact phrase and declaring the current exact head SHA, current synchronized main/epoch, slot, instance and lease. This role-specific path avoids requiring a human-authored comment for autonomous Supervisor work while keeping non-Supervisor submission trust unchanged.
 
 The signal means `READY_FOR_SUPERVISOR_REVIEW`; it does not authorize automatic merge.
 
