@@ -40,7 +40,7 @@ M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and mi
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
 | M02A | Global Acquisition Studio & Background Research | Provider-neutral packet sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001 through ER-005 + freshness persistence guard INTEGRATED; migration 0017 exact-head gates passed, awaiting merge + ER-006 verification | **90%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001–ER-005 and migrations 0016/0017 INTEGRATED; #161 exact-head FULL GATE passed; resulting-main Supervisor reports lane-local coordination drift; ER-006 adversarial verification pending | **90%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
