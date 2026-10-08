@@ -535,6 +535,19 @@ async function verifyM03EntityEnrichmentKeyConstraints(testPool, workspaceId) {
       await insertDomainEvidence(client, 'm03-domain-key-valid', 'source.test');
       await insertEligibility(client, 'm03-eligibility-key-valid', 'source.test', 'connector.test');
       await insertContactEvidence(client, 'm03-contact-key-valid', 'source.test', 'm03-eligibility-key-valid');
+      const persistedKeys = await client.query(
+        `SELECT source_key AS key FROM business_domain_evidence WHERE id = $1
+         UNION ALL SELECT source_key AS key FROM contact_data_eligibility_decisions WHERE id = $2
+         UNION ALL SELECT connector_key AS key FROM contact_data_eligibility_decisions WHERE id = $2
+         UNION ALL SELECT source_key AS key FROM approved_business_contact_evidence WHERE id = $3`,
+        ['m03-domain-key-valid', 'm03-eligibility-key-valid', 'm03-contact-key-valid'],
+      );
+      assert.deepEqual(persistedKeys.rows.map((row) => row.key).sort(), [
+        'connector.test',
+        'source.test',
+        'source.test',
+        'source.test',
+      ]);
       throw new Error('m03-key-constraint-valid-rows-rolled-back');
     }),
     /m03-key-constraint-valid-rows-rolled-back/,
