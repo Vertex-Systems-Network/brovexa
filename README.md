@@ -6,13 +6,13 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 Updated: **2026-10-08**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; resulting-main status currently reports `persistent-supervisor` failure despite the heartbeat job succeeding, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%.  `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; resulting-main status currently reports `persistent-supervisor` failure despite the heartbeat job succeeding, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
 - **Exact integrated main:** `78b66d42949a9e36ddeddb2672bfe55025bc7f7d`
-- **Synchronization epoch:** `85`
-- **Live registry revision at reconciliation:** `209`
+- **Synchronization epoch:** `84`
+- **Live registry revision at reconciliation:** `210`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
 - **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → resolve resulting-main supervisor status drift → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
