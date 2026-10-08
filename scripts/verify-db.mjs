@@ -577,7 +577,7 @@ async function verifyM03EntityEnrichmentFreshnessGuards(testPool, workspaceId) {
        (id, workspace_id, canonical_business_id, normalized_domain, kind, effect, source_key, source_reference_ids,
         source_policy_id, source_policy_version, source_admission_decision_ref, source_admission_decision, storage_class,
         retention_ttl_seconds, deletion_required, refresh_after_seconds, observed_at, recorded_at)
-       VALUES ($1, $2::uuid, $3, 'example.test', 'official_website', 'supports_domain', 'source\\.test', $4::jsonb,
+       VALUES ($1, $2::uuid, $3, 'example.test', 'official_website', 'supports_domain', 'source.test', $4::jsonb,
                'policy.public-web', '1.0.0', $5, 'allow', 'EVIDENCE_MINIMAL', 2592000, true, $6, $7, $7)`,
       [evidenceId, workspaceId, businessId, JSON.stringify([prefix + '-ref']), prefix + '-admission', refreshAfterSeconds, observedAt],
     );
