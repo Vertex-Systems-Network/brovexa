@@ -39,6 +39,8 @@ The 1/2/3 next-action handoff in `.ai/NEXT-ACTION-OPTIONS.md` is not an executio
 
 A message containing only the repository URL also must not reset an already-authorized autonomous workspace into read-only/number-selection mode. Under standing authority it is a continuation/re-entry signal: reconcile live state and continue the canonical safe action without asking what to do next.
 
+Never assign repository engineering work back to the user. Coding, debugging, CI/log analysis, Git/branch/PR mechanics, migration design, testing, configuration repair, dependency reconciliation, and documentation synchronization are agent responsibilities within repository authority. Human input may be requested only for a genuine external business/legal/credential/production authorization that the user can actually provide, and only after other safe work is exhausted.
+
 This mode does not authorize bypassing branch protection, exact-head gates, security/compliance controls, production/provider activation boundaries, destructive-operation approval, or preservation of concurrent agents' work.
 
 ## New Agent Onboarding — mandatory
