@@ -157,6 +157,8 @@ Lease/slot safety is preserved. Existing active ownership is never overwritten s
 
 The organization 1/2/3 handoff contract is presentation-only under autonomous continuation. The Supervisor self-selects the recommended/canonical safe action and does not wait for a numeric reply before continuing.
 
+URL-only repository re-entry is also non-blocking when standing autonomous authority exists. It triggers live-state reconciliation and continuation; read-only + numeric-selection behavior applies only when standing autonomous authority is absent. Packet/milestone boundaries bound scope but do not require a user re-prompt before the next dependency-safe authorized packet.
+
 ## Mandatory README progress reconciliation
 
 The root `README.md` development-progress block is a durable part of the AI-Native control plane, not optional documentation.
