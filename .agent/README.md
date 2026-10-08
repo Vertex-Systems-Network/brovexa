@@ -24,7 +24,7 @@ Canonical live coordination:
 - GitHub issue `#53` — current logical slot `OPEN` / `OCCUPIED`, assigned agent, start status, assigned-main SHA/epoch, and registry revision.
 - Git branch `coordination/leases` — current **live mutating instance** for each occupied slot, stored at `.leases/<SLOT_ID>.json`.
 
-A newly arriving agent always starts from exact current `main`, then waits for Supervisor issue #53 assignment. It must not switch to/mutate a standing module branch until the Supervisor has selected an `OPEN` live slot, synchronized the branch, updated/re-read issue #53, and the exact runtime/session instance has atomically acquired the slot lease described in `docs/AGENT_BRANCH_LEASES.md`. If no assignable live slot is `OPEN`, Supervisor stops onboarding with **Go Home Come Back Next Time**.
+A newly arriving agent always starts from exact current `main`, then waits for Supervisor issue #53 assignment. It must not switch to/mutate a standing module branch until the Supervisor has selected an `OPEN` live slot, synchronized the branch, updated/re-read issue #53, and the exact runtime/session instance has atomically acquired the slot lease described in `docs/AGENT_BRANCH_LEASES.md`. If no assignable live slot is `OPEN`, Supervisor stops onboarding **for that arriving worker only** with **Go Home Come Back Next Time** and immediately continues its current/review/recovery or another dependency-safe authorized packet. This is never a global workspace stop.
 
 Temporary slot assignment/release and live lease acquire/renew/release do not require a repository PR when standing definitions/rules are unchanged. They are live coordination transactions.
 
@@ -41,3 +41,6 @@ Runner-specific verification follows `docs/RUNNER_BENCHMARK.md`: safe-to-defer s
 These manifests/registries/leases coordinate work; they do not authorize wider product behavior.
 
 If a task changes standing branch/module definitions, live-slot protocol, live-instance lease protocol, Supervisor behavior, synchronization, completion-signal freshness, integration integrity, dependencies, migrations, or future-agent instructions, update the applicable manifest plus `AGENTS.md`, `README.md`, `docs/AI_NATIVE_PLAN.md`, `docs/AGENT_BRANCH_LEASES.md`, and relevant policy/checkpoint docs in the same change set.
+
+
+Under standing autonomous-development authority, the user is never assigned repository engineering work such as coding, CI repair, Git/branch operations, migration design, tests, logs, configuration repair, or documentation synchronization. Agents resolve those within repository authority. Human input is reserved for genuine external business/legal/credential/production authorization when no other safe repository work remains.
