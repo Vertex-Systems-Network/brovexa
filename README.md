@@ -12,8 +12,8 @@ Updated: **2026-10-08**
 
 - **Exact integrated main:** `8c26e2301ccf2a97efdfff60e9d7c7af6516bd89`
 - **Synchronization epoch:** `83`
-- **Live registry revision at reconciliation:** `204`
-- **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `IMPLEMENTING; exact-head PostgreSQL/FULL GATE pending`
+- **Live registry revision at reconciliation:** `205`
+- **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `implemented in PR #161; exact-head PostgreSQL/FULL GATE pending`
 - **Current integration path:** migrations `0016` integrated → migration `0017` + PostgreSQL regression implementation → exact-head CI → unchanged ER-006 verification
 - **Latest verified product resulting-main CI:** `35816903364` — SUCCESS; PR #157 exact-head CI `35914760657` — SUCCESS
 - **Current DATABASE packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `WORKING` on synchronized `agent/database-persistence`
@@ -26,7 +26,7 @@ Updated: **2026-10-08**
 
 `█████████░ 90%`
 
-M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated. Migration `0017` implementation is in progress; exact-head CI and preserved ER-006 verification are still required before M03 can close.
+M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and persistence freshness hardening are integrated. Migration `0017` and PostgreSQL regression/rollback coverage are implemented in PR #161; exact-head CI, merge, and preserved ER-006 verification are still required before M03 can close.
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete**
