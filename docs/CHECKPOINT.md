@@ -1,6 +1,6 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-22
+Updated: 2026-10-08
 
 ## Project state
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`M03-ER-001` through `M03-ER-005` are integrated. Migration `0014_canonical_entity_resolution_persistence` and `0015_entity_enrichment_evidence_persistence` are integrated; `0016_entity_enrichment_freshness_guard` is reserved for the persistence freshness defect found by ER-006. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` remains the downstream closeout packet after the persistence fix.
+`M03-ER-001` through `M03-ER-005` are integrated. Migrations `0014_canonical_entity_resolution_persistence`, `0015_entity_enrichment_evidence_persistence`, and `0016_entity_enrichment_freshness_guard` are integrated. Issue #154 remains the known durable contract defect; migration `0017_entity_enrichment_source_connector_key_constraints` is reserved for its forward-only correction. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` remains the downstream closeout packet after the 0017 fix and preserved adversarial rerun.
 
 ## Security / authorization boundary
 
@@ -183,9 +183,9 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate the bounded Supervisor reconciliation / migration-reservation changeset with exact-head FULL GATE and expected-head merge.
-2. Synchronize DATABASE to that resulting main/epoch and implement `M03-ER-006-FRESHNESS-PERSISTENCE-FIX` without modifying integrated migration `0015`.
-3. Enforce evidence observation ordering and deterministic `refreshAfterSeconds` freshness in both the persistence API and durable SQL boundary, with focused rollback/regression coverage.
-4. Integrate the DATABASE fix only after exact-head FULL GATE, then synchronize VERIFY and rerun PR #150's unchanged adversarial assertions.
-5. Close M03 only after ER-006 exact-head and resulting-main FULL GATE are green, with zero unresolved security/review drift.
-6. Preserve provider/network/credential/outreach activation as separate explicit gates.
+1. Integrate PR #160's bounded Supervisor migration-reservation + autonomous-governance reconciliation only after fresh exact-head FULL GATE and expected-head merge.
+2. Synchronize/assign DATABASE to the resulting main/epoch and implement `M03-ER-006-KEY-CONSTRAINT-FIX` in reserved migration `0017` without mutating integrated migrations `0015` or `0016`.
+3. Replace the four affected durable source/connector key regex constraints with literal-dot-compatible forms and add PostgreSQL positive/negative regression plus rollback coverage.
+4. Integrate the DATABASE fix only after exact-head FULL GATE, then synchronize VERIFY while preserving its real unmerged adversarial work and rerun the unchanged ER-006 assertions.
+5. Close M03 only after issue #154 is fixed and ER-006 exact-head + resulting-main FULL GATE are green, with zero unresolved security/review drift.
+6. Preserve provider/network/credential/outreach/production activation as separate explicit gates; no engineering decision is delegated back to the user.
