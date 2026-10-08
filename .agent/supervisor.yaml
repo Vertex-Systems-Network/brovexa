@@ -109,6 +109,8 @@ autonomous_continuation:
   preserve_security_authorization_and_branch_protection: true
   stop_the_line_scope: affected_lane_or_operation
   workspace_wide_freeze_only_if_repository_integrity_untrusted: true
+  persistent_supervisor_degraded_is_global_stop: false
+  persistent_supervisor_degraded_policy: triage_repair_or_skip_affected_lane_continue_safe_work
   safety_incident_policy: contain_preserve_evidence_diagnose_recover_verify_then_resume
   readme_progress_reconcile_at_material_batch_boundary: true
 
