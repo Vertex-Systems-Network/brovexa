@@ -10,7 +10,7 @@ Updated: **2026-10-08**
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main at this reconciliation:** `ecaf1874e9e634e224fbc255957eb9903679b3c4`
+- **Exact integrated main:** `ecaf1874e9e634e224fbc255957eb9903679b3c4`
 - **Synchronization epoch:** `85`
 - **Live registry revision at reconciliation:** `213`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
