@@ -38,3 +38,16 @@ Rolling compact journal. Repository/runtime evidence remains authoritative.
 - Initial PR #158 exact-head governance checks passed, then `pnpm audit --audit-level high` surfaced pre-existing critical/high advisories in Next.js 16.3.3, proxy-addr 2.0.7, source-map-js 1.2.1, and sharp 0.35.4.
 - The security gate was not bypassed or suppressed. The branch now uses Next.js 16.3.6 and exact transitive overrides proxy-addr 2.0.8, source-map-js 1.2.2, and sharp 0.35.5 with the matching Sharp 0.35.5 / libvips 1.3.4 platform lock graph.
 - A PR synchronize run captured stale pre-update handoff metadata and correctly failed the exact-head lease gate. Recovery uses the repository's future-head-metadata-first pattern: create this commit object unattached, publish its exact SHA in the PR handoff, then move the branch ref non-destructively with expected-head protection.
+
+
+## 2026-10-08 — autonomous blocker audit hardening
+
+- Re-audited AI-Native plan/governance/live coordination for rules that could force a technical user prompt or global stop.
+- Found and removed the URL-only read-only/number-selection contradiction under standing autonomous authority.
+- Reclassified routine engineering/architecture/tooling/test/migration ambiguity as AI-owned repository work, not a human decision gate.
+- Made no-slot rejection explicitly arriving-worker-only across Supervisor, slots, workstreams and ownership manifests.
+- Reconciled stale M01-only approval language in the Engineering Constitution to PROJECT-level repository development across the documented roadmap while preserving external/production/legal/destructive gates.
+- Scoped STOP-THE-LINE to the affected lane/operation unless repository-wide integrity is untrusted; unrelated safe work continues.
+- Prohibited assigning coding, CI, Git, migration, testing, logs, configuration or documentation repair back to the user.
+- Reconciled stale M03 checkpoint evidence from the old 0016 freshness packet to issue #154 / reserved migration 0017.
+- Preserved exact-head CI and security gates; prior PR #160 failure on invalid compact status was repaired by restoring durable VERIFYING state rather than weakening the verifier.
