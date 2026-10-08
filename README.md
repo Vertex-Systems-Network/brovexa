@@ -10,7 +10,7 @@ Updated: **2026-10-08**
 
 ### Live AI-Native execution snapshot
 
-- **Reconciled integration baseline:** `50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c`
+- **Exact integrated main:** `50d6e6b2159eac3196e42ee03eafa9a74ebbdf4c`
 - **Synchronization epoch:** `82`
 - **Live registry revision at reconciliation:** `202`
 - **Current product packet:** `M03-ER-006-KEY-CONSTRAINT-FIX` / `MIGRATION_0017_RESERVED`
