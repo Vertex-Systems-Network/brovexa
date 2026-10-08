@@ -541,24 +541,24 @@ async function verifyM03EntityEnrichmentKeyConstraints(testPool, workspaceId) {
   );
 
   await assert.rejects(
-    withPgTransaction(testPool, (client) => insertDomainEvidence(client, 'm03-domain-key-invalid', 'source/invalid')),
+    withPgTransaction(testPool, (client) => insertDomainEvidence(client, 'm03-domain-key-invalid', 'sourceXinvalid')),
     expectPostgresConstraint('23514', 'business_domain_evidence_source_key_check'),
   );
 
   await assert.rejects(
-    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-source-invalid', 'bad-source', 'connector.test')),
+    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-source-invalid', 'sourceXtest', 'connector.test')),
     expectPostgresConstraint('23514', 'contact_data_eligibility_decisions_source_key_check'),
   );
 
   await assert.rejects(
-    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-connector-invalid', 'source.test', 'bad-connector')),
+    withPgTransaction(testPool, (client) => insertEligibility(client, 'm03-eligibility-connector-invalid', 'source.test', 'connectorXtest')),
     expectPostgresConstraint('23514', 'contact_data_eligibility_decisions_connector_key_check'),
   );
 
   await assert.rejects(
     withPgTransaction(testPool, async (client) => {
       await insertEligibility(client, 'm03-contact-invalid-eligibility', 'source.test', 'connector.test');
-      await insertContactEvidence(client, 'm03-contact-key-invalid', 'bad-source', 'm03-contact-invalid-eligibility');
+      await insertContactEvidence(client, 'm03-contact-key-invalid', 'sourceXtest', 'm03-contact-invalid-eligibility');
     }),
     expectPostgresConstraint('23514', 'approved_business_contact_evidence_source_key_check'),
   );
