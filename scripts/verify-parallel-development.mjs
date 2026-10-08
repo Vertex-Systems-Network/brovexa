@@ -136,6 +136,7 @@ for (const requiredRef of [
   requireText(agents, requiredRef, 'AGENTS.md');
 }
 
+requireText(agents, 'docs/ENGINEERING_CONSTITUTION.md', 'AGENTS.md');
 requireText(agents, 'docs/RUNNER_BENCHMARK.md', 'AGENTS.md');
 requireText(readme, 'docs/RUNNER_BENCHMARK.md', 'README.md');
 requireText(plan, 'docs/RUNNER_BENCHMARK.md', 'docs/PROJECT_PLAN.md');
