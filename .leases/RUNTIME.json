@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/worker-runtime",
+  "slot_id": "RUNTIME",
+  "agent_id": "AGENT-RUNTIME",
+  "agent_instance_id": "chatgpt-20261015-m03-runtime-followup-7d3c51",
+  "work_packet_id": "M03-ER-LOOKUP-BOUND-001",
+  "lease_id": "lease-m03-runtime-followup-d9194a",
+  "synced_main_sha": "73d27f2762b626ee854a06e97dd007346a08c84c",
+  "sync_epoch": 87,
+  "acquired_branch_head_sha": "b7e0dd4338be843ca1602be1cf6dfc7163954055",
+  "acquired_at": "2026-10-14T21:56:52.279Z",
+  "renewed_at": "2026-10-14T21:56:52.279Z"
+}
