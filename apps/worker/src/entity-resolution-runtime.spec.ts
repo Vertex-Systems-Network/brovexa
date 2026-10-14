@@ -363,6 +363,22 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(0);
   });
 
+  it('rejects a malformed non-array lookup result before saving candidate decisions', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async () => null as never,
+      }),
+    ).rejects.toThrow(/must return an array/);
+
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('fails closed on an oversized candidate lookup response before persisting match evidence', async () => {
     const recorder = createPersistenceRecorder();
 
