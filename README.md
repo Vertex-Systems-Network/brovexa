@@ -4,22 +4,24 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 ## Development progress
 
-Updated: **2026-10-08**
+Updated: **2026-10-15**
 
 **Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; PR #163's exact-head FULL GATE `37823806455` also passed all three lanes. The resulting-main Persistent Supervisor audit reports DEGRADED from lane-local coordination drift; its heartbeat job succeeds, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`
-- **Synchronization epoch:** `86`
-- **Live registry revision at reconciliation:** `214`
+- **Exact integrated main:** `73d27f2762b626ee854a06e97dd007346a08c84c`
+- **Synchronization epoch:** `87`
+- **Live registry revision at reconciliation:** `217`
 - **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
 - **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → preserve VERIFY's active lease and three unmerged adversarial test files until its holder safely synchronizes/releases → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
-- **Latest verified product gate:** PR #163 exact-head FULL GATE `37823806455` — SUCCESS across all three lanes. Its resulting-main Persistent Supervisor heartbeat succeeded and reports DEGRADED from lane-local preserved branch/lease drift.
+- **Latest verified product gate:** PR #164 resulting-main FULL GATE `37827239395` — SUCCESS across all three lanes. Persistent Supervisor health still reports lane-local DEGRADED coordination drift.
 - **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
-- **Latest integrated governance PR:** #163 — README/checkpoint reconciliation after PR #162; exact-head FULL GATE `37823806455` passed all three lanes
+- **Latest integrated governance PR:** #164 — checkpoint/README reconciliation; exact-head FULL GATE `37826640881` and resulting-main FULL GATE `37827239395` passed all three lanes
 - **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
 - **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
+- **Current Supervisor packet:** `SUP-GITHUB-NO-CLI-001` / GitHub-only development runbook under review on `supervisor/integration-control`; issue #53 Supervisor slot OCCUPIED at revision 217 with an active lease. No product functionality or M03 completion claimed.
+- **Development without local CLI:** GitHub web/connector edits and hosted CI are supported; see [GitHub-only development](docs/GITHUB_ONLY_DEVELOPMENT.md). GitHub Actions still executes required build/test commands on hosted runners.
 - **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
 - **Next dependency-safe product packet:** resume ER-006 after the active VERIFY lease holder safely synchronizes/releases its branch; its 3 unmerged adversarial test files are preserved, and no force-sync or lease takeover is allowed
 - **M03 execution progress:** **~90%**
