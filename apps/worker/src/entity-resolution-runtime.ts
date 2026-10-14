@@ -24,7 +24,9 @@ import {
   type RawBusinessIdentitySignal,
 } from '@brovexa/contracts';
 
-export const MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES = 1024;
+// BusinessResolutionDecisionSchema permits at most 256 decision evidence IDs.
+// Reject larger lookup batches before allocating or persisting match evidence.
+export const MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES = 256;
 
 type WorkerPool = ReturnType<typeof createPgPool>;
 
