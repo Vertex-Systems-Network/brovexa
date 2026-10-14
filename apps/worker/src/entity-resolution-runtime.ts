@@ -24,6 +24,8 @@ import {
   type RawBusinessIdentitySignal,
 } from '@brovexa/contracts';
 
+export const MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES = 1024;
+
 type WorkerPool = ReturnType<typeof createPgPool>;
 
 export interface EntityResolutionObservationInput {
@@ -180,6 +182,12 @@ export async function resolveBusinessEntityDeterministically(
     workspaceId: observation.workspaceId,
     keys: generation.keys,
   });
+
+  if (!Array.isArray(rawMatches) || rawMatches.length > MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES) {
+    throw new Error(
+      `Deterministic candidate lookup must return an array containing at most ${MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES} matches.`,
+    );
+  }
 
   const seenMatches = new Set<string>();
   const matches = [...rawMatches]
