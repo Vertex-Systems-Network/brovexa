@@ -445,6 +445,34 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(0);
   });
 
+  it('rejects lookup callbacks that mutate supplied evidence provenance', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async ({ keys }) => {
+          const domain = keys.find((key) => key.keyKind === 'domain_exact');
+          if (!domain) throw new Error('expected domain key');
+          const match = {
+            candidateCanonicalBusinessId: 'business.1',
+            keyKind: domain.keyKind,
+            keyValue: domain.keyValue,
+            keyScope: domain.keyScope,
+            confidence: 0.99,
+          };
+          domain.sourceReferenceIds[0] = 'ref.forged';
+          return [match];
+        },
+      }),
+    ).rejects.toThrow(/must not mutate generated identity keys/);
+
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('fails closed on an oversized candidate lookup response before persisting match evidence', async () => {
     const recorder = createPersistenceRecorder();
 

@@ -180,10 +180,22 @@ export async function resolveBusinessEntityDeterministically(
   });
 
   const keyByIdentity = new Map(generation.keys.map((key) => [keyIdentity(key), key]));
+  // The injected lookup must not receive references to the canonical matching
+  // keys: their evidence, strength and provenance remain worker-authoritative.
+  const lookupKeys = generation.keys.map((key) => ({
+    ...key,
+    signalIds: [...key.signalIds],
+    sourceReferenceIds: [...key.sourceReferenceIds],
+  }));
+  const expectedLookupKeys = JSON.stringify(lookupKeys);
   const rawMatches = await input.candidateLookup({
     workspaceId: observation.workspaceId,
-    keys: generation.keys,
+    keys: lookupKeys,
   });
+
+  if (JSON.stringify(lookupKeys) !== expectedLookupKeys) {
+    throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
+  }
 
   if (!Array.isArray(rawMatches) || rawMatches.length > MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES) {
     throw new Error(
