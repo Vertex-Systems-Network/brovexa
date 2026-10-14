@@ -194,6 +194,27 @@ export async function resolveBusinessEntityDeterministically(
   const seenMatches = new Set<string>();
   const matches = [...rawMatches]
     .map((match) => {
+      // The lookup adapter is a trust boundary, regardless of its TypeScript return type.
+      if (match === null || typeof match !== 'object' || Array.isArray(match)) {
+        throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+      }
+
+      const candidateId = match.candidateCanonicalBusinessId;
+      if (
+        typeof candidateId !== 'string' ||
+        /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.exec(candidateId)?.[0] !== candidateId
+      ) {
+        throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
+      }
+
+      if (
+        typeof match.keyKind !== 'string' ||
+        typeof match.keyValue !== 'string' ||
+        (match.keyScope !== null && typeof match.keyScope !== 'string')
+      ) {
+        throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
+      }
+
       if (!Number.isFinite(match.confidence) || match.confidence < 0 || match.confidence > 1) {
         throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
       }

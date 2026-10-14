@@ -379,6 +379,72 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(0);
   });
 
+  it('rejects malformed null, scalar and array lookup entries before evidence writes', async () => {
+    for (const malformedMatch of [null, undefined, false, 0, 'business.1', []]) {
+      const recorder = createPersistenceRecorder();
+
+      await expect(
+        resolveBusinessEntityDeterministically({
+          ...baseInput(recorder.adapter),
+          candidateLookup: async () => [malformedMatch as never],
+        }),
+      ).rejects.toThrow(/malformed candidate match/);
+
+      expect(recorder.observations).toHaveLength(1);
+      expect(recorder.evidence).toHaveLength(0);
+      expect(recorder.decisions).toHaveLength(0);
+      expect(recorder.aliases).toHaveLength(0);
+    }
+  });
+
+  it('rejects unnormalized canonical IDs before evidence or alias persistence', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async ({ keys }) => {
+          const domain = keys.find((key) => key.keyKind === 'domain_exact');
+          if (!domain) throw new Error('expected domain key');
+          return [{
+            candidateCanonicalBusinessId: 'business.1 ',
+            keyKind: domain.keyKind,
+            keyValue: domain.keyValue,
+            keyScope: domain.keyScope,
+            confidence: 0.99,
+          }];
+        },
+      }),
+    ).rejects.toThrow(/invalid canonical business ID/);
+
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('rejects malformed lookup key fields instead of coercing them into key identities', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async () => [{
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: 'domain_exact',
+          keyValue: null as never,
+          keyScope: null,
+          confidence: 0.99,
+        }],
+      }),
+    ).rejects.toThrow(/malformed candidate key/);
+
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('fails closed on an oversized candidate lookup response before persisting match evidence', async () => {
     const recorder = createPersistenceRecorder();
 
