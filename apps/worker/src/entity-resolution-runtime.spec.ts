@@ -3,7 +3,10 @@ import type {
   EntityResolutionPersistenceAdapter,
   ResolveBusinessEntityInput,
 } from './entity-resolution-runtime';
-import { MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES, resolveBusinessEntityDeterministically } from './entity-resolution-runtime';
+import {
+  MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES,
+  resolveBusinessEntityDeterministically,
+} from './entity-resolution-runtime';
 
 function createPersistenceRecorder() {
   const observations: unknown[] = [];
