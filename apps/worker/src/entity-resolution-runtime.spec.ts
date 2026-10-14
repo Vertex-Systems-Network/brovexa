@@ -3,7 +3,7 @@ import type {
   EntityResolutionPersistenceAdapter,
   ResolveBusinessEntityInput,
 } from './entity-resolution-runtime';
-import { resolveBusinessEntityDeterministically } from './entity-resolution-runtime';
+import { MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES, resolveBusinessEntityDeterministically } from './entity-resolution-runtime';
 
 function createPersistenceRecorder() {
   const observations: unknown[] = [];
@@ -333,6 +333,33 @@ describe('resolveBusinessEntityDeterministically', () => {
 
     expect(secondResult.evidence[0]?.evidenceId).not.toBe(firstResult.evidence[0]?.evidenceId);
     expect(secondResult.decision?.decisionId).not.toBe(firstResult.decision?.decisionId);
+  });
+
+  it('fails closed on an oversized candidate lookup response before persisting match evidence', async () => {
+    const recorder = createPersistenceRecorder();
+
+    await expect(
+      resolveBusinessEntityDeterministically({
+        ...baseInput(recorder.adapter),
+        candidateLookup: async ({ keys }) => {
+          const domain = keys.find((key) => key.keyKind === 'domain_exact');
+          if (!domain) throw new Error('expected domain key');
+          const match = {
+            candidateCanonicalBusinessId: 'business.1',
+            keyKind: domain.keyKind,
+            keyValue: domain.keyValue,
+            keyScope: domain.keyScope,
+            confidence: 0.99,
+          };
+          return Array.from({ length: MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES + 1 }, () => match);
+        },
+      }),
+    ).rejects.toThrow(/at most 1024 matches/);
+
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
   });
 
   it('produces stable evidence and decision IDs independent of candidate lookup ordering', async () => {
