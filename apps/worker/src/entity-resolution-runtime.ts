@@ -237,6 +237,15 @@ export async function resolveBusinessEntityDeterministically(
   assertDate(evaluatedAt, 'evaluatedAt');
   const thresholdPolicy = BusinessResolutionThresholdPolicySchema.parse(input.thresholdPolicy);
 
+  // The canonical normalizer joins name/location components with NUL.
+  // Embedded input NULs make distinct component tuples indistinguishable,
+  // potentially merging unrelated evidence under one deterministic key.
+  for (const signal of input.observation.identitySignals) {
+    if (signal.rawValue.includes('\u0000')) {
+      throw new Error('Entity-resolution identity signal must not contain NUL separators.');
+    }
+  }
+
   const generation = generateDeterministicEntityCandidateKeys(input.observation.identitySignals);
   const observation = SourceBusinessObservationSchema.parse({
     version: '1.0.0',
