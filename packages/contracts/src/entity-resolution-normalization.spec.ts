@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BusinessIdentitySignalSchema } from './entity-resolution';
 import {
   MAX_ENTITY_RESOLUTION_CANDIDATE_KEYS,
   generateDeterministicEntityCandidateKeys,
@@ -40,6 +41,70 @@ describe('entity-resolution deterministic normalization', () => {
     expect(() => normalizeBusinessIdentityValue('domain', 'ftp://example.com')).toThrow(/HTTP\(S\)/);
   });
 
+  it('rejects embedded NUL from direct normalized values and canonical identity schemas', () => {
+    expect(() => normalizeBusinessIdentityValue('business_name', 'Acme\u0000North')).toThrow(
+      /NUL separators/,
+    );
+    expect(() => normalizeBusinessIdentityValue('locality', 'North\u0000Town')).toThrow(
+      /NUL separators/,
+    );
+
+    const clean = normalizeBusinessIdentitySignal(
+      signal('signal.name', 'business_name', 'Acme', ['ref.name']),
+    );
+    expect(BusinessIdentitySignalSchema.safeParse({
+      ...clean,
+      rawValue: 'Acme\u0000North',
+    }).success).toBe(false);
+    expect(BusinessIdentitySignalSchema.safeParse({
+      ...clean,
+      normalizedValue: 'acme\u0000north',
+    }).success).toBe(false);
+  });
+
+  it('rejects embedded NUL before normalizing any supported identity kind', () => {
+    for (const kind of [
+      'business_name',
+      'domain',
+      'address',
+      'locality',
+      'region',
+      'country_code',
+      'postal_code',
+      'source_external_ref',
+    ] as const) {
+      for (const raw of ['\u0000left', 'left\u0000right', 'right\u0000']) {
+        expect(() => normalizeBusinessIdentityValue(kind, raw)).toThrow(/NUL separators/);
+      }
+    }
+  });
+
+  it('rejects distinct NUL-separated name/locality tuples before candidate generation', () => {
+    for (const [name, locality] of [
+      ['Acme\u0000North', 'Town'],
+      ['Acme', 'North\u0000Town'],
+    ] as const) {
+      expect(() => generateDeterministicEntityCandidateKeys([
+        signal('signal.name', 'business_name', name, ['ref.name']),
+        signal('signal.locality', 'locality', locality, ['ref.locality']),
+      ])).toThrow(/NUL separators/);
+    }
+  });
+
+  it('rejects identity words that normalize to empty after punctuation stripping', () => {
+    for (const kind of ['business_name', 'address', 'locality', 'region'] as const) {
+      for (const raw of ['!!!', '...', '---', '()[]']) {
+        expect(() => normalizeBusinessIdentityValue(kind, raw)).toThrow(/must not normalize to an empty value/);
+      }
+    }
+  });
+
+  it('rejects separator-only postal values after canonicalization', () => {
+    for (const raw of ['---', ' -  - ', '\t--\r']) {
+      expect(() => normalizeBusinessIdentityValue('postal_code', raw)).toThrow(/must not normalize to an empty value/);
+    }
+  });
+
   it('emits contract-valid normalized signals with a pinned normalization version', () => {
     expect(
       normalizeBusinessIdentitySignal(signal('signal.domain', 'domain', 'Example.COM', ['ref.1'])),
@@ -52,6 +117,51 @@ describe('entity-resolution deterministic normalization', () => {
       sourceScope: null,
       sourceReferenceIds: ['ref.1'],
     });
+  });
+});
+
+describe('post-v10 native identity regression tests', () => {
+  it('rejects malformed Unicode on direct schema and normalizer paths', () => {
+    expect(() => normalizeBusinessIdentityValue('business_name', 'A\ud800')).toThrow(/unpaired Unicode/);
+    expect(() => normalizeBusinessIdentityValue('business_name', 'A\u0000B')).toThrow(/NUL separators/);
+    const value = normalizeBusinessIdentitySignal(signal('id.good', 'business_name', 'ACME', ['ref.one']));
+    expect(BusinessIdentitySignalSchema.safeParse({ ...value, rawValue: '\ud800' }).success).toBe(false);
+  });
+  it('rejects invisible, empty canonical and non-default-port identities', () => {
+    expect(() => normalizeBusinessIdentityValue('business_name', '!!!')).toThrow(/empty value/);
+    expect(() => normalizeBusinessIdentityValue('business_name', '\u200b')).toThrow(/visible/);
+    expect(() => normalizeBusinessIdentityValue('postal_code', '---')).toThrow(/empty value/);
+    expect(() => normalizeBusinessIdentityValue('domain', 'https://example.com:8443/')).toThrow(/non-default port/);
+    expect(normalizeBusinessIdentityValue('domain', 'https://example.com:443/')).toBe('example.com');
+  });
+  it('rejects oversized raw and expanded identity values', () => {
+    expect(() => normalizeBusinessIdentityValue('business_name', 'x'.repeat(2049))).toThrow(/2048/);
+    expect(() => normalizeBusinessIdentityValue('business_name', '&'.repeat(513))).toThrow(/2048/);
+    expect(() => normalizeBusinessIdentityValue('source_external_ref', 'ﬃ'.repeat(683))).toThrow(/2048/);
+    expect(normalizeBusinessIdentityValue('source_external_ref', 'A'.repeat(2048))).toBe('A'.repeat(2048));
+  });
+  it('rejects oversized admission arrays before processing', () => {
+    expect(() => normalizeBusinessIdentitySignal(signal('s.big', 'business_name', 'Acme',
+      Array.from({ length: 65 }, (_, i) => 'ref.' + i)))).toThrow(/exceeds 64/);
+    expect(() => generateDeterministicEntityCandidateKeys(
+      Array.from({ length: 129 }, (_, i) => signal('sig.' + i, 'business_name', 'Acme ' + i, ['ref.x']))))
+      .toThrow(/exceeds 128/);
+  });
+  it('rejects duplicate source signal IDs', () => {
+    const duplicate = [signal('same.id', 'domain', 'one.example', ['ref.one']),
+      signal('same.id', 'domain', 'two.example', ['ref.two'])];
+    expect(() => generateDeterministicEntityCandidateKeys(duplicate)).toThrow(/unique signal IDs/);
+  });
+  it('avoids adversarial custom iterator and signals map', () => {
+    const refs = ['ref.one'];
+    refs[Symbol.iterator] = function* () { throw new Error('bad iterator'); };
+    expect(normalizeBusinessIdentitySignal(signal('s.one', 'business_name', 'Acme', refs))
+      .sourceReferenceIds).toEqual(['ref.one']);
+    const signals = [signal('s.two', 'business_name', 'Two', ['ref.two']),
+      signal('s.one', 'business_name', 'One', ['ref.one'])];
+    signals.map = () => { throw new Error('bad map'); };
+    expect(generateDeterministicEntityCandidateKeys(signals).normalizedSignals.map(x => x.signalId))
+      .toEqual(['s.one', 's.two']);
   });
 });
 

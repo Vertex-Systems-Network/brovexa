@@ -1,5 +1,6 @@
 import {
   BusinessIdentitySignalSchema,
+  hasUnpairedUnicodeSurrogate,
   type BusinessIdentitySignal,
   type BusinessIdentitySignalKind,
 } from './entity-resolution';
@@ -51,6 +52,20 @@ const locationCandidateKinds = {
   postal_code: ['name_postal_code', 'identity_name_postal_code'],
 } as const;
 
+function requireVisibleIdentity(value: string, label: string): string {
+  if (!value.replace(/\p{Default_Ignorable_Code_Point}/gu, '').trim()) {
+    throw new Error(label + ' must contain visible characters.');
+  }
+  return value;
+}
+
+function boundedIdentityOutput(value: string): string {
+  if (value.length > 2048) {
+    throw new Error('Normalized identity value must not exceed 2048 UTF-16 code units.');
+  }
+  return value;
+}
+
 function nonEmptyNormalized(value: string, label: string): string {
   const normalized = value.normalize('NFKC').trim();
   if (!normalized) throw new Error(`${label} must not normalize to an empty value.`);
@@ -58,12 +73,14 @@ function nonEmptyNormalized(value: string, label: string): string {
 }
 
 function normalizeWords(rawValue: string): string {
-  return nonEmptyNormalized(rawValue, 'Identity value')
+  const normalized = nonEmptyNormalized(rawValue, 'Identity value')
     .replace(/&/g, ' and ')
     .toLocaleLowerCase('en-US')
     .replace(/[!"#$%'()*+,./:;<=>?@[\\\]^_`{|}~-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  if (!normalized) throw new Error('Identity value must not normalize to an empty value.');
+  return requireVisibleIdentity(normalized, 'Identity value');
 }
 
 function normalizeDomain(rawValue: string): string {
@@ -83,6 +100,9 @@ function normalizeDomain(rawValue: string): string {
   if (url.username || url.password) {
     throw new Error('Domain signal must not contain credentials.');
   }
+  if (url.port !== '') {
+    throw new Error('Domain signal must not contain a non-default port; use a hostname-only identity.');
+  }
   if (url.pathname !== '/' || url.search || url.hash) {
     throw new Error('Domain signal must contain a hostname only, without path, query, or fragment.');
   }
@@ -98,14 +118,23 @@ export function normalizeBusinessIdentityValue(
   kind: BusinessIdentitySignalKind,
   rawValue: string,
 ): string {
+  if (typeof rawValue !== 'string' || rawValue.length > 2048) {
+    throw new Error('Identity raw value must be a string of at most 2048 UTF-16 code units.');
+  }
+  if (rawValue.includes('\u0000')) {
+    throw new Error('Identity signals must not contain NUL separators.');
+  }
+  if (hasUnpairedUnicodeSurrogate(rawValue)) {
+    throw new Error('Identity signals must not contain unpaired Unicode surrogates.');
+  }
   switch (kind) {
     case 'business_name':
     case 'address':
     case 'locality':
     case 'region':
-      return normalizeWords(rawValue);
+      return boundedIdentityOutput(normalizeWords(rawValue));
     case 'domain':
-      return normalizeDomain(rawValue);
+      return boundedIdentityOutput(normalizeDomain(rawValue));
     case 'country_code': {
       const countryCode = nonEmptyNormalized(rawValue, 'Country code')
         .toLocaleUpperCase('en-US')
@@ -113,23 +142,41 @@ export function normalizeBusinessIdentityValue(
       if (!/^[A-Z]{2}$/.test(countryCode)) {
         throw new Error('country_code must normalize to exactly two ASCII letters.');
       }
-      return countryCode;
+      return boundedIdentityOutput(countryCode);
     }
-    case 'postal_code':
-      return nonEmptyNormalized(rawValue, 'Postal code')
+    case 'postal_code': {
+      const normalized = nonEmptyNormalized(rawValue, 'Postal code')
         .toLocaleUpperCase('en-US')
         .replace(/[\s-]+/g, '');
+      if (!normalized) throw new Error('Postal code must not normalize to an empty value.');
+      return boundedIdentityOutput(requireVisibleIdentity(normalized, 'Postal code'));
+    }
     case 'source_external_ref':
-      return nonEmptyNormalized(rawValue, 'Source external reference');
+      return boundedIdentityOutput(requireVisibleIdentity(
+        nonEmptyNormalized(rawValue, 'Source external reference'),
+        'Source external reference',
+      ));
   }
 }
 
 export function normalizeBusinessIdentitySignal(
   signal: RawBusinessIdentitySignal,
 ): BusinessIdentitySignal {
+  const references = signal.sourceReferenceIds;
+  if (!Array.isArray(references)) {
+    throw new Error('Identity signal exceeds 64 source reference IDs.');
+  }
+  const referenceCount = references.length;
+  if (!Number.isSafeInteger(referenceCount) || referenceCount < 0 || referenceCount > 64) {
+    throw new Error('Identity signal exceeds 64 source reference IDs.');
+  }
+  const sourceReferenceIds: string[] = [];
+  for (let index = 0; index < referenceCount; index += 1) {
+    sourceReferenceIds.push(references[index]);
+  }
   return BusinessIdentitySignalSchema.parse({
     ...signal,
-    sourceReferenceIds: [...signal.sourceReferenceIds],
+    sourceReferenceIds,
     normalizedValue: normalizeBusinessIdentityValue(signal.kind, signal.rawValue),
     normalizationVersion: ENTITY_RESOLUTION_NORMALIZATION_VERSION,
   });
@@ -156,9 +203,27 @@ function distinctValues(signals: readonly BusinessIdentitySignal[]): string[] {
 export function generateDeterministicEntityCandidateKeys(
   signals: readonly RawBusinessIdentitySignal[],
 ): DeterministicCandidateGeneration {
-  const normalizedSignals = signals
-    .map(normalizeBusinessIdentitySignal)
-    .sort((left, right) => (left.signalId < right.signalId ? -1 : left.signalId > right.signalId ? 1 : 0));
+  if (!Array.isArray(signals)) {
+    throw new Error('Entity-resolution candidate generation exceeds 128 input signals.');
+  }
+  const signalCount = signals.length;
+  if (!Number.isSafeInteger(signalCount) || signalCount < 0 || signalCount > 128) {
+    throw new Error('Entity-resolution candidate generation exceeds 128 input signals.');
+  }
+  const normalizedSignals: BusinessIdentitySignal[] = [];
+  for (let index = 0; index < signalCount; index += 1) {
+    normalizedSignals.push(normalizeBusinessIdentitySignal(signals[index]));
+  }
+  normalizedSignals.sort((left, right) =>
+    left.signalId < right.signalId ? -1 : left.signalId > right.signalId ? 1 : 0,
+  );
+  const seenSignalIds = new Set<string>();
+  for (const normalizedSignal of normalizedSignals) {
+    if (seenSignalIds.has(normalizedSignal.signalId)) {
+      throw new Error('Entity-resolution candidate generation requires unique signal IDs.');
+    }
+    seenSignalIds.add(normalizedSignal.signalId);
+  }
 
   const keyMap = new Map<string, DeterministicEntityCandidateKey>();
 

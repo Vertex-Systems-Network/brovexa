@@ -4,7 +4,24 @@ const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A
 const DateTimeSchema = z.string().datetime();
 const SourceKeySchema = z.string().regex(/^source\.[a-z0-9_.-]+$/);
 const VersionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
-const IdentityValueSchema = z.string().trim().min(1).max(2048);
+/** Prevent malformed UTF-16 from colliding with U+FFFD after UTF-8 persistence. */
+export function hasUnpairedUnicodeSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = index + 1 < value.length ? value.charCodeAt(index + 1) : 0;
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const IdentityValueSchema = z.string().trim().min(1).max(2048)
+  .refine((value) => !value.includes('\u0000'), 'Identity signals must not contain NUL separators.')
+  .refine((value) => !hasUnpairedUnicodeSurrogate(value), 'Identity signals must not contain unpaired Unicode surrogates.');
 
 function unique(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
