@@ -15,6 +15,7 @@ export * from './source-pagination-coverage';
 export * from './source-transport';
 export * from './source-transport-hop-chain';
 export * from './source-transport-result';
+export * from './website-intelligence';
 
 export const HealthResponseSchema = z.object({
   status: z.literal('ok'),
