@@ -535,7 +535,7 @@ describe('resolveBusinessEntityDeterministically', () => {
           keyScope: domain.keyScope,
           confidence: 0.99,
         }];
-        matches[Symbol.iterator] = function* () { /* never yield */ };
+        Object.defineProperty(matches, Symbol.iterator, { value: function* () { /* never yield */ } });
         return matches;
       },
     });
