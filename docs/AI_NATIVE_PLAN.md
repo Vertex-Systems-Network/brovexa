@@ -1,16 +1,16 @@
 # Brovexa AI-Native Multi-Agent Plan
 
-Status: **ACTIVE — M02/M02A provider-neutral foundations integrated; M03 is the current execution objective.**
+Status: **ACTIVE — bounded provider-neutral M03 implementation VERIFIED / INTEGRATED; M04 is the next planned milestone.**
 
 This document is the versioned source for standing branches, static slot capacity, dependency order and current milestone decomposition. Live occupancy is not stored here. GitHub issue #53 is the authoritative live logical slot registry, synchronization truth is the latest valid Supervisor broadcast comment in issue #50, and branch `coordination/leases` is the atomic live-instance authority.
 
 ## Current execution objective
 
-The next canonical milestone is **M03 — Entity Resolution & Contact Enrichment**.
+The next planned product milestone after completed M03 is **M04 — Website & Digital Presence Intelligence**. M04 implementation has not yet begun in this checkpoint.
 
 M02 provider-neutral source/network-safety work and the planned M02A Global Acquisition Studio packet sequence are integrated. M02A closed with independent adversarial verification in PR #131. Production provider HTTP/network/credentials, unrestricted acquisition, production model execution and autonomous outreach remain separately gated and are **not** opened by M03 work.
 
-M03 must establish canonical business identity before downstream website intelligence, signal detection, opportunity reasoning or lead scoring can rely on resolved entities. The safe implementation order is deterministic-first, evidence-backed, tenant-scoped, reversible and review-aware.
+M03 established the bounded provider-neutral canonical business identity and contact-enrichment implementation before downstream intelligence. ER-001–ER-006 are integrated, with PR #166 and PR #170 exact-head/resulting-main 3/3 FULL GATE pass; migrations 0014–0017 and original ER-006 adversarial tests are preserved. Its implementation remains deterministic-first, evidence-backed, tenant-scoped, reversible and review-aware. Production provider/model/network/contact-enrichment/outreach activation is separately gated.
 
 ## Capacity model
 
