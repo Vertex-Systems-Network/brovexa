@@ -80,6 +80,32 @@ function baseInput(
 }
 
 describe('resolveBusinessEntityDeterministically', () => {
+  it('rejects NUL-bearing identity signals before normalization or persistence', async () => {
+    for (const { kind, rawValue } of [
+      { kind: 'business_name', rawValue: 'Example\u0000Co' },
+      { kind: 'locality', rawValue: 'Mul\u0000tan' },
+    ] as const) {
+      const recorder = createPersistenceRecorder();
+      const input = baseInput(recorder.adapter);
+      input.observation.identitySignals = input.observation.identitySignals.map((signal) =>
+        signal.kind === kind ? { ...signal, rawValue } : signal,
+      );
+      let lookupCalls = 0;
+      await expect(resolveBusinessEntityDeterministically({
+        ...input,
+        candidateLookup: async () => {
+          lookupCalls += 1;
+          return [];
+        },
+      })).rejects.toThrow(/must not contain NUL separators/);
+      expect(lookupCalls).toBe(0);
+      expect(recorder.observations).toHaveLength(0);
+      expect(recorder.evidence).toHaveLength(0);
+      expect(recorder.decisions).toHaveLength(0);
+      expect(recorder.aliases).toHaveLength(0);
+    }
+  });
+
   it('auto-matches only one candidate that covers every exact key above threshold', async () => {
     const recorder = createPersistenceRecorder();
     const result = await resolveBusinessEntityDeterministically({
