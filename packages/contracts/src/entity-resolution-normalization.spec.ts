@@ -91,6 +91,20 @@ describe('entity-resolution deterministic normalization', () => {
     }
   });
 
+  it('rejects identity words that normalize to empty after punctuation stripping', () => {
+    for (const kind of ['business_name', 'address', 'locality', 'region'] as const) {
+      for (const raw of ['!!!', '...', '---', '()[]']) {
+        expect(() => normalizeBusinessIdentityValue(kind, raw)).toThrow(/must not normalize to an empty value/);
+      }
+    }
+  });
+
+  it('rejects separator-only postal values after canonicalization', () => {
+    for (const raw of ['---', ' -  - ', '\t--\r']) {
+      expect(() => normalizeBusinessIdentityValue('postal_code', raw)).toThrow(/must not normalize to an empty value/);
+    }
+  });
+
   it('emits contract-valid normalized signals with a pinned normalization version', () => {
     expect(
       normalizeBusinessIdentitySignal(signal('signal.domain', 'domain', 'Example.COM', ['ref.1'])),

@@ -58,12 +58,14 @@ function nonEmptyNormalized(value: string, label: string): string {
 }
 
 function normalizeWords(rawValue: string): string {
-  return nonEmptyNormalized(rawValue, 'Identity value')
+  const normalized = nonEmptyNormalized(rawValue, 'Identity value')
     .replace(/&/g, ' and ')
     .toLocaleLowerCase('en-US')
     .replace(/[!"#$%'()*+,./:;<=>?@[\\\]^_`{|}~-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  if (!normalized) throw new Error('Identity value must not normalize to an empty value.');
+  return normalized;
 }
 
 function normalizeDomain(rawValue: string): string {
@@ -118,10 +120,13 @@ export function normalizeBusinessIdentityValue(
       }
       return countryCode;
     }
-    case 'postal_code':
-      return nonEmptyNormalized(rawValue, 'Postal code')
+    case 'postal_code': {
+      const normalized = nonEmptyNormalized(rawValue, 'Postal code')
         .toLocaleUpperCase('en-US')
         .replace(/[\s-]+/g, '');
+      if (!normalized) throw new Error('Postal code must not normalize to an empty value.');
+      return normalized;
+    }
     case 'source_external_ref':
       return nonEmptyNormalized(rawValue, 'Source external reference');
   }
