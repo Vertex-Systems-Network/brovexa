@@ -315,7 +315,7 @@ export async function resolveBusinessEntityDeterministically(
     ) {
       throw new Error('Deterministic candidate lookup returned a key outside the generated candidate set.');
     }
-    const pair = JSON.stringify([candidateCanonicalBusinessId, keyKind, keyScope, keyValue]);
+    const pair = JSON.stringify([match.candidateCanonicalBusinessId, match.keyKind, match.keyScope, match.keyValue]);
     if (seenMatches.has(pair)) {
       throw new Error('Deterministic candidate lookup returned a duplicate candidate/key match.');
     }
