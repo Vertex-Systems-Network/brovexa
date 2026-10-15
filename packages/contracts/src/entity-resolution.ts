@@ -4,7 +4,10 @@ const IdentifierSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A
 const DateTimeSchema = z.string().datetime();
 const SourceKeySchema = z.string().regex(/^source\.[a-z0-9_.-]+$/);
 const VersionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
-const IdentityValueSchema = z.string().trim().min(1).max(2048);
+const IdentityValueSchema = z.string().trim().min(1).max(2048).refine(
+  (value) => !value.includes('\u0000'),
+  'Identity signals must not contain NUL separators.',
+);
 
 function unique(values: readonly string[]): boolean {
   return new Set(values).size === values.length;

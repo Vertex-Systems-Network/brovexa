@@ -98,6 +98,9 @@ export function normalizeBusinessIdentityValue(
   kind: BusinessIdentitySignalKind,
   rawValue: string,
 ): string {
+  if (rawValue.includes('\u0000')) {
+    throw new Error('Identity signals must not contain NUL separators.');
+  }
   switch (kind) {
     case 'business_name':
     case 'address':

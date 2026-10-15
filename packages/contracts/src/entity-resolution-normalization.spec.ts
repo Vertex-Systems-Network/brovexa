@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BusinessIdentitySignalSchema } from './entity-resolution';
 import {
   MAX_ENTITY_RESOLUTION_CANDIDATE_KEYS,
   generateDeterministicEntityCandidateKeys,
@@ -38,6 +39,56 @@ describe('entity-resolution deterministic normalization', () => {
     );
     expect(() => normalizeBusinessIdentityValue('domain', 'example.com/path')).toThrow(/hostname only/);
     expect(() => normalizeBusinessIdentityValue('domain', 'ftp://example.com')).toThrow(/HTTP\(S\)/);
+  });
+
+  it('rejects embedded NUL from direct normalized values and canonical identity schemas', () => {
+    expect(() => normalizeBusinessIdentityValue('business_name', 'Acme\u0000North')).toThrow(
+      /NUL separators/,
+    );
+    expect(() => normalizeBusinessIdentityValue('locality', 'North\u0000Town')).toThrow(
+      /NUL separators/,
+    );
+
+    const clean = normalizeBusinessIdentitySignal(
+      signal('signal.name', 'business_name', 'Acme', ['ref.name']),
+    );
+    expect(BusinessIdentitySignalSchema.safeParse({
+      ...clean,
+      rawValue: 'Acme\u0000North',
+    }).success).toBe(false);
+    expect(BusinessIdentitySignalSchema.safeParse({
+      ...clean,
+      normalizedValue: 'acme\u0000north',
+    }).success).toBe(false);
+  });
+
+  it('rejects embedded NUL before normalizing any supported identity kind', () => {
+    for (const kind of [
+      'business_name',
+      'domain',
+      'address',
+      'locality',
+      'region',
+      'country_code',
+      'postal_code',
+      'source_external_ref',
+    ] as const) {
+      for (const raw of ['\u0000left', 'left\u0000right', 'right\u0000']) {
+        expect(() => normalizeBusinessIdentityValue(kind, raw)).toThrow(/NUL separators/);
+      }
+    }
+  });
+
+  it('rejects distinct NUL-separated name/locality tuples before candidate generation', () => {
+    for (const [name, locality] of [
+      ['Acme\u0000North', 'Town'],
+      ['Acme', 'North\u0000Town'],
+    ] as const) {
+      expect(() => generateDeterministicEntityCandidateKeys([
+        signal('signal.name', 'business_name', name, ['ref.name']),
+        signal('signal.locality', 'locality', locality, ['ref.locality']),
+      ])).toThrow(/NUL separators/);
+    }
   });
 
   it('emits contract-valid normalized signals with a pinned normalization version', () => {
