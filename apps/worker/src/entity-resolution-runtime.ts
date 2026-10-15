@@ -98,6 +98,52 @@ function keyIdentity(key: Pick<DeterministicEntityCandidateKey, 'keyKind' | 'key
 }
 
 /** Compare only own data properties: adapter-owned toJSON/getters are not trustworthy. */
+
+/** Read only own data properties; a lookup result must not run adapter getters. */
+function snapshotCandidateLookupMatch(raw: unknown): DeterministicCandidateLookupMatch {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+  }
+  const own = (name: keyof DeterministicCandidateLookupMatch): unknown => {
+    const property = Object.getOwnPropertyDescriptor(raw, name);
+    if (!property) {
+      throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+    }
+    if (!('value' in property)) {
+      throw new Error('Deterministic candidate lookup returned an accessor-backed candidate match.');
+    }
+    return property.value;
+  };
+  const candidateCanonicalBusinessId = own('candidateCanonicalBusinessId');
+  const keyKind = own('keyKind');
+  const keyValue = own('keyValue');
+  const keyScope = own('keyScope');
+  const confidence = own('confidence');
+  if (
+    typeof candidateCanonicalBusinessId !== 'string' ||
+    !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(candidateCanonicalBusinessId)
+  ) {
+    throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
+  }
+  if (
+    typeof keyKind !== 'string' ||
+    typeof keyValue !== 'string' ||
+    (keyScope !== null && typeof keyScope !== 'string')
+  ) {
+    throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
+  }
+  if (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+    throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
+  }
+  return {
+    candidateCanonicalBusinessId,
+    keyKind: keyKind as DeterministicCandidateKeyKind,
+    keyValue,
+    keyScope,
+    confidence,
+  };
+}
+
 function lookupKeysUnchanged(
   actual: readonly DeterministicEntityCandidateKey[],
   expected: readonly DeterministicEntityCandidateKey[],
@@ -251,37 +297,14 @@ export async function resolveBusinessEntityDeterministically(
     identity: string;
   }[] = [];
   for (let i = 0; i < rawMatches.length; i += 1) {
-    if (!Object.prototype.hasOwnProperty.call(rawMatches, i)) {
+    const slot = Object.getOwnPropertyDescriptor(rawMatches, i);
+    if (!slot) {
       throw new Error('Deterministic candidate lookup returned a sparse matches array.');
     }
-    const raw = rawMatches[i];
-    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-      throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+    if (!('value' in slot)) {
+      throw new Error('Deterministic candidate lookup returned an accessor-backed candidate match.');
     }
-    const { candidateCanonicalBusinessId, keyKind, keyValue, keyScope, confidence } = raw;
-    if (
-      typeof candidateCanonicalBusinessId !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(candidateCanonicalBusinessId)
-    ) {
-      throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
-    }
-    if (
-      typeof keyKind !== 'string' ||
-      typeof keyValue !== 'string' ||
-      (keyScope !== null && typeof keyScope !== 'string')
-    ) {
-      throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
-    }
-    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
-      throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
-    }
-    const match: DeterministicCandidateLookupMatch = {
-      candidateCanonicalBusinessId,
-      keyKind,
-      keyValue,
-      keyScope,
-      confidence,
-    };
+    const match = snapshotCandidateLookupMatch(slot.value);
     const identity = keyIdentity(match);
     const key = keyByIdentity.get(identity);
     // Legacy NUL-joined identities are retained for deterministic evidence IDs,

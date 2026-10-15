@@ -544,6 +544,55 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(1);
   });
 
+  it('rejects adapter-owned array entry getters without invoking them', async () => {
+    const recorder = createPersistenceRecorder();
+    let reads = 0;
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const item = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        const matches = [item];
+        Object.defineProperty(matches, 0, { get() { reads += 1; return item; } });
+        return matches;
+      },
+    })).rejects.toThrow(/accessor-backed candidate match/);
+    expect(reads).toBe(0);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('rejects inherited candidate IDs rather than trusting prototype-backed properties', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const inherited = Object.assign(Object.create({
+          candidateCanonicalBusinessId: 'business.1',
+        }), {
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        });
+        return [inherited];
+      },
+    })).rejects.toThrow(/malformed candidate match/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('rejects provenance tampering hidden behind adapter-owned toJSON', async () => {
     const recorder = createPersistenceRecorder();
     await expect(resolveBusinessEntityDeterministically({
@@ -574,6 +623,7 @@ describe('resolveBusinessEntityDeterministically', () => {
 
   it('rejects late provenance changes invoked by a malicious result getter', async () => {
     const recorder = createPersistenceRecorder();
+    let reads = 0;
     await expect(resolveBusinessEntityDeterministically({
       ...baseInput(recorder.adapter),
       candidateLookup: async ({ keys }) => {
@@ -585,12 +635,14 @@ describe('resolveBusinessEntityDeterministically', () => {
           keyValue: domain.keyValue,
           keyScope: domain.keyScope,
           get confidence() {
+            reads += 1;
             domain.sourceReferenceIds.push('ref.late');
             return 0.99;
           },
         }];
       },
-    })).rejects.toThrow(/must not mutate generated identity keys/);
+    })).rejects.toThrow(/accessor-backed candidate match/);
+    expect(reads).toBe(0);
     expect(recorder.evidence).toHaveLength(0);
     expect(recorder.decisions).toHaveLength(0);
     expect(recorder.aliases).toHaveLength(0);
