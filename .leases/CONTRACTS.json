@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "state": "ACTIVE",
+  "branch": "agent/contracts-policy",
+  "slot_id": "CONTRACTS",
+  "agent_id": "AGENT-CONTRACTS",
+  "agent_instance_id": "chatgpt-20261016-m03-contracts-owner-4c8f29",
+  "work_packet_id": "M03-CONTRACTS-NUL-AND-HARDENING-001",
+  "lease_id": "lease-contracts-20261016-owner-4c8f29",
+  "synced_main_sha": "73d27f2762b626ee854a06e97dd007346a08c84c",
+  "sync_epoch": 87,
+  "acquired_branch_head_sha": "ed256e32f6feef283300ab45cecca2faf2a94f12",
+  "acquired_at": "2026-10-15T20:54:08.904Z",
+  "renewed_at": "2026-10-15T20:54:08.904Z"
+}
