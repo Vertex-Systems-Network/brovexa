@@ -97,6 +97,41 @@ function keyIdentity(key: Pick<DeterministicEntityCandidateKey, 'keyKind' | 'key
   return [key.keyKind, key.keyScope ?? '', key.keyValue].join('\u0000');
 }
 
+/** Compare only own data properties: adapter-owned toJSON/getters are not trustworthy. */
+function lookupKeysUnchanged(
+  actual: readonly DeterministicEntityCandidateKey[],
+  expected: readonly DeterministicEntityCandidateKey[],
+): boolean {
+  if (!Array.isArray(actual) || actual.length !== expected.length) return false;
+  if (Reflect.ownKeys(actual).length !== expected.length + 1) return false;
+  const fields = ['keyKind', 'keyValue', 'keyScope', 'strength', 'reasonCode'] as const;
+  for (let i = 0; i < expected.length; i += 1) {
+    const itemDescriptor = Object.getOwnPropertyDescriptor(actual, i);
+    if (!itemDescriptor || !('value' in itemDescriptor)) return false;
+    const item: unknown = itemDescriptor.value;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    if (Reflect.ownKeys(item).length !== 7) return false;
+    const original = expected[i]!;
+    for (const field of fields) {
+      const descriptor = Object.getOwnPropertyDescriptor(item, field);
+      if (!descriptor || !('value' in descriptor) || descriptor.value !== original[field]) return false;
+    }
+    for (const field of ['signalIds', 'sourceReferenceIds'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(item, field);
+      if (!descriptor || !('value' in descriptor)) return false;
+      const ids: unknown = descriptor.value;
+      const previous = original[field];
+      if (!Array.isArray(ids) || ids.length !== previous.length) return false;
+      if (Reflect.ownKeys(ids).length !== previous.length + 1) return false;
+      for (let k = 0; k < previous.length; k += 1) {
+        const value = Object.getOwnPropertyDescriptor(ids, k);
+        if (!value || !('value' in value) || value.value !== previous[k]) return false;
+      }
+    }
+  }
+  return true;
+}
+
 function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
@@ -187,13 +222,17 @@ export async function resolveBusinessEntityDeterministically(
     signalIds: [...key.signalIds],
     sourceReferenceIds: [...key.sourceReferenceIds],
   }));
-  const expectedLookupKeys = JSON.stringify(lookupKeys);
+  const expectedLookupKeys = lookupKeys.map((key) => ({
+    ...key,
+    signalIds: [...key.signalIds],
+    sourceReferenceIds: [...key.sourceReferenceIds],
+  }));
   const rawMatches = await input.candidateLookup({
     workspaceId: observation.workspaceId,
     keys: lookupKeys,
   });
 
-  if (JSON.stringify(lookupKeys) !== expectedLookupKeys) {
+  if (!lookupKeysUnchanged(lookupKeys, expectedLookupKeys)) {
     throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
   }
 
@@ -203,50 +242,74 @@ export async function resolveBusinessEntityDeterministically(
     );
   }
 
+  // Index-based admission avoids a callback-owned Symbol.iterator or sparse
+  // array silently dropping candidates. Snapshot match fields exactly once.
   const seenMatches = new Set<string>();
-  const matches = [...rawMatches]
-    .map((match) => {
-      // The lookup adapter is a trust boundary, regardless of its TypeScript return type.
-      if (match === null || typeof match !== 'object' || Array.isArray(match)) {
-        throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
-      }
+  const matches: {
+    match: DeterministicCandidateLookupMatch;
+    key: DeterministicEntityCandidateKey;
+    identity: string;
+  }[] = [];
+  for (let i = 0; i < rawMatches.length; i += 1) {
+    if (!Object.prototype.hasOwnProperty.call(rawMatches, i)) {
+      throw new Error('Deterministic candidate lookup returned a sparse matches array.');
+    }
+    const raw = rawMatches[i];
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+    }
+    const { candidateCanonicalBusinessId, keyKind, keyValue, keyScope, confidence } = raw;
+    if (
+      typeof candidateCanonicalBusinessId !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(candidateCanonicalBusinessId)
+    ) {
+      throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
+    }
+    if (
+      typeof keyKind !== 'string' ||
+      typeof keyValue !== 'string' ||
+      (keyScope !== null && typeof keyScope !== 'string')
+    ) {
+      throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
+    }
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+      throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
+    }
+    const match: DeterministicCandidateLookupMatch = {
+      candidateCanonicalBusinessId,
+      keyKind,
+      keyValue,
+      keyScope,
+      confidence,
+    };
+    const identity = keyIdentity(match);
+    const key = keyByIdentity.get(identity);
+    // Legacy NUL-joined identities are retained for deterministic evidence IDs,
+    // but exact field equality prevents null/empty-scope tuple impersonation.
+    if (
+      !key || key.keyKind !== match.keyKind ||
+      key.keyScope !== match.keyScope || key.keyValue !== match.keyValue
+    ) {
+      throw new Error('Deterministic candidate lookup returned a key outside the generated candidate set.');
+    }
+    const pair = JSON.stringify([candidateCanonicalBusinessId, keyKind, keyScope, keyValue]);
+    if (seenMatches.has(pair)) {
+      throw new Error('Deterministic candidate lookup returned a duplicate candidate/key match.');
+    }
+    seenMatches.add(pair);
+    matches.push({ match, key, identity });
+  }
 
-      const candidateId = match.candidateCanonicalBusinessId;
-      if (
-        typeof candidateId !== 'string' ||
-        /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.exec(candidateId)?.[0] !== candidateId
-      ) {
-        throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
-      }
-
-      if (
-        typeof match.keyKind !== 'string' ||
-        typeof match.keyValue !== 'string' ||
-        (match.keyScope !== null && typeof match.keyScope !== 'string')
-      ) {
-        throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
-      }
-
-      if (!Number.isFinite(match.confidence) || match.confidence < 0 || match.confidence > 1) {
-        throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
-      }
-      const identity = keyIdentity(match);
-      const key = keyByIdentity.get(identity);
-      if (!key) {
-        throw new Error('Deterministic candidate lookup returned a key outside the generated candidate set.');
-      }
-      const pair = `${match.candidateCanonicalBusinessId}\u0000${identity}`;
-      if (seenMatches.has(pair)) {
-        throw new Error('Deterministic candidate lookup returned a duplicate candidate/key match.');
-      }
-      seenMatches.add(pair);
-      return { match, key, identity };
-    })
-    .sort((left, right) => {
-      const a = `${left.match.candidateCanonicalBusinessId}\u0000${left.identity}`;
-      const b = `${right.match.candidateCanonicalBusinessId}\u0000${right.identity}`;
-      return a < b ? -1 : a > b ? 1 : 0;
-    });
+  // A hostile result getter may tamper with key provenance after the first
+  // check. Reject it before decision/evidence/alias persistence.
+  if (!lookupKeysUnchanged(lookupKeys, expectedLookupKeys)) {
+    throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
+  }
+  matches.sort((left, right) => {
+    const a = `${left.match.candidateCanonicalBusinessId}\u0000${left.identity}`;
+    const b = `${right.match.candidateCanonicalBusinessId}\u0000${right.identity}`;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
 
   if (matches.length === 0) {
     return {

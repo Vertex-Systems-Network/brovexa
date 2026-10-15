@@ -500,6 +500,102 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(0);
   });
 
+  it('rejects null-to-empty source-scope impersonation before candidate evidence', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain');
+        return [{
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: '',
+          confidence: 0.99,
+        }];
+      },
+    })).rejects.toThrow(/outside the generated candidate set/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('does not silently drop candidates through a forged array iterator', async () => {
+    const recorder = createPersistenceRecorder();
+    const result = await resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain');
+        const matches = [{
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        }];
+        matches[Symbol.iterator] = function* () { /* never yield */ };
+        return matches;
+      },
+    });
+    expect(result.status).toBe('matched_existing');
+    expect(recorder.evidence).toHaveLength(1);
+    expect(recorder.aliases).toHaveLength(1);
+  });
+
+  it('rejects provenance tampering hidden behind adapter-owned toJSON', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain');
+        const match = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        const original = [...domain.sourceReferenceIds];
+        domain.sourceReferenceIds.push('ref.forged');
+        Object.defineProperty(domain, 'toJSON', { value: () => ({
+          ...domain,
+          sourceReferenceIds: original,
+        }) });
+        return [match];
+      },
+    })).rejects.toThrow(/must not mutate generated identity keys/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('rejects late provenance changes invoked by a malicious result getter', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain');
+        return [{
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          get confidence() {
+            domain.sourceReferenceIds.push('ref.late');
+            return 0.99;
+          },
+        }];
+      },
+    })).rejects.toThrow(/must not mutate generated identity keys/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('produces stable evidence and decision IDs independent of candidate lookup ordering', async () => {
     const first = createPersistenceRecorder();
     const second = createPersistenceRecorder();
