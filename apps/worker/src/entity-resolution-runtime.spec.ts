@@ -544,6 +544,29 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(1);
   });
 
+  it('rejects duplicate candidate/key pairs with different confidence before evidence persistence', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const one = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        return [one, { ...one, confidence: 0.8 }];
+      },
+    })).rejects.toThrow(/duplicate candidate\/key match/);
+    expect(recorder.observations).toHaveLength(1);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('rejects adapter-owned array entry getters without invoking them', async () => {
     const recorder = createPersistenceRecorder();
     let reads = 0;
