@@ -165,6 +165,28 @@ describe('post-v10 native identity regression tests', () => {
   });
 });
 
+describe('M03 exported helper admission correctness', () => {
+  it('requires at least one signal before candidate generation', () => {
+    expect(() => generateDeterministicEntityCandidateKeys([])).toThrow(/at least one identity signal/);
+    expect(generateDeterministicEntityCandidateKeys([
+      signal('single.domain', 'domain', 'one.example', ['ref.one']),
+    ]).keys).toHaveLength(1);
+  });
+
+  it('rejects unsupported runtime signal kind rather than returning undefined', () => {
+    expect(() => normalizeBusinessIdentityValue(
+      'unknown_kind' as RawBusinessIdentitySignal['kind'],
+      'Acme',
+    )).toThrow(/Unsupported business identity signal kind/);
+  });
+
+  it('rejects non-string provenance elements before canonical schema admission', () => {
+    const malformed = signal('invalid.refs', 'business_name', 'Acme', ['ref.one']);
+    malformed.sourceReferenceIds = [undefined as unknown as string];
+    expect(() => normalizeBusinessIdentitySignal(malformed)).toThrow(/must be a string/);
+  });
+});
+
 describe('deterministic entity candidate generation', () => {
   const baseSignals: RawBusinessIdentitySignal[] = [
     signal('signal.name', 'business_name', 'Acme & Co', ['ref.name']),

@@ -156,6 +156,8 @@ export function normalizeBusinessIdentityValue(
         nonEmptyNormalized(rawValue, 'Source external reference'),
         'Source external reference',
       ));
+    default:
+      throw new Error('Unsupported business identity signal kind: ' + String(kind));
   }
 }
 
@@ -172,7 +174,11 @@ export function normalizeBusinessIdentitySignal(
   }
   const sourceReferenceIds: string[] = [];
   for (let index = 0; index < referenceCount; index += 1) {
-    sourceReferenceIds.push(references[index]);
+    const referenceId = references[index];
+    if (typeof referenceId !== 'string') {
+      throw new Error('Identity signal source reference must be a string.');
+    }
+    sourceReferenceIds.push(referenceId);
   }
   return BusinessIdentitySignalSchema.parse({
     ...signal,
@@ -207,6 +213,9 @@ export function generateDeterministicEntityCandidateKeys(
     throw new Error('Entity-resolution candidate generation exceeds 128 input signals.');
   }
   const signalCount = signals.length;
+  if (signalCount === 0) {
+    throw new Error('Entity-resolution candidate generation requires at least one identity signal.');
+  }
   if (!Number.isSafeInteger(signalCount) || signalCount < 0 || signalCount > 128) {
     throw new Error('Entity-resolution candidate generation exceeds 128 input signals.');
   }
