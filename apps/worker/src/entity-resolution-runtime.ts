@@ -282,7 +282,15 @@ export async function resolveBusinessEntityDeterministically(
     throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
   }
 
-  if (!Array.isArray(rawMatches) || rawMatches.length > MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES) {
+  // Snapshot the untrusted array length: repeated length reads could allow a
+  // Proxy to pass the cap but later admit an oversized match batch.
+  if (!Array.isArray(rawMatches)) {
+    throw new Error(
+      `Deterministic candidate lookup must return an array containing at most ${MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES} matches.`,
+    );
+  }
+  const matchCount = rawMatches.length;
+  if (!Number.isSafeInteger(matchCount) || matchCount < 0 || matchCount > MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES) {
     throw new Error(
       `Deterministic candidate lookup must return an array containing at most ${MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES} matches.`,
     );
@@ -296,7 +304,7 @@ export async function resolveBusinessEntityDeterministically(
     key: DeterministicEntityCandidateKey;
     identity: string;
   }[] = [];
-  for (let i = 0; i < rawMatches.length; i += 1) {
+  for (let i = 0; i < matchCount; i += 1) {
     const slot = Object.getOwnPropertyDescriptor(rawMatches, i);
     if (!slot) {
       throw new Error('Deterministic candidate lookup returned a sparse matches array.');
@@ -321,6 +329,11 @@ export async function resolveBusinessEntityDeterministically(
     }
     seenMatches.add(pair);
     matches.push({ match, key, identity });
+  }
+
+  // Reject mid-admission array growth/shrinkage before evidence, decisions, or aliases.
+  if (rawMatches.length !== matchCount) {
+    throw new Error('Deterministic candidate lookup result length changed during admission.');
   }
 
   // A hostile result getter may tamper with key provenance after the first
