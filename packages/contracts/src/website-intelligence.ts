@@ -28,7 +28,7 @@ function unique(values: readonly string[]): boolean {
 function websiteTargetMatchesVerifiedDomain(value: string, domain: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' &&
+    return value === `https://${domain}/` && url.protocol === 'https:' &&
       url.username === '' && url.password === '' &&
       url.hostname === domain && isIP(url.hostname) === 0 &&
       url.port === '' &&

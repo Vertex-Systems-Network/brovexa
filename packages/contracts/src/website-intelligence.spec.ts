@@ -68,6 +68,8 @@ describe('M04 website inspection request contract', () => {
       'http://example.com/', 'https://example.com:8443/',
       'https://example.com/?token=secret', 'https://example.com/#top',
       'https://example.com/admin',
+      'https://example.com/?', 'https://example.com/#',
+      'https://example.com:443/', 'https://example.com',
     ]) {
       expect(WebsiteInspectionRequestSchema.safeParse({ ...request(), targetUrl }).success).toBe(false);
     }
