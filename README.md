@@ -8,17 +8,18 @@ Updated: **2026-10-16**
 
 **Current verified state:** M00, M01, M01A, M02A and the bounded provider-neutral **M03 — Entity Resolution & Contact Enrichment** implementation are COMPLETE/INTEGRATED. M03-ER-001 through M03-ER-006, migrations 0014–0017, adversarial ER-006 regression tests and deterministic candidate/identity validation are integrated. PR #166 added bounded worker lookup and preserved ER-006 tests; PR #170 integrated CONTRACTS NUL/Unicode/normalization/provenance guards. Both passed exact-head FULL GATE. GitHub-hosted resulting-main FULL GATE `38808590274` passed **3/3 lanes** at `dfa53dc93c9e8c4939be20e94962c9996b0a7cc0` (quality/security, PostgreSQL 18 + RBAC, canonical worker + Valkey). VERIFY #167 and CONTRACTS #168 are FINAL CLOSED and their original standing-branch histories preserved. **No production provider/model/network/credentials/outreach/deployment authorization is implied.**
 
-### Latest verified M03 integration checkpoint
+### Live AI-Native execution snapshot
 
-- **Last verified product main, before this docs-only reconciliation:** `dfa53dc93c9e8c4939be20e94962c9996b0a7cc0`
+- **Exact integrated main:** `dfa53dc93c9e8c4939be20e94962c9996b0a7cc0`
 - **Synchronization epoch:** `89` (live source: issue #50)
-- **Live slot registry:** issue #53 (read live revision/occupancy; do not infer leases from this file)
+- **Live registry revision at reconciliation:** `234` (latest occupancy and leases must be read live from issue #53)
 - **Integrated product PRs:** [#166](https://github.com/Vertex-Systems-Network/brovexa/pull/166) and [#170](https://github.com/Vertex-Systems-Network/brovexa/pull/170); prior DB migration fix #161
 - **Native CI:** #166 exact-head `38671774518` and resulting-main `38806104170` PASS 3/3; #170 exact-head `38807224186` and resulting-main `38808590274` PASS 3/3
 - **Recovery:** issue #167 CLOSED, 50 original VERIFY branch commits preserved; all three ER-006 adversarial test blobs retained byte-identically in main
 - **Security:** deterministic-first, tenant isolation, evidence/provenance, review decisions, reversible workflows and no-outreach policy maintained
 - **GitHub-only development:** [runbook](docs/GITHUB_ONLY_DEVELOPMENT.md); additional handoff preflight regression tests in CI, without relaxing original gates
-- **M03 implementation progress:** **100% — FINAL COMPLETE** (bounded provider-neutral milestone)
+- **Current product packet:** `SUP-M03-FINAL-DOC-RECONCILE-001` — docs-only closeout; no outstanding M03 implementation packet
+- **M03 execution progress:** **100% — FINAL COMPLETE** (bounded provider-neutral milestone)
 
 `██████████ 100%`
 
