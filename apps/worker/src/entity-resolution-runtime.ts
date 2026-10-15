@@ -24,6 +24,10 @@ import {
   type RawBusinessIdentitySignal,
 } from '@brovexa/contracts';
 
+// BusinessResolutionDecisionSchema permits at most 256 decision evidence IDs.
+// Reject larger lookup batches before allocating or persisting match evidence.
+export const MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES = 256;
+
 type WorkerPool = ReturnType<typeof createPgPool>;
 
 export interface EntityResolutionObservationInput {
@@ -93,6 +97,87 @@ function keyIdentity(key: Pick<DeterministicEntityCandidateKey, 'keyKind' | 'key
   return [key.keyKind, key.keyScope ?? '', key.keyValue].join('\u0000');
 }
 
+/** Compare only own data properties: adapter-owned toJSON/getters are not trustworthy. */
+
+/** Read only own data properties; a lookup result must not run adapter getters. */
+function snapshotCandidateLookupMatch(raw: unknown): DeterministicCandidateLookupMatch {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+  }
+  const own = (name: keyof DeterministicCandidateLookupMatch): unknown => {
+    const property = Object.getOwnPropertyDescriptor(raw, name);
+    if (!property) {
+      throw new Error('Deterministic candidate lookup returned a malformed candidate match.');
+    }
+    if (!('value' in property)) {
+      throw new Error('Deterministic candidate lookup returned an accessor-backed candidate match.');
+    }
+    return property.value;
+  };
+  const candidateCanonicalBusinessId = own('candidateCanonicalBusinessId');
+  const keyKind = own('keyKind');
+  const keyValue = own('keyValue');
+  const keyScope = own('keyScope');
+  const confidence = own('confidence');
+  if (
+    typeof candidateCanonicalBusinessId !== 'string' ||
+    !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(candidateCanonicalBusinessId)
+  ) {
+    throw new Error('Deterministic candidate lookup returned an invalid canonical business ID.');
+  }
+  if (
+    typeof keyKind !== 'string' ||
+    typeof keyValue !== 'string' ||
+    (keyScope !== null && typeof keyScope !== 'string')
+  ) {
+    throw new Error('Deterministic candidate lookup returned a malformed candidate key.');
+  }
+  if (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+    throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
+  }
+  return {
+    candidateCanonicalBusinessId,
+    keyKind: keyKind as DeterministicCandidateKeyKind,
+    keyValue,
+    keyScope,
+    confidence,
+  };
+}
+
+function lookupKeysUnchanged(
+  actual: readonly DeterministicEntityCandidateKey[],
+  expected: readonly DeterministicEntityCandidateKey[],
+): boolean {
+  if (!Array.isArray(actual) || actual.length !== expected.length) return false;
+  if (Reflect.ownKeys(actual).length !== expected.length + 1) return false;
+  const fields = ['keyKind', 'keyValue', 'keyScope', 'strength', 'reasonCode'] as const;
+  for (let i = 0; i < expected.length; i += 1) {
+    const itemDescriptor = Object.getOwnPropertyDescriptor(actual, i);
+    if (!itemDescriptor || !('value' in itemDescriptor)) return false;
+    const item: unknown = itemDescriptor.value;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    if (Reflect.ownKeys(item).length !== 7) return false;
+    const original = expected[i]!;
+    for (const field of fields) {
+      const descriptor = Object.getOwnPropertyDescriptor(item, field);
+      if (!descriptor || !('value' in descriptor) || descriptor.value !== original[field]) return false;
+    }
+    for (const field of ['signalIds', 'sourceReferenceIds'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(item, field);
+      if (!descriptor || !('value' in descriptor)) return false;
+      const ids: unknown = descriptor.value;
+      const previous = original[field];
+      if (!Array.isArray(ids) || ids.length !== previous.length) return false;
+      if (Reflect.ownKeys(ids).length !== previous.length + 1) return false;
+      for (let k = 0; k < previous.length; k += 1) {
+        const value = Object.getOwnPropertyDescriptor(ids, k);
+        if (!value || !('value' in value) || value.value !== previous[k]) return false;
+      }
+    }
+  }
+  return true;
+}
+
 function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
@@ -152,6 +237,15 @@ export async function resolveBusinessEntityDeterministically(
   assertDate(evaluatedAt, 'evaluatedAt');
   const thresholdPolicy = BusinessResolutionThresholdPolicySchema.parse(input.thresholdPolicy);
 
+  // The canonical normalizer joins name/location components with NUL.
+  // Embedded input NULs make distinct component tuples indistinguishable,
+  // potentially merging unrelated evidence under one deterministic key.
+  for (const signal of input.observation.identitySignals) {
+    if (signal.rawValue.includes('\u0000')) {
+      throw new Error('Entity-resolution identity signal must not contain NUL separators.');
+    }
+  }
+
   const generation = generateDeterministicEntityCandidateKeys(input.observation.identitySignals);
   const observation = SourceBusinessObservationSchema.parse({
     version: '1.0.0',
@@ -176,34 +270,91 @@ export async function resolveBusinessEntityDeterministically(
   });
 
   const keyByIdentity = new Map(generation.keys.map((key) => [keyIdentity(key), key]));
+  // The injected lookup must not receive references to the canonical matching
+  // keys: their evidence, strength and provenance remain worker-authoritative.
+  const lookupKeys = generation.keys.map((key) => ({
+    ...key,
+    signalIds: [...key.signalIds],
+    sourceReferenceIds: [...key.sourceReferenceIds],
+  }));
+  const expectedLookupKeys = lookupKeys.map((key) => ({
+    ...key,
+    signalIds: [...key.signalIds],
+    sourceReferenceIds: [...key.sourceReferenceIds],
+  }));
   const rawMatches = await input.candidateLookup({
     workspaceId: observation.workspaceId,
-    keys: generation.keys,
+    keys: lookupKeys,
   });
 
+  if (!lookupKeysUnchanged(lookupKeys, expectedLookupKeys)) {
+    throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
+  }
+
+  // Snapshot the untrusted array length: repeated length reads could allow a
+  // Proxy to pass the cap but later admit an oversized match batch.
+  if (!Array.isArray(rawMatches)) {
+    throw new Error(
+      `Deterministic candidate lookup must return an array containing at most ${MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES} matches.`,
+    );
+  }
+  const matchCount = rawMatches.length;
+  if (!Number.isSafeInteger(matchCount) || matchCount < 0 || matchCount > MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES) {
+    throw new Error(
+      `Deterministic candidate lookup must return an array containing at most ${MAX_ENTITY_RESOLUTION_LOOKUP_MATCHES} matches.`,
+    );
+  }
+
+  // Index-based admission avoids a callback-owned Symbol.iterator or sparse
+  // array silently dropping candidates. Snapshot match fields exactly once.
   const seenMatches = new Set<string>();
-  const matches = [...rawMatches]
-    .map((match) => {
-      if (!Number.isFinite(match.confidence) || match.confidence < 0 || match.confidence > 1) {
-        throw new Error('Deterministic candidate lookup confidence must be between 0 and 1.');
-      }
-      const identity = keyIdentity(match);
-      const key = keyByIdentity.get(identity);
-      if (!key) {
-        throw new Error('Deterministic candidate lookup returned a key outside the generated candidate set.');
-      }
-      const pair = `${match.candidateCanonicalBusinessId}\u0000${identity}`;
-      if (seenMatches.has(pair)) {
-        throw new Error('Deterministic candidate lookup returned a duplicate candidate/key match.');
-      }
-      seenMatches.add(pair);
-      return { match, key, identity };
-    })
-    .sort((left, right) => {
-      const a = `${left.match.candidateCanonicalBusinessId}\u0000${left.identity}`;
-      const b = `${right.match.candidateCanonicalBusinessId}\u0000${right.identity}`;
-      return a < b ? -1 : a > b ? 1 : 0;
-    });
+  const matches: {
+    match: DeterministicCandidateLookupMatch;
+    key: DeterministicEntityCandidateKey;
+    identity: string;
+  }[] = [];
+  for (let i = 0; i < matchCount; i += 1) {
+    const slot = Object.getOwnPropertyDescriptor(rawMatches, i);
+    if (!slot) {
+      throw new Error('Deterministic candidate lookup returned a sparse matches array.');
+    }
+    if (!('value' in slot)) {
+      throw new Error('Deterministic candidate lookup returned an accessor-backed candidate match.');
+    }
+    const match = snapshotCandidateLookupMatch(slot.value);
+    const identity = keyIdentity(match);
+    const key = keyByIdentity.get(identity);
+    // Legacy NUL-joined identities are retained for deterministic evidence IDs,
+    // but exact field equality prevents null/empty-scope tuple impersonation.
+    if (
+      !key || key.keyKind !== match.keyKind ||
+      key.keyScope !== match.keyScope || key.keyValue !== match.keyValue
+    ) {
+      throw new Error('Deterministic candidate lookup returned a key outside the generated candidate set.');
+    }
+    const pair = JSON.stringify([match.candidateCanonicalBusinessId, match.keyKind, match.keyScope, match.keyValue]);
+    if (seenMatches.has(pair)) {
+      throw new Error('Deterministic candidate lookup returned a duplicate candidate/key match.');
+    }
+    seenMatches.add(pair);
+    matches.push({ match, key, identity });
+  }
+
+  // Reject mid-admission array growth/shrinkage before evidence, decisions, or aliases.
+  if (rawMatches.length !== matchCount) {
+    throw new Error('Deterministic candidate lookup result length changed during admission.');
+  }
+
+  // A hostile result getter may tamper with key provenance after the first
+  // check. Reject it before decision/evidence/alias persistence.
+  if (!lookupKeysUnchanged(lookupKeys, expectedLookupKeys)) {
+    throw new Error('Deterministic candidate lookup must not mutate generated identity keys.');
+  }
+  matches.sort((left, right) => {
+    const a = `${left.match.candidateCanonicalBusinessId}\u0000${left.identity}`;
+    const b = `${right.match.candidateCanonicalBusinessId}\u0000${right.identity}`;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
 
   if (matches.length === 0) {
     return {
