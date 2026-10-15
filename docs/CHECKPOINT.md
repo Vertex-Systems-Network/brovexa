@@ -1,6 +1,6 @@
 # Brovexa Project Checkpoint
 
-Updated: 2026-09-22
+Updated: 2026-10-08
 
 ## Project state
 
@@ -10,9 +10,9 @@ Updated: 2026-09-22
 - **M01A — AI Agent Runtime & Memory OS:** provider-neutral foundation VERIFIED / INTEGRATED / IMPLEMENTATION-COMPLETE. Production model/provider execution remains separately gated.
 - **M02 — Business Discovery & Source Connectors:** provider-neutral source/network-safety foundation VERIFIED / INTEGRATED. Real provider HTTP/network/credentials remain separately gated.
 - **M02A — Global Acquisition Studio & Background Research:** planned provider-neutral packet sequence `M02A-ACQ-001` through `M02A-ACQ-006` VERIFIED / INTEGRATED. PR #131 completed independent adversarial verification; resulting-main FULL GATE passed all three lanes.
-- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION. `M03-ER-001` through `M03-ER-005` are integrated, and PR #151 integrated the contract-layer stale-evidence fail-closed fix. Independent verification PR #150 subsequently exposed a persistence-layer freshness bypass: direct durable domain-verification persistence does not yet enforce evidence observation ordering / `refreshAfterSeconds`. DATABASE owns `M03-ER-006-FRESHNESS-PERSISTENCE-FIX`; migration `0016_entity_enrichment_freshness_guard` is reserved for the durable guard. ER-006 remains blocked until that fix is integrated and its unchanged adversarial assertions pass.
+- **M03 — Entity Resolution & Contact Enrichment:** FINAL VERIFICATION (~90%). ER-001 through ER-005 and migrations 0016/0017 are integrated. PR #161 fixed issue #154 with PostgreSQL valid/invalid-key regression coverage and explicit rollback; exact-head FULL GATE run `37819268805` passed. PR #163 reconciled docs at epoch 86; its exact-head FULL GATE `37823806455` passed all three lanes. PR #163 exact-head FULL GATE `37823806455` passed all three lanes. Persistent Supervisor is DEGRADED because several OPEN branches contain preserved divergent history and DATABASE/MODULE/VERIFY have lane-local recovery/synchronization drift. Its heartbeat job succeeds; this state is triage-only, not a global stop. The VERIFY lease holder retains three unmerged adversarial test files on its branch; do not force-sync or take over that lease. Preserved ER-006 assertions remain pending.
 
-The latest reconciled integration snapshot is epoch **77** after PR #151 at main `e760fa797545533517b6de84cc675c4060e3e36e`, with resulting-main CI `35769464173` green. This SHA is checkpoint evidence, not permanent live coordination truth; always resolve the latest issue #50 state before mutation.
+The latest integrated main is `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`, sync epoch 86; Supervisor is assigned at epoch 86 / registry revision 214 for documentation reconciliation. PR #161 exact-head FULL GATE `37819268805`, PR #162 exact-head FULL GATE `37822118049`, PR #162 resulting-main FULL GATE `37822765589`, and PR #163 exact-head FULL GATE `37823806455` passed all three required lanes. Persistent Supervisor remains DEGRADED from stale OPEN slot baselines and occupied MODULE/VERIFY recovery state; repo policy treats this as lane-local triage. VERIFY retains three unmerged adversarial test files and an ACTIVE lease from epoch 78. Preserve that work; no force-sync or lease takeover. ER-006 rerun remains pending. Always resolve current issue #50/#53 and leases before mutation.
 
 ## Live-state authority
 
@@ -157,7 +157,7 @@ Initial bounded DAG is maintained in `docs/AI_NATIVE_PLAN.md`:
 
 `{ M03-ER-004, M03-ER-005 } → M03-ER-006`
 
-`M03-ER-001` through `M03-ER-005` are integrated. Migration `0014_canonical_entity_resolution_persistence` and `0015_entity_enrichment_evidence_persistence` are integrated; `0016_entity_enrichment_freshness_guard` is reserved for the persistence freshness defect found by ER-006. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` remains the downstream closeout packet after the persistence fix.
+`M03-ER-001` through `M03-ER-005` are integrated. Migrations `0014_canonical_entity_resolution_persistence`, `0015_entity_enrichment_evidence_persistence`, and `0016_entity_enrichment_freshness_guard` are integrated. Issue #154 is fixed by integrated migration `0017_entity_enrichment_source_connector_key_constraints`; PostgreSQL valid/invalid-key and rollback coverage is integrated. ER-005 persistence preserves tenant isolation, workspace-scoped idempotency, approved provenance, normalized contact values, retention/deletion semantics and an explicit no-outreach boundary. `M03-ER-006` remains the downstream closeout packet after the 0017 fix and preserved adversarial rerun.
 
 ## Security / authorization boundary
 
@@ -183,9 +183,8 @@ M03 identity work must remain tenant-scoped, evidence/provenance aware, determin
 
 ## Next safe actions
 
-1. Integrate the bounded Supervisor reconciliation / migration-reservation changeset with exact-head FULL GATE and expected-head merge.
-2. Synchronize DATABASE to that resulting main/epoch and implement `M03-ER-006-FRESHNESS-PERSISTENCE-FIX` without modifying integrated migration `0015`.
-3. Enforce evidence observation ordering and deterministic `refreshAfterSeconds` freshness in both the persistence API and durable SQL boundary, with focused rollback/regression coverage.
-4. Integrate the DATABASE fix only after exact-head FULL GATE, then synchronize VERIFY and rerun PR #150's unchanged adversarial assertions.
-5. Close M03 only after ER-006 exact-head and resulting-main FULL GATE are green, with zero unresolved security/review drift.
-6. Preserve provider/network/credential/outreach activation as separate explicit gates.
+1. Issue #154 and migration `0017` are fixed and integrated by PR #161; its exact-head FULL GATE passed.
+2. Preserve occupied MODULE and VERIFY branch history and live ownership; do not force-sync divergent branches or take over their leases. Persistent Supervisor DEGRADED remains lane-local triage.
+3. After the VERIFY lease holder synchronizes its work safely, rerun the unchanged M03-ER-006 adversarial assertions and resulting-main FULL GATE.
+4. Close issue #154 and M03 only after the preserved ER-006 assertions and resulting-main gates pass with no unresolved product security or review findings.
+5. Keep provider/network/credential/outreach/production activation as separate explicit gates; resolve technical work from repository evidence without delegating coding decisions to the user.

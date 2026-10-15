@@ -118,6 +118,9 @@ slot_registry:
   new_agent_start_branch: main
   assignment_decisions_serialized: true
   no_open_slot_response: "Go Home Come Back Next Time"
+  no_open_slot_scope: arriving-worker-only
+  no_open_slot_global_workspace_stop: false
+  supervisor_continues_after_rejection: true
 
 branch_leases:
   branch_lease_source: coordination/leases

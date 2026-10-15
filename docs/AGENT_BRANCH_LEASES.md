@@ -110,6 +110,15 @@ Recovery is explicit: preserve or close old work as needed, delete the old lease
 
 No force-reset or silent takeover is allowed as a lease-recovery shortcut.
 
+## Autonomous collision/recovery behavior
+
+A lease collision stops mutation of the affected slot/branch only; it does not stop the entire workspace. Under standing autonomous authority, the Supervisor must not ask the user how to handle a technical lease blocker.
+
+- If evidence shows the existing lease is live, preserve it and continue another dependency-safe authorized packet.
+- If evidence shows the lease is stale/crashed, perform the explicit recovery audit above, preserve any unmerged work, delete/reacquire only with current blob-SHA compare-and-swap protection, then continue.
+- If ownership cannot be proven either way, leave the lease untouched, record the ambiguity, and continue other safe work.
+- User input is reserved for genuine external authorization/business decisions when no safe repository work remains; it is not required for routine lease recovery mechanics.
+
 ## PR integration gate
 
 Every implementation/governance PR from an agent work branch must declare:

@@ -233,8 +233,13 @@ export async function persistBusinessDomainVerificationDecision(pool:Pool,input:
   if(input.method==='deterministic'&&input.reviewDecisionRef!==null) fail('ENTITY_ENRICHMENT_INPUT_INVALID','deterministic method cannot declare reviewDecisionRef.');
   if(input.decision==='review_required'&&input.method!=='deterministic') fail('ENTITY_ENRICHMENT_INPUT_INVALID','review_required must remain deterministic.');
   if(input.reviewDecisionRef!==null) assertIdentifier(input.reviewDecisionRef,'reviewDecisionRef');
-  const evidence=await pool.query<{id:string;kind:DomainEvidenceKind;effect:DomainEvidenceEffect}>(`SELECT id,kind,effect FROM business_domain_evidence WHERE workspace_id=$1::uuid AND canonical_business_id=$2 AND normalized_domain=$3 AND purged_at IS NULL AND id=ANY($4::text[])`,[input.workspaceId,input.canonicalBusinessId,input.normalizedDomain,evidenceIds]);
+  const evidence=await pool.query<{id:string;kind:DomainEvidenceKind;effect:DomainEvidenceEffect;observed_at:Date;refresh_after_seconds:number|string|null}>(`SELECT id,kind,effect,observed_at,refresh_after_seconds FROM business_domain_evidence WHERE workspace_id=$1::uuid AND canonical_business_id=$2 AND normalized_domain=$3 AND purged_at IS NULL AND id=ANY($4::text[])`,[input.workspaceId,input.canonicalBusinessId,input.normalizedDomain,evidenceIds]);
   if(evidence.rows.length!==evidenceIds.length||new Set(evidence.rows.map(r=>r.id)).size!==evidenceIds.length) fail('DOMAIN_DECISION_EVIDENCE_INVALID','Every decision evidence ID must exist in the same workspace, business and domain.');
+  if(input.decision==='verified'){
+    const evaluatedAtMs=input.evaluatedAt.getTime();
+    if(evidence.rows.some(r=>evaluatedAtMs<r.observed_at.getTime())) fail('DOMAIN_DECISION_EVIDENCE_INVALID','Domain verification cannot be evaluated before referenced evidence was observed.');
+    if(input.method==='deterministic'&&evidence.rows.some(r=>{ const refreshAfterSeconds=normalizePgSeconds(r.refresh_after_seconds,'refresh_after_seconds'); return refreshAfterSeconds!==null&&(evaluatedAtMs-r.observed_at.getTime())/1000>refreshAfterSeconds; })) fail('DOMAIN_DECISION_EVIDENCE_INVALID','Deterministic domain verification cannot reuse stale evidence beyond its refresh window.');
+  }
   if(input.decision==='verified'&&!evidence.rows.some(r=>r.effect==='supports_domain')) fail('DOMAIN_DECISION_EVIDENCE_INVALID','verified domain requires supporting evidence.');
   if(input.decision==='verified'&&input.method==='deterministic'&&(!evidence.rows.some(r=>r.effect==='supports_domain'&&r.kind!=='source_claim')||evidence.rows.some(r=>r.effect==='contradicts_domain'))) fail('DOMAIN_DECISION_EVIDENCE_INVALID','deterministic verification requires independent non-contradictory evidence.');
   const inserted=await pool.query<DomainDecisionRow>(`INSERT INTO business_domain_verification_decisions

@@ -45,9 +45,13 @@
 
 ## Supervisor submission
 
-Do not treat PR creation as task completion. When the work packet is actually ready for Supervisor review, add a **new top-level PR comment** whose entire body is the canonical completion signal defined in `AGENTS.md`.
+For a **Supervisor-owned PR**, put the canonical exact phrase below only when the handoff declares the current exact head and all required lease/synchronization metadata is current. This PR-body submission is the Supervisor's head-bound canonical event.
 
-The completion signal is head-bound. If any commit is pushed after the signal, the old signal is invalid: update this handoff to the new exact head, rerun required verification, then post a fresh exact completion signal.
+For a **non-Supervisor agent PR**, do not treat PR creation/body text as completion. When the work packet is actually ready for Supervisor review, add a **trusted new top-level PR comment** whose entire body is the canonical completion signal defined in `AGENTS.md`.
+
+Any later head change invalidates the prior role-specific submission. Update the exact-head handoff, rerun required verification, and publish the appropriate fresh role-specific signal.
+
+**Work Done and Submitted**
 
 The active branch lease is also mandatory and instance-bound. A missing/mismatched lease, a lease held by another instance, or branch history that does not descend from the lease acquisition head blocks integration.
 

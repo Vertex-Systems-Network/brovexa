@@ -9,17 +9,42 @@ Before planning or changing code, every agent must:
 1. Read `README.md`.
 2. Read `AGENTS.md` completely.
 3. Read `docs/PROJECT_PLAN.md`.
-4. Read `docs/CHECKPOINT.md` for the latest integrated state.
-5. Read `docs/PARALLEL_AGENT_DEVELOPMENT.md`.
-6. Read `docs/AI_NATIVE_PLAN.md` for standing branch/module/merge assignments.
-7. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
-8. Read `docs/AGENT_BRANCH_LEASES.md` before mutating any agent/Supervisor work branch.
-9. Read `docs/RUNNER_BENCHMARK.md` and inspect `.agent/runner-benchmark.yaml` for deferred special-Runner work.
-10. Read the relevant milestone/module documents for the assigned workstream.
-11. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
-12. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml`, and `.agent/supervisor.yaml`.
+4. Read `docs/ENGINEERING_CONSTITUTION.md` for project-level authority, safety and stop-the-line scope.
+5. Read `docs/CHECKPOINT.md` for the latest integrated state.
+6. Read `docs/PARALLEL_AGENT_DEVELOPMENT.md`.
+7. Read `docs/AI_NATIVE_PLAN.md` for standing branch/module/merge assignments.
+8. Read `docs/NEW_AGENT_ONBOARDING.md` before any new-agent assignment or slot decision.
+9. Read `docs/AGENT_BRANCH_LEASES.md` before mutating any agent/Supervisor work branch.
+10. Read `docs/RUNNER_BENCHMARK.md` and inspect `.agent/runner-benchmark.yaml` for deferred special-Runner work.
+11. Read the relevant milestone/module documents for the assigned workstream.
+12. Inspect latest `main`, latest Supervisor synchronization epoch from issue #50, live slot occupancy from issue #53, and the slot lease on `coordination/leases` before editing.
+13. Check `.agent/` coordination manifests, especially `.agent/slots.yaml`, `.agent/workstreams.yaml`, `.agent/dependencies.yaml`, `.agent/migrations.yaml`, and `.agent/supervisor.yaml`.
 
 Repository/runtime/test evidence outranks conversation memory or stale task descriptions.
+
+## Autonomous continuous execution — mandatory
+
+When the user has already granted standing autonomous-development authority or explicitly asked the workspace to continue without technical confirmation, the Supervisor must operate in autonomous continuation mode:
+
+1. reconcile exact `main`, open Issues/PRs, issue #50/#53, live leases, compact state, active CI and Runner obligations;
+2. choose the highest-priority dependency-safe action from repository evidence and execute it without asking the user to choose a technical option;
+3. on technical failure, inspect evidence, repair/retry within scope, rerun verification, and continue; never ask the user to approve a code/CI/test/config/documentation repair already authorized by repository governance;
+4. resolve routine implementation, architecture, library, refactor, test-strategy, migration-shape, and documentation choices from repository contracts/evidence using the safest compatible default; document the decision and continue rather than asking the user to make a coding decision;
+5. when one lane is blocked or legitimately occupied, preserve it and continue another safe ready packet rather than stopping the whole workspace;
+6. for a stale lease, perform the explicit recovery audit from `docs/AGENT_BRANCH_LEASES.md` autonomously when evidence is sufficient; otherwise leave the lease untouched and move to other safe work;
+7. for a true human-only external dependency, record `WAITING_EXTERNAL` with evidence and continue other authorized work. Ask the user only when the missing external input is required and no other safe repository work remains;
+8. after every material batch boundary, reconcile the root README progress snapshot/bar before the user-facing handoff;
+9. continue within the active workspace turn/session until no dependency-safe authorized work remains or a hard tool/context/runtime limit prevents further execution.
+
+The 1/2/3 next-action handoff in `.ai/NEXT-ACTION-OPTIONS.md` is not an execution gate in this mode. The canonical safe action is self-selected and started automatically; options may still be shown as informational handoff metadata after progress is made.
+
+A message containing only the repository URL also must not reset an already-authorized autonomous workspace into read-only/number-selection mode. Under standing authority it is a continuation/re-entry signal: reconcile live state and continue the canonical safe action without asking what to do next.
+
+Never assign repository engineering work back to the user. Coding, debugging, CI/log analysis, Git/branch/PR mechanics, migration design, testing, configuration repair, dependency reconciliation, and documentation synchronization are agent responsibilities within repository authority. Human input may be requested only for a genuine external business/legal/credential/production authorization that the user can actually provide, and only after other safe work is exhausted.
+
+This mode does not authorize bypassing branch protection, exact-head gates, security/compliance controls, production/provider activation boundaries, destructive-operation approval, or preservation of concurrent agents' work.
+
+Persistent Supervisor issue #129 `DEGRADED` is an observer/triage signal, not a global execution gate. Reconcile or repair the specific drift when safe, or preserve/skip the affected lane and continue another dependency-safe packet. Escalate to a workspace-wide mutation freeze only when evidence shows repository-wide integrity or authorization cannot be trusted.
 
 ## New Agent Onboarding — mandatory
 
@@ -42,11 +67,11 @@ Onboarding decisions are serialized by the Supervisor so two arrivals cannot cla
 
 New-agent arrival never creates extra capacity on demand. A new module/branch must be planned and bootstrapped before it can exist as an assignable slot.
 
-If **no assignable live `OPEN` slot exists**, the Supervisor stops the new agent immediately and responds exactly:
+If **no assignable live `OPEN` slot exists**, the Supervisor stops **that newly arriving worker only** and responds exactly:
 
 **Go Home Come Back Next Time**
 
-In that case there is **no module assignment, no module-branch checkout, no work packet, no feature edit, and no agent PR**.
+In that case there is **no module assignment, no module-branch checkout, no work packet, no feature edit, and no agent PR for that arrival**. This no-slot response is never a global workspace stop condition: the Supervisor must continue its current packet, review/integration queue, recovery work, or another already-authorized dependency-safe packet without asking the user.
 
 A slot returns to `OPEN` only after the Supervisor confirms no active work packet/unmerged work remains, the live instance lease has been safely released, the idle standing branch is synchronized to current `main`, and issue #53 is updated/re-read to confirm release.
 
@@ -102,7 +127,7 @@ Logical slot ownership and live branch-write ownership are separate.
 
 Before the first mutation to any agent or Supervisor work branch, the instance must atomically acquire `.leases/<SLOT_ID>.json` on `coordination/leases` as defined by `docs/AGENT_BRANCH_LEASES.md`.
 
-Each runtime/session uses a unique `agent_instance_id` and `lease_id`. If the slot lease already exists, the new instance **must stop and must not write that branch**, even when it uses the same logical `agent_id`.
+Each runtime/session uses a unique `agent_instance_id` and `lease_id`. If the slot lease already exists, the new instance **must stop writing that branch**, even when it uses the same logical `agent_id`. That branch-level stop is not a workspace-level stop: the Supervisor audits stale ownership for recovery or continues another dependency-safe lane without user confirmation.
 
 Lease renewal and release use the current lease blob SHA as compare-and-swap protection. Leases do not expire silently. Stale/crashed leases require an explicit recovery audit before deletion/takeover.
 
@@ -139,7 +164,9 @@ When any agent, including the Supervisor, finishes its assigned work packet, it 
 
 **Work Done and Submitted**
 
-For non-Supervisor agents, the canonical repository event is a **top-level PR comment whose entire body is exactly `Work Done and Submitted`**.
+For non-Supervisor agents, the canonical repository event is a **trusted top-level PR comment whose entire body is exactly `Work Done and Submitted`**.
+
+For the Supervisor, the canonical repository event is the PR body's **Supervisor submission** containing the exact phrase and declaring the current exact head SHA, current synchronized main/epoch, slot, instance and lease. This role-specific path avoids requiring a human-authored comment for autonomous Supervisor work while keeping non-Supervisor submission trust unchanged.
 
 The signal means `READY_FOR_SUPERVISOR_REVIEW`; it does not authorize automatic merge.
 
@@ -306,3 +333,10 @@ Every agent handoff includes at least:
 - completion signal status.
 
 See `docs/PARALLEL_AGENT_DEVELOPMENT.md`, `docs/AI_NATIVE_PLAN.md`, `docs/NEW_AGENT_ONBOARDING.md`, and `docs/AGENT_BRANCH_LEASES.md` for the full operating model.
+
+
+## VSN organization next-action handoff
+
+Before every user-facing development handoff, read and follow `.ai/NEXT-ACTION-OPTIONS.md`.
+
+If the user sends only this repository's GitHub URL, follow `.ai/NEXT-ACTION-OPTIONS.md`: with standing autonomous-development authority it is a continuation/re-entry signal, so reconcile live repository state and continue the canonical dependency-safe action without waiting for a number or technical confirmation; without standing authority, use the read-only numbered-option bootstrap.

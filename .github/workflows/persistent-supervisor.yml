@@ -180,6 +180,19 @@ jobs:
               if (pr.draft) continue;
               if (pr.head.repo?.full_name !== repository.full_name) continue;
 
+              const prBody = pr.body || '';
+              const declaredSlot = prBody.match(/Assigned slot ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredInstance = prBody.match(/Agent instance ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredLeaseId = prBody.match(/Lease ID:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredBranch = prBody.match(/Branch:\s*`([^`]+)`/i)?.[1] || null;
+              const declaredHead = prBody.match(/Exact head SHA:\s*`([0-9a-f]{40})`/i)?.[1] || null;
+              const supervisorSubmission = Boolean(
+                declaredSlot === 'SUPERVISOR'
+                && /Agent ID \/ role:\s*`SUPERVISOR\b/i.test(prBody)
+                && prBody.includes('**Work Done and Submitted**')
+                && declaredHead === pr.head.sha
+              );
+
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
@@ -188,29 +201,25 @@ jobs:
               });
               const exactSignals = comments.filter((comment) => (comment.body || '').trim() === 'Work Done and Submitted');
               const signals = exactSignals.filter((comment) => trustedAssociations.has(comment.author_association));
-              if (exactSignals.length > signals.length) {
+              if (!supervisorSubmission && exactSignals.length > signals.length) {
                 untrustedSignals.push(`#${pr.number}`);
               }
-              if (!signals.length) continue;
+              if (!supervisorSubmission && !signals.length) continue;
 
-              const latestSignal = signals.at(-1);
+              const latestSignal = supervisorSubmission ? null : signals.at(-1);
               const { data: headCommit } = await github.rest.repos.getCommit({
                 owner,
                 repo,
                 ref: pr.head.sha,
               });
               const headTime = new Date(headCommit.commit.committer?.date || headCommit.commit.author?.date || 0).getTime();
-              const signalTime = new Date(latestSignal.created_at).getTime();
+              const signalTime = supervisorSubmission
+                ? new Date(pr.updated_at).getTime()
+                : new Date(latestSignal.created_at).getTime();
               if (!(signalTime >= headTime)) {
                 staleSignals.push(`#${pr.number}:stale-head`);
                 continue;
               }
-
-              const prBody = pr.body || '';
-              const declaredSlot = prBody.match(/Assigned slot ID:\s*`([^`]+)`/i)?.[1] || null;
-              const declaredInstance = prBody.match(/Agent instance ID:\s*`([^`]+)`/i)?.[1] || null;
-              const declaredLeaseId = prBody.match(/Lease ID:\s*`([^`]+)`/i)?.[1] || null;
-              const declaredBranch = prBody.match(/Branch:\s*`([^`]+)`/i)?.[1] || null;
               const slotRow = declaredSlot ? slots.get(declaredSlot) : null;
               const activeLease = declaredSlot ? leaseFiles.get(declaredSlot) : null;
               const liveLeaseMatches = Boolean(
