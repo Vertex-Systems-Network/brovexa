@@ -544,6 +544,93 @@ describe('resolveBusinessEntityDeterministically', () => {
     expect(recorder.aliases).toHaveLength(1);
   });
 
+  it('rejects lookup array length drift after the initial bounded admission check', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const first = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        let reads = 0;
+        return new Proxy([first, { ...first, candidateCanonicalBusinessId: 'business.2' }], {
+          get(target, property, receiver) {
+            if (property === 'length') return ++reads === 1 ? 1 : 2;
+            return Reflect.get(target, property, receiver);
+          },
+        });
+      },
+    })).rejects.toThrow(/result length changed during admission/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('rejects a non-integer proxy array length instead of silently admitting no matches', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const match = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        return new Proxy([match], {
+          get(target, property, receiver) {
+            if (property === 'length') return Number.NaN;
+            return Reflect.get(target, property, receiver);
+          },
+        });
+      },
+    })).rejects.toThrow(/array containing at most 256 matches/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
+  it('rejects callback-owned array growth during match descriptor inspection', async () => {
+    const recorder = createPersistenceRecorder();
+    await expect(resolveBusinessEntityDeterministically({
+      ...baseInput(recorder.adapter),
+      candidateLookup: async ({ keys }) => {
+        const domain = keys.find((key) => key.keyKind === 'domain_exact');
+        if (!domain) throw new Error('expected domain key');
+        const match = {
+          candidateCanonicalBusinessId: 'business.1',
+          keyKind: domain.keyKind,
+          keyValue: domain.keyValue,
+          keyScope: domain.keyScope,
+          confidence: 0.99,
+        };
+        const batch = [match];
+        let inserted = false;
+        return new Proxy(batch, {
+          getOwnPropertyDescriptor(target, property) {
+            if (property === '0' && !inserted) {
+              inserted = true;
+              target.push({ ...match, candidateCanonicalBusinessId: 'business.2' });
+            }
+            return Reflect.getOwnPropertyDescriptor(target, property);
+          },
+        });
+      },
+    })).rejects.toThrow(/result length changed during admission/);
+    expect(recorder.evidence).toHaveLength(0);
+    expect(recorder.decisions).toHaveLength(0);
+    expect(recorder.aliases).toHaveLength(0);
+  });
+
   it('rejects duplicate candidate/key pairs with different confidence before evidence persistence', async () => {
     const recorder = createPersistenceRecorder();
     await expect(resolveBusinessEntityDeterministically({
