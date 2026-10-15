@@ -45,6 +45,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Test PR handoff metadata preflight
+        run: node --test scripts/verify-pr-handoff-preflight.test.mjs
+
       - name: Verify foundation contract
         run: node scripts/verify-foundation.mjs
 

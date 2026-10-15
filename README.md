@@ -4,32 +4,30 @@ AI-native global business intelligence, acquisition, evidence, opportunity and L
 
 ## Development progress
 
-Updated: **2026-10-08**
+Updated: **2026-10-16**
 
-**Current verified state:** M00 planning/readiness, M01 Platform Foundation, M01A provider-neutral AI Agent Runtime & Memory OS, and the integrated M02/M02A provider-neutral discovery/acquisition foundation are complete. **M03 — Entity Resolution & Contact Enrichment remains in final verification:** `M03-ER-001` through `M03-ER-005`, migrations `0016` and `0017`, and PostgreSQL regression/rollback coverage are integrated by PR #161. Its exact-head FULL GATE passed run `37819268805`; PR #163's exact-head FULL GATE `37823806455` also passed all three lanes. The resulting-main Persistent Supervisor audit reports DEGRADED from lane-local coordination drift; its heartbeat job succeeds, and the preserved ER-006 adversarial rerun remains pending. M03 stays at ~90%. `SUP-AI-NATIVE-CONTINUOUS-FLOW-001` is now integrated through PR #158: technical blockers/errors are non-interactive under standing autonomous authority, numbered next actions are presentation-only, blocked lanes are lane-local, and README progress reconciliation is mandatory at material batch boundaries. Production provider/model/network/contact-enrichment activation remains separately gated.
+**Current verified state:** M00, M01, M01A, M02A and the bounded provider-neutral **M03 — Entity Resolution & Contact Enrichment** implementation are COMPLETE/INTEGRATED. M03-ER-001 through M03-ER-006, migrations 0014–0017, adversarial ER-006 regression tests and deterministic candidate/identity validation are integrated. PR #166 added bounded worker lookup and preserved ER-006 tests; PR #170 integrated CONTRACTS NUL/Unicode/normalization/provenance guards. Both passed exact-head FULL GATE. GitHub-hosted resulting-main FULL GATE `38808590274` passed **3/3 lanes** at `dfa53dc93c9e8c4939be20e94962c9996b0a7cc0` (quality/security, PostgreSQL 18 + RBAC, canonical worker + Valkey). VERIFY #167 and CONTRACTS #168 are FINAL CLOSED and their original standing-branch histories preserved. **No production provider/model/network/credentials/outreach/deployment authorization is implied.**
 
 ### Live AI-Native execution snapshot
 
-- **Exact integrated main:** `2da848babccf8cf15daeaaaa1b8bfada10a54c5b`
-- **Synchronization epoch:** `86`
-- **Live registry revision at reconciliation:** `214`
-- **Current product packet:** `M03-ER-006` / preserved independent adversarial verification pending after PR #161 integration
-- **Current integration path:** migration `0017` and PostgreSQL valid/invalid-key plus rollback coverage integrated in PR #161 → preserve VERIFY's active lease and three unmerged adversarial test files until its holder safely synchronizes/releases → rerun unchanged ER-006 assertions → resulting-main FULL GATE → close M03
-- **Latest verified product gate:** PR #163 exact-head FULL GATE `37823806455` — SUCCESS across all three lanes. Its resulting-main Persistent Supervisor heartbeat succeeded and reports DEGRADED from lane-local preserved branch/lease drift.
-- **Current DATABASE packet:** PR #161 merged; DATABASE lease remains active at epoch 84 and requires its holder to reconcile/release after closeout
-- **Latest integrated governance PR:** #163 — README/checkpoint reconciliation after PR #162; exact-head FULL GATE `37823806455` passed all three lanes
-- **AI-Native continuous-flow status:** PR #158 integrated; technical blockers/errors, routine engineering choices, URL-only re-entry, no-slot/lease collisions, and packet boundaries do not require user confirmation under standing authority; README reconciliation is mandatory at material batch boundaries
-- **Repository-development authority:** PROJECT-level across the documented roadmap; no per-task/module/milestone/phase engineering re-approval and no coding/CI/Git/migration/testing/config/docs work is delegated back to the user
-- **Control-plane health semantics:** Persistent Supervisor `DEGRADED` is triage-only and lane-scoped; it is not a global stop unless repository-wide integrity/authorization is untrusted
-- **Next dependency-safe product packet:** resume ER-006 after the active VERIFY lease holder safely synchronizes/releases its branch; its 3 unmerged adversarial test files are preserved, and no force-sync or lease takeover is allowed
-- **M03 execution progress:** **~90%**
+- **Exact integrated main:** `dfa53dc93c9e8c4939be20e94962c9996b0a7cc0`
+- **Synchronization epoch:** `89` (live source: issue #50)
+- **Live registry revision at reconciliation:** `234` (latest occupancy and leases must be read live from issue #53)
+- **Integrated product PRs:** [#166](https://github.com/Vertex-Systems-Network/brovexa/pull/166) and [#170](https://github.com/Vertex-Systems-Network/brovexa/pull/170); prior DB migration fix #161
+- **Native CI:** #166 exact-head `38671774518` and resulting-main `38806104170` PASS 3/3; #170 exact-head `38807224186` and resulting-main `38808590274` PASS 3/3
+- **Recovery:** issue #167 CLOSED, 50 original VERIFY branch commits preserved; all three ER-006 adversarial test blobs retained byte-identically in main
+- **Security:** deterministic-first, tenant isolation, evidence/provenance, review decisions, reversible workflows and no-outreach policy maintained
+- **GitHub-only development:** [runbook](docs/GITHUB_ONLY_DEVELOPMENT.md); additional handoff preflight regression tests in CI, without relaxing original gates
+- **Current product packet:** `SUP-M03-FINAL-DOC-RECONCILE-001` — docs-only closeout; no outstanding M03 implementation packet
+- **M03 execution progress:** **100% — FINAL COMPLETE** (bounded provider-neutral milestone)
 
-`█████████░ 90%`
+`██████████ 100%`
 
-M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and migrations `0016`/`0017` are integrated. PR #161 and PR #163 exact-head FULL GATEs passed all required lanes. Persistent Supervisor DEGRADED is lane-local triage; the VERIFY holder's active lease protects three unmerged adversarial test files. Rerun ER-006 and resulting-main verification before M03 can close.
+M03 is implementation-complete with verified native gates; external production integrations are separately gated. Supervisor control-plane `DEGRADED`, if reported, refers to other lane-local coordination and is not evidence that the M03 source code remains unintegrated.
+
 ### Overall delivery estimate
 
-**Weighted program delivery: ~35% complete**
+**Weighted program delivery: ~35% complete** (portfolio approximation; M03's final 10% does not imply a precise portfolio reweighting).
 
 `███████░░░░░░░░░░░░░ 35%`
 
@@ -39,8 +37,8 @@ M03 progress is evidence-based and remains at ~90%: ER-001 through ER-005 and mi
 | M01 | Platform Foundation & Developer Experience | VERIFIED / INTEGRATED | **100%** |
 | M01A | AI Agent Runtime & Memory OS | Provider-neutral foundation VERIFIED / INTEGRATED | **100%** |
 | M02 | Business Discovery & Source Connectors | Five bounded slices VERIFIED / INTEGRATED; real provider transport remains gated | **60%** |
-| M02A | Global Acquisition Studio & Background Research | Provider-neutral packet sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
-| M03 | Entity Resolution & Contact Enrichment | ER-001–ER-005 and migrations 0016/0017 INTEGRATED; #161 exact-head FULL GATE passed; resulting-main Supervisor reports lane-local coordination drift; ER-006 adversarial verification pending | **90%** |
+| M02A | Global Acquisition Studio & Background Research | Provider-neutral sequence ACQ-001 through ACQ-006 VERIFIED / INTEGRATED | **100%** |
+| M03 | Entity Resolution & Contact Enrichment | ER-001–ER-006, migrations 0014–0017, worker/contracts hardening and preserved adversarial tests integrated; exact-head and resulting-main FULL GATE 3/3 PASS | **100%** |
 | M04 | Website & Digital Presence Intelligence | Planned | **5%** |
 | M05 | Demand, Intent & Opportunity Signals | Planned | **5%** |
 | M06 | BPO Intelligence, Scoring & Explainability | Planned | **5%** |
