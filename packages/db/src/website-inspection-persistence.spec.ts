@@ -118,7 +118,7 @@ describe('M04 website inspection persistence', () => {
     expect(fail.query.mock.calls.at(-1)?.[0]).toBe('ROLLBACK');
   });
   it('restricts explicit deletion to the requested workspace and deletion-required data', async () => {
-    const query = vi.fn(async () => ({ rows: [{ id: 'inspect.1' }] }));
+    const query = vi.fn(async (_sql: string, _args?: readonly unknown[]) => ({ rows: [{ id: 'inspect.1' }] }));
     const pool = { query } as unknown as Pool;
     await expect(deleteWebsiteInspectionEvidence(pool, {
       inspectionId: 'inspect.1', workspaceId,
