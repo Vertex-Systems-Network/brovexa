@@ -118,7 +118,7 @@ function validate(input: PersistWebsiteInspectionInput): void {
   for (const o of input.observations) {
     if (!o || !capabilities.has(o.capability) || seen.has(o.capability) ||
         !ids(o.evidenceReferenceIds, 32) || !ids(o.transportReceiptIds, 5) ||
-        o.transportReceiptIds.some((v) => !receipts.has(v))) {
+        o.transportReceiptIds.some((v: string) => !receipts.has(v))) {
       invalid('Malformed or foreign capability evidence.');
     }
     seen.add(o.capability);
