@@ -40,21 +40,21 @@ function payloadInspectionId(context: WorkHandlerContext): string {
       context.workVersion !== M04_WEBSITE_INSPECTION_WORK_VERSION ||
       !identifier.test(context.workspaceId) || !identifier.test(context.workUnitId) ||
       !identifier.test(context.jobRunId) || !identifier.test(context.correlationId) ||
-      !Number.isSafeInteger(context.attempt) || context.attempt < 1) invalid();
+      !Number.isSafeInteger(context.attempt) || context.attempt < 1) return invalid();
   const raw: unknown = context.payload;
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) invalid();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return invalid();
   let keys: PropertyKey[];
   try { keys = Reflect.ownKeys(raw); } catch { return invalid(); }
-  if (keys.length !== 2 || !keys.includes('kind') || !keys.includes('inspectionId')) invalid();
+  if (keys.length !== 2 || !keys.includes('kind') || !keys.includes('inspectionId')) return invalid();
   const own = (name: string): unknown => {
     let descriptor: PropertyDescriptor | undefined;
-    try { descriptor = Object.getOwnPropertyDescriptor(raw, name); } catch { invalid(); }
-    if (!descriptor || !('value' in descriptor)) invalid();
+    try { descriptor = Object.getOwnPropertyDescriptor(raw, name); } catch { return invalid(); }
+    if (!descriptor || !('value' in descriptor)) return invalid();
     return descriptor.value;
   };
-  if (own('kind') !== 'website_inspection_fixture') invalid();
+  if (own('kind') !== 'website_inspection_fixture') return invalid();
   const id = own('inspectionId');
-  if (typeof id !== 'string' || !identifier.test(id)) invalid();
+  if (typeof id !== 'string' || !identifier.test(id)) return invalid();
   return id;
 }
 
