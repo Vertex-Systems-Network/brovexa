@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
-import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
+import { awaitM04LiveStage, M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import { M04LiveAcquisitionError } from './website-live-acquisition';
 import type { WorkHandler } from './runtime';
 import type { M04LiveReadRequest } from './website-live-acquisition';
@@ -15,6 +15,8 @@ export interface M04LiveWorkerDeps extends Omit<M04LiveNativeIntegrationDeps,'si
   /** Independently tenant-scoped canonical request store, never the queue payload. */
   readonly loadRequest: (scope: Readonly<{workspaceId:string;inspectionId:string}>) => Promise<unknown>;
   readonly cancellationPollMs?: number;
+  /** Bound each independent cancellation-store read; no unbounded initial polling. */
+  readonly cancellationCheckTimeoutMs?: number;
 }
 function property(object:unknown,key:string):unknown {
   if(!object||typeof object!=='object'||Array.isArray(object))throw new PermanentWorkError('M04_LIVE_WORK_PAYLOAD_INVALID');
@@ -47,6 +49,9 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
   const pollMs=deps.cancellationPollMs??1000;
   if(!Number.isSafeInteger(pollMs)||pollMs<100||pollMs>30000)
     throw new RangeError('M04 live cancellation interval must be 100-30000ms.');
+  const cancellationTimeoutMs=deps.cancellationCheckTimeoutMs??5000;
+  if(!Number.isSafeInteger(cancellationTimeoutMs)||cancellationTimeoutMs<100||cancellationTimeoutMs>30000)
+    throw new RangeError('M04 live cancellation check timeout must be 100-30000ms.');
   const handler:WorkHandler=async(context)=>{
     if(context.workType!==M04_LIVE_WORK_TYPE||context.workVersion!==M04_LIVE_WORK_VERSION||
        !uuid.test(context.workspaceId))throw new PermanentWorkError('M04_LIVE_WORK_CONTEXT_INVALID');
@@ -63,11 +68,21 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
     let pollPending:Promise<void>|null=null;
     let ended=false;
     const poll=():Promise<void>=>{
-      if(ended)return Promise.resolve();
+      if(ended || controller.signal.aborted)return Promise.resolve();
       if(pollPending)return pollPending;
       pollPending=(async()=>{
-        try {if(await context.isCancellationRequested()&&!ended)controller.abort();}
-        catch{monitorFailure=new RetryableWorkError('M04_LIVE_CANCELLATION_CHECK_FAILED');controller.abort();}
+        try {
+          const cancellationRequested=await awaitM04LiveStage(
+            context.isCancellationRequested, {timeoutMs:cancellationTimeoutMs},
+          );
+          if(cancellationRequested&&!ended)controller.abort();
+        }
+        catch {
+          if(!ended && !controller.signal.aborted) {
+            monitorFailure=new RetryableWorkError('M04_LIVE_CANCELLATION_CHECK_FAILED');
+            controller.abort();
+          }
+        }
       })().finally(()=>{pollPending=null;});
       return pollPending;
     };

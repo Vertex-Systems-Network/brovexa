@@ -86,3 +86,25 @@ describe('M04 live worker registration',()=>{
   expect(d.loadRequest).not.toHaveBeenCalled();
  });
 });
+
+describe('WEB-032 bounded live worker cancellation-store polling',()=>{
+ it('fails retryably before tenant request lookup if the first cancellation-store read never returns',async()=>{
+  const d=deps(),handlers=createM04LiveWorkerHandlers({...d,cancellationCheckTimeoutMs:100} as never);
+  await expect(handlers[M04_LIVE_WORK_TYPE]({
+    ...ctx(),isCancellationRequested:()=>new Promise<boolean>(()=>{}),
+  })).rejects.toMatchObject({name:'RetryableWorkError',code:'M04_LIVE_CANCELLATION_CHECK_FAILED'});
+  expect(d.loadRequest).not.toHaveBeenCalled();
+ });
+ it('rejects cancellation polling timeout settings outside the safe range',()=>{
+  expect(()=>createM04LiveWorkerHandlers({...deps(),cancellationCheckTimeoutMs:30001} as never)).toThrow(RangeError);
+ });
+ it('interrupts a hung request lookup when later canonical cancellation is observed',async()=>{
+  const d=deps(vi.fn(()=>new Promise<ReturnType<typeof request>>(()=>{})));
+  const handler=createM04LiveWorkerHandlers({...d,cancellationPollMs:100,cancellationCheckTimeoutMs:100} as never)[M04_LIVE_WORK_TYPE];
+  let checks=0;
+  await expect(handler({
+   ...ctx(),isCancellationRequested:async()=>++checks>1,
+  })).rejects.toMatchObject({name:'CancelledWorkError',code:'M04_LIVE_WORK_CANCELLED'});
+  expect(d.loadRequest).toHaveBeenCalledOnce();
+ });
+});
