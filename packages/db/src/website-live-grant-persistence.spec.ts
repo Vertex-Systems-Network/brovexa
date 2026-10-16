@@ -48,6 +48,60 @@ describe('WEB-035 owner-grant persistence',()=>{
   expect(toJSON).not.toHaveBeenCalled();
   expect(p.connect).not.toHaveBeenCalled();
  });
+ it('refuses a hash-identical grant replay after expiry or revoked owner authority',async()=>{
+  let hash='';
+  const query=vi.fn(async(sql:string,args?:unknown[])=>{
+    if(sql.startsWith('INSERT INTO website_live_inspection_grants')){
+      hash=String(args?.[19]);return {rows:[]};
+    }
+    if(sql.startsWith('SELECT workspace_id,grant_hash'))
+      return {rows:[{workspace_id:workspaceId,grant_hash:hash}]};
+    if(sql.startsWith('SELECT g.inspection_id FROM website_live_inspection_grants'))
+      return {rows:[]};
+    return {rows:[]};
+  });
+  const release=vi.fn();
+  const pool={connect:vi.fn(async()=>({query,release}))} as unknown as Pool;
+  await expect(persistWebsiteLiveGrant(pool,approval()))
+    .rejects.toMatchObject({code:'M04_LIVE_GRANT_INACTIVE'});
+  const statements=query.mock.calls.map(c=>c[0]);
+  expect(statements.some(x=>x.includes('g.expires_at>clock_timestamp()'))).toBe(true);
+  expect(statements.some(x=>x.includes("wr.kind='owner'"))).toBe(true);
+  expect(statements.some(x=>x.includes("s.decision='allow'"))).toBe(true);
+  expect(statements.some(x=>x.includes('FOR SHARE OF g,w,wm,u,wmr,wr,d,s'))).toBe(true);
+  expect(statements.at(-1)).toBe('ROLLBACK');
+  expect(release).toHaveBeenCalledOnce();
+ });
+ it('allows an identical grant replay only when current authority survives DB row locking',async()=>{
+  let hash='';
+  const query=vi.fn(async(sql:string,args?:unknown[])=>{
+    if(sql.startsWith('INSERT INTO website_live_inspection_grants')){
+      hash=String(args?.[19]);return {rows:[]};
+    }
+    if(sql.startsWith('SELECT workspace_id,grant_hash'))
+      return {rows:[{workspace_id:workspaceId,grant_hash:hash}]};
+    if(sql.startsWith('SELECT g.inspection_id FROM website_live_inspection_grants'))
+      return {rows:[{inspection_id:'inspect.1'}]};
+    return {rows:[]};
+  });
+  const pool={connect:vi.fn(async()=>({query,release:vi.fn()}))} as unknown as Pool;
+  await expect(persistWebsiteLiveGrant(pool,approval()))
+    .resolves.toEqual({inspectionId:'inspect.1',replayed:true});
+  expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
+  const auth=query.mock.calls.find(c=>c[0].startsWith('SELECT g.inspection_id FROM website_live_inspection_grants'));
+  expect(auth?.[1]).toEqual(['inspect.1',workspaceId,hash]);
+ });
+ it('denies changed tenant or grant hash before active replay admission',async()=>{
+  const query=vi.fn(async(sql:string)=>{
+    if(sql.startsWith('SELECT workspace_id,grant_hash'))
+      return {rows:[{workspace_id:workspaceId,grant_hash:'f'.repeat(64)}]};
+    return {rows:[]};
+  });
+  const pool={connect:vi.fn(async()=>({query,release:vi.fn()}))} as unknown as Pool;
+  await expect(persistWebsiteLiveGrant(pool,approval()))
+    .rejects.toMatchObject({code:'M04_LIVE_GRANT_CONFLICT'});
+  expect(query.mock.calls.some(c=>c[0].startsWith('SELECT g.inspection_id FROM website_live_inspection_grants'))).toBe(false);
+ });
  it('denies lookup outside canonical UUID workspace scope',async()=>{
   const p=fakePool();
   await expect(getWebsiteLiveGrant(p.pool,{workspaceId:'bad',inspectionId:'inspect.1'}))

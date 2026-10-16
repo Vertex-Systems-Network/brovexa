@@ -30,7 +30,7 @@ export interface WebsiteLiveTrustedGrant extends WebsiteLiveGrantApproval {
   sourceAdmission: Record<string, unknown>;
 }
 export class WebsiteLiveGrantError extends Error {
-  constructor(readonly code: 'M04_LIVE_GRANT_INVALID'|'M04_LIVE_GRANT_CONFLICT') {
+  constructor(readonly code: 'M04_LIVE_GRANT_INVALID'|'M04_LIVE_GRANT_CONFLICT'|'M04_LIVE_GRANT_INACTIVE') {
     super(code);
     this.name='WebsiteLiveGrantError';
   }
@@ -142,6 +142,41 @@ export async function persistWebsiteLiveGrant(pool:Pool,raw:WebsiteLiveGrantAppr
     );
     if(previous.rows[0]?.workspace_id!==v.workspaceId||previous.rows[0]?.grant_hash!==digest)
       throw new WebsiteLiveGrantError('M04_LIVE_GRANT_CONFLICT');
+    // An identical historical grant is NOT a renewed owner approval. The
+    // insert trigger cannot fire on ON CONFLICT DO NOTHING; pin current owner,
+    // verified domain and M02 admission under row locks before replay success.
+    // The caller cannot extend expires_at by retrying an old approval payload.
+    const active=await client.query<{inspection_id:string}>(
+      `SELECT g.inspection_id FROM website_live_inspection_grants AS g
+       JOIN workspaces AS w ON w.id=g.workspace_id AND w.status='active'
+       JOIN workspace_memberships AS wm
+         ON wm.id=g.approved_by_membership_id AND wm.workspace_id=g.workspace_id
+         AND wm.user_id=g.approved_by_user_id AND wm.status='active'
+       JOIN users AS u ON u.id=wm.user_id AND u.status='active'
+       JOIN workspace_membership_roles AS wmr
+         ON wmr.membership_id=wm.id AND wmr.workspace_id=wm.workspace_id
+       JOIN workspace_roles AS wr
+         ON wr.id=wmr.role_id AND wr.workspace_id=wm.workspace_id AND wr.kind='owner'
+       JOIN business_domain_verification_decisions AS d
+         ON d.id=g.domain_verification_id AND d.workspace_id=g.workspace_id
+         AND d.canonical_business_id=g.canonical_business_id
+         AND d.normalized_domain=g.verified_domain AND d.decision='verified'
+       JOIN source_admission_snapshots AS s
+         ON s.id=g.source_admission_decision_ref AND s.workspace_id=g.workspace_id
+         AND s.decision='allow' AND s.source_key=g.source_key
+         AND s.policy_id=g.source_policy_id AND s.policy_version=g.source_policy_version
+         AND s.request->>'targetUrl'=g.target_url
+         AND s.request->>'executionIntent'='execute'
+         AND s.request->>'operation'='fetch'
+         AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
+         AND s.request->>'rawPayloadRequested'='false'
+         AND s.request->>'exportRequested'='false'
+       WHERE g.inspection_id=$1 AND g.workspace_id=$2 AND g.grant_hash=$3
+         AND g.approved_at<=clock_timestamp() AND g.expires_at>clock_timestamp()
+       LIMIT 1 FOR SHARE OF g,w,wm,u,wmr,wr,d,s`,
+      [v.inspectionId,v.workspaceId,digest],
+    );
+    if(!active.rows[0])throw new WebsiteLiveGrantError('M04_LIVE_GRANT_INACTIVE');
     return {inspectionId:v.inspectionId,replayed:true};
   });
 }
