@@ -32,6 +32,42 @@ export class WebsiteFixtureAuthorizationError extends Error {
 const identifier = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 
 /**
+ * WEB-015: a trusted lookup is still an asynchronous object boundary. An
+ * adapter may accidentally return accessors or a mutable reused row.
+ * Snapshot the EXACT approved fields once without executing user getters.
+ * Never read the lookup record again after the snapshot is constructed.
+ */
+function snapshotStoredDecision(value: unknown): WebsiteStoredFixtureDecision {
+  const invalid = (): never => {
+    throw new WebsiteFixtureAuthorizationError('M04_FIXTURE_RECORD_INVALID');
+  };
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) invalid();
+  const own = (object: object, field: string): unknown => {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(object, field); }
+    catch { return invalid(); }
+    if (!descriptor || !('value' in descriptor)) invalid();
+    return descriptor.value;
+  };
+  const ids = own(value, 'domainEvidenceIds');
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 32) invalid();
+  const evidence: unknown[] = [];
+  for (let i = 0; i < ids.length; i++) evidence.push(own(ids, String(i)));
+  const pinned: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  for (const field of [
+    'decision', 'transportKind', 'workspaceId', 'inspectionId',
+    'canonicalBusinessId', 'verifiedDomain', 'verificationId',
+    'sourceKey', 'sourceAdmissionDecisionRef', 'sourcePolicyId',
+    'sourcePolicyVersion', 'transportPolicyId', 'transportPolicyVersion',
+    'canonicalUrl', 'receiptId', 'fixtureBodySha256', 'fixtureStatus',
+    'fixtureContentType', 'fixtureByteLength', 'maxResponseBytes',
+    'timeoutMs', 'expiresAt',
+  ] as const) pinned[field] = own(value, field);
+  pinned.domainEvidenceIds = Object.freeze(evidence);
+  return Object.freeze(pinned) as unknown as WebsiteStoredFixtureDecision;
+}
+
+/**
  * Never accept any approval field from the claimed request as the source of
  * truth. Compare the entire independent read to the frozen request and return
  * a new allow-listed approval snapshot. Runtime verifies dates, digest, limits.
@@ -64,7 +100,7 @@ export function createWebsiteStoredFixtureAuthorizer(lookup: WebsiteFixtureDecis
     const key = Object.freeze({ workspaceId: request.workspaceId, inspectionId: request.inspectionId });
     const stored = await lookup(key);
     if (!stored) throw new WebsiteFixtureAuthorizationError('M04_FIXTURE_RECORD_NOT_FOUND');
-    const r = stored;
+    const r = snapshotStoredDecision(stored);
     const verified = r.inspectionId === key.inspectionId &&
       r.workspaceId === key.workspaceId &&
       r.decision === 'allow' && r.transportKind === 'test' &&

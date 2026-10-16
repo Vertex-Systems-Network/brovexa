@@ -132,3 +132,44 @@ test('async policy lookup cannot approve request identifiers changed mid-await',
   });
   await code(authorize(mutable),'M04_FIXTURE_RECORD_INVALID');
 });
+
+
+// WEB-015 candidates: declared but intentionally NOT executed until M04 final QA.
+test('WEB-015 rejects lookup getter properties without invoking side effects', async () => {
+  const record = decision();
+  let reads = 0;
+  Object.defineProperty(record, 'receiptId', {
+    enumerable: true,
+    get() { reads++; return 'receipt.005'; },
+  });
+  await code(createWebsiteStoredFixtureAuthorizer(async () => record)(request()),
+    'M04_FIXTURE_RECORD_INVALID');
+  assert.equal(reads, 0);
+});
+
+test('WEB-015 rejects getter-backed and sparse domain evidence before approval', async () => {
+  const getter = decision();
+  let reads = 0;
+  Object.defineProperty(getter.domainEvidenceIds, '0', {
+    enumerable: true, configurable: true,
+    get() { reads++; return 'domain.evidence.005'; },
+  });
+  await code(createWebsiteStoredFixtureAuthorizer(async () => getter)(request()),
+    'M04_FIXTURE_RECORD_INVALID');
+  assert.equal(reads, 0);
+  const sparse = decision();
+  delete sparse.domainEvidenceIds[0];
+  await code(createWebsiteStoredFixtureAuthorizer(async () => sparse)(request()),
+    'M04_FIXTURE_RECORD_INVALID');
+});
+
+test('WEB-015 independently snapshots mutable lookup metadata', async () => {
+  const record = decision();
+  const authorized = await createWebsiteStoredFixtureAuthorizer(async () => record)(request());
+  record.receiptId = 'receipt.forged';
+  record.fixtureBodySha256 = '0'.repeat(64);
+  record.domainEvidenceIds[0] = 'domain.forged';
+  assert.equal(authorized.receiptId, 'receipt.005');
+  assert.equal(authorized.fixtureBodySha256, sha);
+  assert.deepEqual(authorized.domainEvidenceIds, ['domain.evidence.005']);
+});
