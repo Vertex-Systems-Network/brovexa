@@ -1,6 +1,7 @@
 import { WebsiteLivePersistenceError, persistWebsiteLiveInspectionResult,
   deleteWebsiteLiveInspectionEvidence, type createPgPool } from '@brovexa/db';
 import { inspectAuthorizedM04LiveRoot } from './website-live-assessment';
+import { awaitM04LiveStage } from './website-live-async-boundary';
 import type { M04LiveAcquisitionDependencies, M04LiveReadRequest } from './website-live-acquisition';
 
 /** Separate v2 live persistence handoff. Requires a trusted M02 and permit adapter. */
@@ -39,7 +40,13 @@ export async function inspectAndPersistM04LiveRoot(
   const scope=scopeOf(request);
   const assessment=await inspectAuthorizedM04LiveRoot(request,deps);
   if(deps.signal?.aborted)throw new Error('M04_LIVE_CANCELLED');
-  const source=await deps.getStoragePolicy(scope);
+  const policyTimeout=own(assessment.request,'timeoutMs');
+  if(typeof policyTimeout!=='number'||!Number.isSafeInteger(policyTimeout)||
+     policyTimeout<100||policyTimeout>30_000)throw new Error('M04_LIVE_POLICY_INVALID');
+  const source=await awaitM04LiveStage(
+    () => deps.getStoragePolicy(scope),
+    { timeoutMs: policyTimeout, signal: deps.signal },
+  );
   if(deps.signal?.aborted)throw new Error('M04_LIVE_CANCELLED');
   const workspaceId=own(source,'workspaceId'),inspectionId=own(source,'inspectionId');
   const retentionTtlSeconds=own(source,'retentionTtlSeconds');

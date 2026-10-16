@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
+import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import type { WorkHandler } from './runtime';
 import type { M04LiveReadRequest } from './website-live-acquisition';
 import { inspectAndPersistM04LiveRoot, type M04LiveNativeIntegrationDeps } from './website-live-native-integration';
@@ -96,6 +97,12 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
     }catch(error){
       if(monitorFailure!==null)throw monitorFailure;
       if(controller.signal.aborted)throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
+      if(error instanceof M04LiveAsyncBoundaryError) {
+        if(error.code==='M04_LIVE_CANCELLED') throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
+        // A slow policy/DNS/storage callback is a transient infrastructure fault,
+        // never a permanent failure of the tenant's inspection request.
+        throw new RetryableWorkError('M04_LIVE_STAGE_TIMEOUT');
+      }
       throw error;
     }finally{ended=true;if(timer!==undefined)clearInterval(timer);}
   };

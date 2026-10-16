@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { resolve4 } from 'node:dns/promises';
 import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
+import { awaitM04LiveStage } from './website-live-async-boundary';
 
 /**
  * M04 live WEBSITE READ: isolated opt-in HTTPS root acquisition.
@@ -303,7 +304,9 @@ export async function acquireAuthorizedM04LiveRoot(
   const bytes = requestBytes as number;
   const timeoutMs = requestTimeout as number;
   const identity = Object.freeze({workspaceId:scope.workspaceId,inspectionId:scope.inspectionId});
-  const originalPermit = await deps.loadPermit(identity);
+  const originalPermit = await awaitM04LiveStage(
+    () => deps.loadPermit(identity), { timeoutMs, signal: deps.signal },
+  );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   const permit: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   for (const field of scopeFields) permit[field] = ownValue(originalPermit, field);
@@ -324,7 +327,9 @@ export async function acquireAuthorizedM04LiveRoot(
     fail('M04_LIVE_PERMIT_INVALID');
   }
   const resolve = deps.resolveAddresses ?? resolve4;
-  const resolved = await resolve(scope.verifiedDomain);
+  const resolved = await awaitM04LiveStage(
+    () => resolve(scope.verifiedDomain), { timeoutMs, signal: deps.signal },
+  );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   // Reject a mixed public/private DNS answer, not merely the chosen first IP.
   if (!Array.isArray(resolved) || resolved.length < 1 || resolved.length > 32 ||
@@ -350,7 +355,10 @@ export async function acquireAuthorizedM04LiveRoot(
     sourceKey:scope.sourceKey,sourcePolicyId:scope.sourcePolicyId,
     sourcePolicyVersion:scope.sourcePolicyVersion,
   });
-  const rawAdmission = await deps.admitM02Hop(hop);
+  const rawAdmission = await awaitM04LiveStage(
+    () => deps.admitM02Hop(hop), { timeoutMs, signal: deps.signal },
+  );
+  if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   const admitted: Record<string,unknown> = Object.create(null) as Record<string,unknown>;
   for (const key of [
     'decision','workspaceId','inspectionId','transportKind','canonicalUrl','resolvedIpv4',

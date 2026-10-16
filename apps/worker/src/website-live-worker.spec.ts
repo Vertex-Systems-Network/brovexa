@@ -1,4 +1,5 @@
 import {describe,it,expect,vi} from 'vitest';
+import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import {createM04LiveWorkerHandlers,M04_LIVE_WORK_TYPE} from './website-live-worker';
 import type {WorkHandlerContext} from './runtime';
 vi.mock('./website-live-native-integration',()=>({
@@ -40,6 +41,16 @@ describe('M04 live worker registration',()=>{
   expect(d.loadRequest).toHaveBeenCalledWith({workspaceId,inspectionId:'inspect.live1'});
   expect(result.effectData).toEqual({inspectionId:'inspect.live1',replayed:false,
    version:'2.0.0',bodyIncluded:false,executionMode:'live'});
+ });
+ it('classifies a timed-out trusted asynchronous stage as retryable',async()=>{
+  const integration=await import('./website-live-native-integration');
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+    new M04LiveAsyncBoundaryError('M04_LIVE_TIMEOUT'),
+  );
+  const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
+  await expect(handler(ctx())).rejects.toMatchObject({
+    name:'RetryableWorkError',code:'M04_LIVE_STAGE_TIMEOUT',
+  });
  });
  it('cancels before any request on worker cancellation',async()=>{
   const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
