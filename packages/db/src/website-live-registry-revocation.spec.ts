@@ -24,21 +24,21 @@ describe('M04 WEB-043/044 current connector registry revocation', () => {
   });
 
   it('requires locked current registry rows even when an identical grant is replayed', async () => {
-    const src = await readFile(resolve(import.meta.dirname, 'website-live-grant-persistence.ts'), 'utf8');
+    const src = await readFile(resolve(process.cwd(), 'src', 'website-live-grant-persistence.ts'), 'utf8');
     const replay = src.slice(src.indexOf('const active=await client.query'), src.indexOf('if(!active.rows[0])'));
     for (const invariant of registryStates) expect(replay).toContain(invariant);
     expect(replay).toContain('FOR SHARE OF g,w,wm,u,wmr,wr,d,s,cd,cp');
   });
 
   it('requires locked current connector rows even when old evidence is replayed', async () => {
-    const src = await readFile(resolve(import.meta.dirname, 'website-live-persistence.ts'), 'utf8');
+    const src = await readFile(resolve(process.cwd(), 'src', 'website-live-persistence.ts'), 'utf8');
     const replay = src.slice(src.indexOf('async function assertActiveLiveGrantOnReplay'), src.indexOf('/** Atomic parent+receipt'));
     for (const invariant of registryStates) expect(replay).toContain(invariant);
     expect(replay).toContain('FOR SHARE OF g,w,wm,u,wmr,wr,d,s,cd,cp');
   });
 
   it('pins forward and down migrations to both deferred COMMIT-time registry checks', async () => {
-    const dir = resolve(import.meta.dirname, '..', 'migrations');
+    const dir = resolve(process.cwd(), 'migrations');
     const up = await readFile(resolve(dir,'0024_website_live_registry_revocation_guard.up.sql'),'utf8');
     const down = await readFile(resolve(dir,'down','0024_website_live_registry_revocation_guard.down.sql'),'utf8');
     expect(up).toContain('AFTER INSERT ON website_live_inspection_grants');

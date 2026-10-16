@@ -17,7 +17,7 @@ function approval(){return {
  expiresAt:new Date(Date.now()+180_000).toISOString(),
 };}
 function fakePool(){
- const query=vi.fn(async(sql:string)=>sql.startsWith('INSERT INTO website_live_inspection_grants')?
+ const query=vi.fn(async(sql:string,_params?:readonly unknown[])=>sql.startsWith('INSERT INTO website_live_inspection_grants')?
   {rows:[{inspection_id:'inspect.1'}]}:{rows:[]});
  const release=vi.fn();
  const connect=vi.fn(async()=>({query,release}));
@@ -92,7 +92,7 @@ describe('WEB-035 owner-grant persistence',()=>{
   expect(auth?.[1]).toEqual(['inspect.1',workspaceId,hash]);
  });
  it('denies changed tenant or grant hash before active replay admission',async()=>{
-  const query=vi.fn(async(sql:string)=>{
+  const query=vi.fn(async(sql:string,_params?:readonly unknown[])=>{
     if(sql.startsWith('SELECT workspace_id,grant_hash'))
       return {rows:[{workspace_id:workspaceId,grant_hash:'f'.repeat(64)}]};
     return {rows:[]};

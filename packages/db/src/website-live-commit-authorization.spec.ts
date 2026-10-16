@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 /** WEB-036 candidate native migration tests; a real PostgreSQL18 up/down test
  * remains a separate acceptance gate (it must not be simulated as passed). */
-const dir = resolve(import.meta.dirname, '..', 'migrations');
+const dir = resolve(process.cwd(), 'migrations');
 
 describe('WEB-036 deferred owner-grant evidence fence', () => {
   it('checks expiry and current workspace owner during the commit phase', async () => {

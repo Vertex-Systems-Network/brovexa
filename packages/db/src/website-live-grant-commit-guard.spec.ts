@@ -4,7 +4,7 @@ import {describe,expect,it} from 'vitest';
 
 describe('M04 WEB-040 live grant COMMIT authorization',()=>{
  it('installs a deferred constraint trigger and irreversible owner/source checks',async()=>{
-  const base=resolve(import.meta.dirname,'..','migrations');
+  const base=resolve(process.cwd(), 'migrations');
   const up=await readFile(resolve(base,'0023_website_live_grant_commit_guard.up.sql'),'utf8');
   const down=await readFile(resolve(base,'down','0023_website_live_grant_commit_guard.down.sql'),'utf8');
   expect(up).toContain('DEFERRABLE INITIALLY DEFERRED');

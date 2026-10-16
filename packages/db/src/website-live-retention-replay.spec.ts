@@ -48,7 +48,7 @@ describe('WEB-038 durable, scoped retention replay',()=>{
     .rejects.toMatchObject({code:'M04_LIVE_DB_INPUT_INVALID'});
  });
  it('reversible migration constrains receipts and makes them immutable',async()=>{
-  const dir=resolve(import.meta.dirname,'..','migrations');
+  const dir=resolve(process.cwd(), 'migrations');
   const up=await readFile(resolve(dir,'0022_website_live_retention_work_receipts.up.sql'),'utf8');
   const down=await readFile(resolve(dir,'down','0022_website_live_retention_work_receipts.down.sql'),'utf8');
   expect(up).toContain('work_unit_id text PRIMARY KEY');

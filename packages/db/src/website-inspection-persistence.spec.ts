@@ -153,7 +153,7 @@ describe('M04 website inspection persistence', () => {
     expect(query.mock.calls[0]?.[1]).toEqual(['inspect.1', workspaceId]);
   });
   it('pins reversible SQL to verified domain and receipt binding', async () => {
-    const base = resolve(import.meta.dirname, '..', 'migrations');
+    const base = resolve(process.cwd(), 'migrations');
     const up = await readFile(resolve(base, '0018_website_inspection_evidence.up.sql'), 'utf8');
     const down = await readFile(resolve(base, 'down', '0018_website_inspection_evidence.down.sql'), 'utf8');
     expect(up).toContain('website_runs_verified_domain_fk');
