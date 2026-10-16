@@ -543,3 +543,22 @@ describe('M04-WEB-017 storage adapter evidence isolation', () => {
     expect(result.observations[0]?.evidenceReferenceIds).toEqual(['evidence.form.1']);
   });
 });
+
+// WEB-019 native candidate; intentionally NOT RUN until the full M04 final gate.
+describe('M04 WEB-019 independent monotonic exchange timing (candidate)', () => {
+  it('denies persistence when a slow injected exchange falsifies elapsedMs', async () => {
+    const slowRequest = request();
+    slowRequest.limits.timeoutMs = 100;
+    const body = new TextEncoder().encode('<form method="post"></form>');
+    const { deps, persist } = fixture({
+      exchange: async () => {
+        await new Promise(resolve => setTimeout(resolve, 140));
+        return { status: 200, finalUrl: 'https://example.com/',
+          contentType: 'text/html', body, elapsedMs: 0 };
+      },
+    });
+    await expect(executeWebsiteInspectionFixture(slowRequest, deps))
+      .rejects.toMatchObject({ code: 'M04_FIXTURE_TIMEOUT' });
+    expect(persist).not.toHaveBeenCalled();
+  });
+});

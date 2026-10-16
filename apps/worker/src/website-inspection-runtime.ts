@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import type {
   WebsiteInspectionRequest,
   WebsiteInspectionResult,
@@ -386,11 +387,19 @@ export async function executeWebsiteInspectionFixture(
     contentType: admission.fixtureContentType,
     byteLength: admission.fixtureByteLength,
   });
+  // WEB-019: an injected exchange's self-reported elapsedMs is not authority.
+  // Independently measure the await with Node's monotonic clock. This protects
+  // persistence from a completed exchange that under-reports a slow transport;
+  // it does NOT interrupt a hung adapter or enable live network transport.
+  const exchangeStartMs = performance.now();
   const rawResponse = await dependencies.exchange({
     transportKind: 'test', transportRequestId: request.inspectionId,
     url: request.targetUrl, maxResponseBytes: request.limits.maxResponseBytes,
     timeoutMs: request.limits.timeoutMs, acceptedContentTypes: ['text/html'],
   });
+  const actualElapsedMs = performance.now() - exchangeStartMs;
+  if (!Number.isFinite(actualElapsedMs) || actualElapsedMs < 0 ||
+      actualElapsedMs > request.limits.timeoutMs) fail('M04_FIXTURE_TIMEOUT');
   const response = snapshotExchange(rawResponse, request.limits.maxResponseBytes);
   checkExchange(response, request);
   verifyAttestedFixture(response, manifest);

@@ -686,3 +686,20 @@ test('WEB-017: rejected persistence propagates without an artificial success res
   });
   await assert.rejects(executeWebsiteInspectionFixture(req(), deps), /DATABASE_COMMIT_REJECTED/);
 });
+
+// WEB-019 staged regression: no invocation until the final M04 gate.
+test('WEB-019 rejects a delayed injected exchange even when its elapsedMs is forged as zero', async () => {
+  const r = req();
+  r.limits.timeoutMs = 100;
+  const {deps,calls} = fixture({
+    async exchange(input) {
+      calls.exchange++;
+      await new Promise(resolve => setTimeout(resolve, 140));
+      return { status: 200, finalUrl: input.url, contentType: 'text/html',
+        body: Uint8Array.from(defaultBody), elapsedMs: 0 };
+    },
+  });
+  await rejectsCode(executeWebsiteInspectionFixture(r,deps),'M04_FIXTURE_TIMEOUT');
+  assert.equal(calls.persist, 0);
+  assert.equal(calls.extract, 0);
+});
