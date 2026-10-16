@@ -142,14 +142,14 @@ async function insertGrant(g){
     expires_at,grant_hash)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,'1.0.0','transport.m04qa','1.0.0',$9,25000,1000,3600,
            '{"networkMode":"provider_network","transportPolicyId":"transport.m04qa","transportPolicyVersion":"1.0.0"}'::jsonb,
-           $10,$11,now()+($12::int*interval '1 minute'),repeat('a',64))`,
+           $10,$11,clock_timestamp()+($12::numeric*interval '1 minute'),repeat('a',64))`,
   [g.id,g.workspace,g.business,g.domainId,g.host,g.admission,SOURCE,g.policy,`https://${g.host}/`,g.approvalUser,g.approvalMembership,g.expiryMinutes]);
   // Trigger is deferred until COMMIT; force evaluation while savepoint remains rollback-safe.
   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
 }
 
 /** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
-async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0}={}){
+async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false}={}){
   await client.query('SET CONSTRAINTS ALL DEFERRED');
   const sql=[
     'INSERT INTO website_live_inspection_runs',
@@ -175,8 +175,8 @@ async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,comp
       "VALUES($1,$2,$3,'contact_form','observed_present','detected',0.9,'[\"dom.e2e.form\"]'::jsonb)"
     ].join(' '),[inspectionId,workspaceA,inspectionId+'.receipt']);
   }
-  // Force deferred authorization to execute after children, as at COMMIT.
-  await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+  // Force deferred authorization after children unless caller is testing an elapsed-time COMMIT fence.
+  if (!deferCommitFence) await client.query('SET CONSTRAINTS ALL IMMEDIATE');
 }
 
 async function scenario(name, fn, expected={allowed:true,code:null}){
@@ -230,6 +230,16 @@ try{
    await insertGrant(grant(id));
    await insertLiveEvidence(id,{ip:'127.0.0.1'});
  },{allowed:false,code:'23514',constraint:'website_live_address_check'});
+ // WEB-051: a valid receipt can become unauthorized while a transaction stays open.
+ // The SQL deferred fence must consult wall clock time, not PostgreSQL's
+ // transaction-stable now(), and reject evidence staged before grant expiry.
+ await scenario('real elapsed grant expiry is rejected at deferred commit fence',async()=>{
+   const id='m04.qa.'+slug+'.evidence.clock-expired';
+   await insertGrant(grant(id,{expiryMinutes:0.05}));
+   await insertLiveEvidence(id,{deferCommitFence:true});
+   await client.query('SELECT pg_sleep(3.5)');
+   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+ },{allowed:false,code:'23514',constraint:'website_live_evidence_active_grant_guard'});
  await scenario('persisted live evidence rejects in-place modification',async()=>{
    const id='m04.qa.'+slug+'.evidence.immutable';
    await insertGrant(grant(id));
