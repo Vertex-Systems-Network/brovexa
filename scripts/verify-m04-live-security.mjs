@@ -147,6 +147,38 @@ async function insertGrant(g){
   // Trigger is deferred until COMMIT; force evaluation while savepoint remains rollback-safe.
   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
 }
+
+/** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
+async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0}={}){
+  await client.query('SET CONSTRAINTS ALL DEFERRED');
+  const sql=[
+    'INSERT INTO website_live_inspection_runs',
+    '(id,workspace_id,canonical_business_id,domain_verification_id,verified_domain,',
+    'target_url,source_key,source_admission_decision_ref,source_policy_id,source_policy_version,',
+    'transport_policy_id,transport_policy_version,max_response_bytes,timeout_ms,',
+    'receipt_id,remote_ipv4,status_code,content_type,body_length,body_sha256,',
+    'received_at,completed_at,reason_codes,payload_hash,retention_ttl_seconds)',
+    "VALUES($1,$2,$3,$4,'example.com','https://example.com/',$5,$6,$7,'1.0.0',",
+    "'transport.m04qa','1.0.0',$8,1000,$9,$10,200,'text/html',100,",
+    "repeat('b',64),clock_timestamp()+($11::int*interval '1 minute'),",
+    "clock_timestamp()+($11::int*interval '1 minute'),",
+    "'[\"website.single_page_only\"]'::jsonb,repeat('c',64),3600)"
+  ].join(' ');
+  await client.query(sql,[
+    inspectionId,workspaceA,businessA,domainA,SOURCE,admissionA,POLICY,maxBytes,
+    inspectionId+'.receipt',ip,completedAfterMinutes
+  ]);
+  if(completedAfterMinutes===0 && ip==='8.8.8.8' && maxBytes===25000){
+    await client.query([
+      'INSERT INTO website_live_capability_observations',
+      '(inspection_id,workspace_id,receipt_id,capability,observation,reason,confidence,evidence_reference_ids)',
+      "VALUES($1,$2,$3,'contact_form','observed_present','detected',0.9,'[\"dom.e2e.form\"]'::jsonb)"
+    ].join(' '),[inspectionId,workspaceA,inspectionId+'.receipt']);
+  }
+  // Force deferred authorization to execute after children, as at COMMIT.
+  await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+}
+
 async function scenario(name, fn, expected={allowed:true,code:null}){
  const marker='m04scenario';
  await client.query(`SAVEPOINT ${marker}`);
@@ -177,6 +209,33 @@ try{
    await insertGrant(grant(`m04.qa.${slug}.immutable`));
    await client.query('UPDATE website_live_inspection_grants SET timeout_ms=2000 WHERE inspection_id=$1',[`m04.qa.${slug}.immutable`]);
  },{allowed:false,code:'23514',constraint:'website_live_grant_immutable_guard'});
+
+ await scenario('authorized evidence and same-tenant child observation',async()=>{
+   const id='m04.qa.'+slug+'.evidence.valid';
+   await insertGrant(grant(id));
+   await insertLiveEvidence(id);
+ });
+ await scenario('evidence budget cannot exceed its approved grant',async()=>{
+   const id='m04.qa.'+slug+'.evidence.budget';
+   await insertGrant(grant(id));
+   await insertLiveEvidence(id,{maxBytes:25001});
+ },{allowed:false,code:'23514',constraint:'website_live_evidence_active_grant_guard'});
+ await scenario('evidence completion after grant expiry is blocked',async()=>{
+   const id='m04.qa.'+slug+'.evidence.expired';
+   await insertGrant(grant(id));
+   await insertLiveEvidence(id,{completedAfterMinutes:4});
+ },{allowed:false,code:'23514',constraint:'website_live_evidence_active_grant_guard'});
+ await scenario('private IPv4 live evidence is rejected',async()=>{
+   const id='m04.qa.'+slug+'.evidence.private';
+   await insertGrant(grant(id));
+   await insertLiveEvidence(id,{ip:'127.0.0.1'});
+ },{allowed:false,code:'23514',constraint:'website_live_address_check'});
+ await scenario('persisted live evidence rejects in-place modification',async()=>{
+   const id='m04.qa.'+slug+'.evidence.immutable';
+   await insertGrant(grant(id));
+   await insertLiveEvidence(id);
+   await client.query('UPDATE website_live_inspection_runs SET timeout_ms=1500 WHERE id=$1',[id]);
+ },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
  await client.query('ROLLBACK');
  console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; all fixtures rolled back)`);
 }catch(error){try{await client.query('ROLLBACK')}catch{} console.error(`Brovexa M04 native full-schema security FAILED after ${checks} passes: ${error?.message}`); process.exitCode=1;}
