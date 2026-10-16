@@ -38,19 +38,62 @@ export interface WebsiteInspectionStoragePolicy {
   deletionRequired: true;
 }
 
+/**
+ * WEB-018: The tenant policy lookup is an asynchronous authorization boundary.
+ * A reused ORM row, Proxy or getter must not change workspace scope or TTL
+ * between validation and record construction. Access own data only, once;
+ * never execute policy accessors and never copy auxiliary policy fields.
+ */
+function snapshotStoragePolicy(value: unknown): WebsiteInspectionStoragePolicy {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_WORKSPACE_INVALID');
+  }
+  const own = (field: keyof WebsiteInspectionStoragePolicy, code: string): unknown => {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(value, field); }
+    catch { throw new WebsiteInspectionBridgeError(code); }
+    if (!descriptor || !('value' in descriptor)) throw new WebsiteInspectionBridgeError(code);
+    return descriptor.value;
+  };
+  const tenant = own('workspaceId', 'M04_PERSISTENCE_WORKSPACE_INVALID');
+  const ttl = own('retentionTtlSeconds', 'M04_PERSISTENCE_RETENTION_INVALID');
+  const deletion = own('deletionRequired', 'M04_PERSISTENCE_RETENTION_INVALID');
+  if (typeof tenant !== 'string' || !workspaceId.test(tenant)) {
+    throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_WORKSPACE_INVALID');
+  }
+  if (deletion !== true || typeof ttl !== 'number' || !Number.isSafeInteger(ttl) ||
+      ttl < 1 || ttl > 31_536_000) {
+    throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_RETENTION_INVALID');
+  }
+  return Object.freeze({ workspaceId: tenant, retentionTtlSeconds: ttl,
+    deletionRequired: true as const });
+}
+
+/** WEB-018: DB acknowledgements are untrusted until pinned to own data. */
+function snapshotAcknowledgement(value: unknown): { inspectionId: string; replayed: boolean } {
+  const invalid = (): never => { throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_ACK_MISMATCH'); };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) invalid();
+  const own = (field: 'inspectionId' | 'replayed'): unknown => {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(value, field); }
+    catch { return invalid(); }
+    if (!descriptor || !('value' in descriptor)) invalid();
+    return descriptor.value;
+  };
+  const inspectionId = own('inspectionId');
+  const replayed = own('replayed');
+  if (typeof inspectionId !== 'string' || typeof replayed !== 'boolean') invalid();
+  return Object.freeze({ inspectionId, replayed });
+}
+
 export function toWebsiteInspectionPersistencePayload(
   result: WebsiteInspectionResult,
   policy: WebsiteInspectionStoragePolicy,
 ): WebsiteInspectionPersistencePayload {
-  if (!result || !result.request || !policy ||
-      !workspaceId.test(policy.workspaceId) ||
-      result.request.workspaceId !== policy.workspaceId) {
+  const pinnedPolicy = snapshotStoragePolicy(policy);
+  if (!result || !result.request ||
+      result.request.workspaceId !== pinnedPolicy.workspaceId) {
     throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_WORKSPACE_INVALID');
-  }
-  if (policy.deletionRequired !== true ||
-      !Number.isSafeInteger(policy.retentionTtlSeconds) ||
-      policy.retentionTtlSeconds < 1 || policy.retentionTtlSeconds > 31_536_000) {
-    throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_RETENTION_INVALID');
   }
   if (result.version !== '1.0.0' || result.request.version !== '1.0.0' ||
       result.bodyIncluded !== false ||
@@ -106,7 +149,7 @@ export function toWebsiteInspectionPersistencePayload(
     })),
     completedAt: result.completedAt,
     bodyIncluded: false,
-    retentionTtlSeconds: policy.retentionTtlSeconds,
+    retentionTtlSeconds: pinnedPolicy.retentionTtlSeconds,
     deletionRequired: true,
   };
 }
@@ -139,9 +182,8 @@ export function createWebsiteInspectionPersistenceHandoff(
     }
     const policy = await dependencies.policyForWorkspace(result.request.workspaceId);
     const payload = toWebsiteInspectionPersistencePayload(result, policy);
-    const acknowledgement = await dependencies.persist(payload);
-    if (!acknowledgement || acknowledgement.inspectionId !== payload.request.inspectionId ||
-        typeof acknowledgement.replayed !== 'boolean') {
+    const acknowledgement = snapshotAcknowledgement(await dependencies.persist(payload));
+    if (acknowledgement.inspectionId !== payload.request.inspectionId) {
       throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_ACK_MISMATCH');
     }
     return acknowledgement;

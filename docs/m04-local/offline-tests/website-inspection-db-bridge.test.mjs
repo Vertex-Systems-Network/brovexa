@@ -150,3 +150,59 @@ test('handoff returns actual idempotency status without extra DB operations', as
   assert.deepEqual(await handoff(evidence()),{inspectionId:'inspect.1',replayed:true});
   assert.equal(calls,1);
 });
+
+// WEB-018 staged regressions: deliberately not executed until M04 final gate.
+test('WEB-018 denies accessor tenant policy without executing getter', () => {
+  const decision=policy();
+  let invoked=0;
+  Object.defineProperty(decision,'workspaceId',{ configurable:true, get(){ invoked++; return WORKSPACE; }});
+  assert.throws(()=>toWebsiteInspectionPersistencePayload(evidence(),decision),error =>
+    error instanceof WebsiteInspectionBridgeError && error.code==='M04_PERSISTENCE_WORKSPACE_INVALID');
+  assert.equal(invoked,0);
+});
+
+test('WEB-018 denies accessor TTL without executing getter or copying secrets', () => {
+  const decision=policy();
+  let invoked=0;
+  Object.defineProperty(decision,'retentionTtlSeconds',{ configurable:true, get(){ invoked++; return 86400; }});
+  assert.throws(()=>toWebsiteInspectionPersistencePayload(evidence(),decision),error =>
+    error instanceof WebsiteInspectionBridgeError && error.code==='M04_PERSISTENCE_RETENTION_INVALID');
+  assert.equal(invoked,0);
+  const safe={...policy(), internalCredentials:'never-persist-this-value'};
+  const payload=toWebsiteInspectionPersistencePayload(evidence(),safe);
+  assert.equal(JSON.stringify(payload).includes('never-persist-this-value'),false);
+});
+
+test('WEB-018 snapshots policy retention before persistence mutates reused row', async () => {
+  const {createWebsiteInspectionPersistenceHandoff}=await import('../apps/worker/src/website-inspection-db-bridge.ts');
+  const decision=policy();
+  let record;
+  const handoff=createWebsiteInspectionPersistenceHandoff({
+    parseResult:raw=>raw,
+    async policyForWorkspace(){return decision;},
+    async persist(payload){
+      record=payload;
+      decision.retentionTtlSeconds=Infinity;
+      decision.workspaceId='550e8400-e29b-41d4-a716-446655440001';
+      return {inspectionId:'inspect.1',replayed:false};
+    },
+  });
+  await handoff(evidence());
+  assert.equal(record.retentionTtlSeconds,86400);
+  assert.equal(record.request.workspaceId,WORKSPACE);
+});
+
+test('WEB-018 denies getter-backed DB acknowledgement without invocation', async () => {
+  const {createWebsiteInspectionPersistenceHandoff}=await import('../apps/worker/src/website-inspection-db-bridge.ts');
+  let calls=0;
+  const ack={inspectionId:'inspect.1'};
+  Object.defineProperty(ack,'replayed',{ get(){ calls++; return false; }});
+  const handoff=createWebsiteInspectionPersistenceHandoff({
+    parseResult:raw=>raw,
+    async policyForWorkspace(){return policy();},
+    async persist(){return ack;},
+  });
+  await assert.rejects(handoff(evidence()),err=>
+    err instanceof WebsiteInspectionBridgeError && err.code==='M04_PERSISTENCE_ACK_MISMATCH');
+  assert.equal(calls,0);
+});
