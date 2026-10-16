@@ -652,3 +652,43 @@ describe('M04-WEB-021 pipeline per-inspection cancellation', () => {
     expect(base.exchange).not.toHaveBeenCalled();
   });
 });
+
+// WEB-022 native Vitest regression candidates: deliberately NOT RUN yet.
+describe('M04-WEB-022 cancellable admission and extraction callbacks', () => {
+  it('rejects pending authorization on cancellation before contacting transport', async () => {
+    const controller = new AbortController();
+    let entered!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const { deps, exchange, persist } = fixture({
+      cancellationSignal: controller.signal,
+      authorize: async () => {
+        entered();
+        return new Promise<never>(() => {});
+      },
+    });
+    const pending = executeWebsiteInspectionFixture(request(), deps);
+    await started;
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: 'M04_FIXTURE_CANCELLED' });
+    expect(exchange).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('rejects pending extraction on cancellation without invoking persistence', async () => {
+    const controller = new AbortController();
+    let entered!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const { deps, persist } = fixture({
+      cancellationSignal: controller.signal,
+      extract: async () => {
+        entered();
+        return new Promise<never>(() => {});
+      },
+    });
+    const pending = executeWebsiteInspectionFixture(request(), deps);
+    await started;
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: 'M04_FIXTURE_CANCELLED' });
+    expect(persist).not.toHaveBeenCalled();
+  });
+});

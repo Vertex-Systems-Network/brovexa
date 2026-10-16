@@ -117,6 +117,52 @@ function assertNotCancelled(signal?: AbortSignal): void {
 }
 
 /**
+ * WEB-022: return promptly when a worker cancels while an injected async
+ * authorization/extraction callback is pending. Late resolutions/rejections
+ * are observed but ignored. This does not forcibly stop uncooperative user
+ * code and is NOT used to pretend an already-started DB commit rolled back.
+ */
+function awaitCancellableCallback<T>(
+  callback: () => Promise<T>,
+  cancellationSignal?: AbortSignal,
+): Promise<T> {
+  assertNotCancelled(cancellationSignal);
+  if (!cancellationSignal) return callback();
+  return new Promise<T>((resolve, reject) => {
+    let finished = false;
+    const cleanup = (): void => cancellationSignal.removeEventListener('abort', onCancel);
+    const onCancel = (): void => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      reject(new WebsiteInspectionRuntimeError('M04_FIXTURE_CANCELLED'));
+    };
+    cancellationSignal.addEventListener('abort', onCancel, { once: true });
+    if (cancellationSignal.aborted) {
+      onCancel();
+      return;
+    }
+    void Promise.resolve().then(() => {
+      if (finished) return undefined;
+      return callback();
+    }).then(
+      value => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        resolve(value as T);
+      },
+      error => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
  * WEB-020: enforce a real timer even when an injected exchange never settles.
  * A rejected race does not kill an uncooperative callback; the callback is
  * required to observe input.signal. Both late fulfilment and rejection are
@@ -450,7 +496,9 @@ export async function executeWebsiteInspectionFixture(
   if (!Number.isFinite(Date.parse(request.requestedAt)) ||
       nowMs < Date.parse(request.requestedAt)) fail('M04_CLOCK_INVALID');
 
-  const admission = snapshotAdmission(await dependencies.authorize(request));
+  const admission = snapshotAdmission(await awaitCancellableCallback(
+    () => dependencies.authorize(request), dependencies.cancellationSignal,
+  ));
   assertNotCancelled(dependencies.cancellationSignal);
   checkIdenticalApproval(request, admission, nowMs);
   const receiptId = admission.receiptId; // Pin provenance before injected execution.
@@ -500,9 +548,12 @@ export async function executeWebsiteInspectionFixture(
     let untrustedExtraction: WebsiteExtraction;
     try {
       // A defensive copy prevents the extractor from mutating transport-owned evidence.
-      untrustedExtraction = await dependencies.extract({
-        request, body: Uint8Array.from(response.body), receiptId,
-      });
+      untrustedExtraction = await awaitCancellableCallback(
+        () => dependencies.extract({
+          request, body: Uint8Array.from(response.body), receiptId,
+        }),
+        dependencies.cancellationSignal,
+      );
     } catch {
       untrustedExtraction = { coverage: 'partial', findings: [], reasonCodes: ['website.analysis_failed'] };
     }

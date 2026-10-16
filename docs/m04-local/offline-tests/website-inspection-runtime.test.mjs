@@ -784,3 +784,66 @@ test('WEB-020: cancellation after fixture extraction forbids persistence', async
   await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_CANCELLED');
   assert.equal(calls.persist, 0);
 });
+
+// WEB-022: cancellable asynchronous authorization/extraction, no DB rollback claims.
+test('WEB-022: cancellation exits a never-settling authorization without transport', async () => {
+  const controller = new AbortController();
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const { deps, calls } = fixture({
+    cancellationSignal: controller.signal,
+    async authorize() {
+      calls.authorize++;
+      started();
+      return new Promise(() => {});
+    },
+  });
+  const running = executeWebsiteInspectionFixture(req(), deps);
+  await entered;
+  controller.abort();
+  await rejectsCode(running, 'M04_FIXTURE_CANCELLED');
+  assert.equal(calls.exchange, 0);
+  assert.equal(calls.persist, 0);
+});
+
+test('WEB-022: cancellation exits a never-settling extraction before DB handoff', async () => {
+  const controller = new AbortController();
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const { deps, calls } = fixture({
+    cancellationSignal: controller.signal,
+    async extract() {
+      calls.extract++;
+      started();
+      return new Promise(() => {});
+    },
+  });
+  const running = executeWebsiteInspectionFixture(req(), deps);
+  await entered;
+  controller.abort();
+  await rejectsCode(running, 'M04_FIXTURE_CANCELLED');
+  assert.equal(calls.exchange, 1);
+  assert.equal(calls.persist, 0);
+});
+
+test('WEB-022: late authorization after cancellation cannot trigger an exchange', async () => {
+  const controller = new AbortController();
+  let started, complete;
+  const entered = new Promise(resolve => { started = resolve; });
+  const { deps, calls } = fixture({
+    cancellationSignal: controller.signal,
+    authorize(request) {
+      calls.authorize++;
+      started();
+      return new Promise(resolve => { complete = () => resolve(approval(request)); });
+    },
+  });
+  const running = executeWebsiteInspectionFixture(req(), deps);
+  await entered;
+  controller.abort();
+  await rejectsCode(running, 'M04_FIXTURE_CANCELLED');
+  complete();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.exchange, 0);
+  assert.equal(calls.persist, 0);
+});
