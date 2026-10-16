@@ -236,6 +236,21 @@ async function assertActiveLiveGrantOnReplay(
        AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
        AND s.request->>'rawPayloadRequested'='false'
        AND s.request->>'exportRequested'='false'
+     JOIN connector_definitions AS cd
+       ON cd.id=s.connector_definition_id
+       AND cd.connector_key=s.connector_key AND cd.version=s.connector_version
+       AND cd.source_key=g.source_key
+       AND cd.policy_id=g.source_policy_id AND cd.policy_version=g.source_policy_version
+       AND cd.status='approved' AND cd.activation='enabled'
+       AND cd.credential_mode='none'
+       AND cd.access_method IN ('public_web','first_party_web')
+     JOIN connector_policies AS cp
+       ON cp.id=s.connector_policy_db_id
+       AND cp.policy_id=cd.policy_id AND cp.version=cd.policy_version
+       AND cp.source_key=g.source_key AND cp.connector_key=cd.connector_key
+       AND cp.state IN ('APPROVED','APPROVED_WITH_LIMITS')
+       AND cp.access_method=cd.access_method
+       AND cp.reviewed_at<=clock_timestamp() AND cp.next_review_at>clock_timestamp()
      WHERE g.inspection_id=$1 AND g.workspace_id=$2
        AND g.canonical_business_id=$3 AND g.domain_verification_id=$4
        AND g.verified_domain=$5 AND g.target_url=$6
@@ -248,7 +263,7 @@ async function assertActiveLiveGrantOnReplay(
        AND $17::timestamptz <= g.expires_at
        AND g.expires_at > clock_timestamp()
      LIMIT 1
-     FOR SHARE OF g,w,wm,u,wmr,wr,d,s`,
+     FOR SHARE OF g,w,wm,u,wmr,wr,d,s,cd,cp`,
     [r.inspectionId,r.workspaceId,r.canonicalBusinessId,r.domainVerificationId,
       r.verifiedDomain,r.targetUrl,r.sourceKey,r.sourceAdmissionDecisionRef,
       r.sourcePolicyId,r.sourcePolicyVersion,r.transportPolicyId,r.transportPolicyVersion,

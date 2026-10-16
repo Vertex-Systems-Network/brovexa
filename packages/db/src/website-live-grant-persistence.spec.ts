@@ -114,6 +114,10 @@ describe('WEB-035 owner-grant persistence',()=>{
   const sql=p.query.mock.calls.at(-1)?.[0]??'';
   expect(sql).toContain("wr.kind='owner'");
   expect(sql).toContain("s.decision='allow'");
+  expect(sql).toContain("cd.status='approved'");
+  expect(sql).toContain("cd.activation='enabled'");
+  expect(sql).toContain("cp.state IN ('APPROVED','APPROVED_WITH_LIMITS')");
+  expect(sql).toContain('cp.next_review_at>clock_timestamp()');
   expect(sql).toContain('g.expires_at>now()');
   expect(sql).toContain('g.workspace_id=$1 AND g.inspection_id=$2');
   expect(sql).toContain("d.normalized_domain=g.verified_domain AND d.decision='verified'");

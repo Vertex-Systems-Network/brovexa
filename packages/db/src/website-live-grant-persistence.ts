@@ -171,9 +171,24 @@ export async function persistWebsiteLiveGrant(pool:Pool,raw:WebsiteLiveGrantAppr
          AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
          AND s.request->>'rawPayloadRequested'='false'
          AND s.request->>'exportRequested'='false'
+     JOIN connector_definitions AS cd
+       ON cd.id=s.connector_definition_id
+       AND cd.connector_key=s.connector_key AND cd.version=s.connector_version
+       AND cd.source_key=g.source_key
+       AND cd.policy_id=g.source_policy_id AND cd.policy_version=g.source_policy_version
+       AND cd.status='approved' AND cd.activation='enabled'
+       AND cd.credential_mode='none'
+       AND cd.access_method IN ('public_web','first_party_web')
+     JOIN connector_policies AS cp
+       ON cp.id=s.connector_policy_db_id
+       AND cp.policy_id=cd.policy_id AND cp.version=cd.policy_version
+       AND cp.source_key=g.source_key AND cp.connector_key=cd.connector_key
+       AND cp.state IN ('APPROVED','APPROVED_WITH_LIMITS')
+       AND cp.access_method=cd.access_method
+       AND cp.reviewed_at<=clock_timestamp() AND cp.next_review_at>clock_timestamp()
        WHERE g.inspection_id=$1 AND g.workspace_id=$2 AND g.grant_hash=$3
          AND g.approved_at<=clock_timestamp() AND g.expires_at>clock_timestamp()
-       LIMIT 1 FOR SHARE OF g,w,wm,u,wmr,wr,d,s`,
+       LIMIT 1 FOR SHARE OF g,w,wm,u,wmr,wr,d,s,cd,cp`,
       [v.inspectionId,v.workspaceId,digest],
     );
     if(!active.rows[0])throw new WebsiteLiveGrantError('M04_LIVE_GRANT_INACTIVE');
@@ -220,6 +235,21 @@ export async function getWebsiteLiveGrant(pool:Pool,scope:{workspaceId:string;in
        AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
        AND s.request->>'rawPayloadRequested'='false'
        AND s.request->>'exportRequested'='false'
+     JOIN connector_definitions AS cd
+       ON cd.id=s.connector_definition_id
+       AND cd.connector_key=s.connector_key AND cd.version=s.connector_version
+       AND cd.source_key=g.source_key
+       AND cd.policy_id=g.source_policy_id AND cd.policy_version=g.source_policy_version
+       AND cd.status='approved' AND cd.activation='enabled'
+       AND cd.credential_mode='none'
+       AND cd.access_method IN ('public_web','first_party_web')
+     JOIN connector_policies AS cp
+       ON cp.id=s.connector_policy_db_id
+       AND cp.policy_id=cd.policy_id AND cp.version=cd.policy_version
+       AND cp.source_key=g.source_key AND cp.connector_key=cd.connector_key
+       AND cp.state IN ('APPROVED','APPROVED_WITH_LIMITS')
+       AND cp.access_method=cd.access_method
+       AND cp.reviewed_at<=clock_timestamp() AND cp.next_review_at>clock_timestamp()
      JOIN business_domain_verification_decisions d
        ON d.id=g.domain_verification_id AND d.workspace_id=g.workspace_id
        AND d.canonical_business_id=g.canonical_business_id
@@ -233,8 +263,8 @@ export async function getWebsiteLiveGrant(pool:Pool,scope:{workspaceId:string;in
      JOIN workspace_roles wr ON wr.id=wmr.role_id AND wr.workspace_id=wm.workspace_id AND wr.kind='owner'
      WHERE g.workspace_id=$1 AND g.inspection_id=$2
        AND g.approved_at<=now() AND g.expires_at>now()
-       -- Re-evaluate exact source scope at EVERY trusted worker read. Historical
-       -- grant existence is not permission if the verification/admission changed.
+       -- Re-evaluate source registry activation and review deadline on every read.
+       -- Stored grant and M02 policy JSON alone never authorize live network.
      LIMIT 1`,
     [scope.workspaceId,scope.inspectionId],
   );
