@@ -50,6 +50,23 @@ async function waitFor(label, predicate, timeoutMs = 10_000) {
 }
 
 async function resetDatabase() {
+  await pool.query('DROP TABLE IF EXISTS website_live_capability_observations');
+  await pool.query('DROP TABLE IF EXISTS website_live_retention_work_receipts');
+  await pool.query('DROP TABLE IF EXISTS website_live_inspection_runs');
+  await pool.query('DROP TABLE IF EXISTS website_live_inspection_grants');
+  await pool.query('DROP TABLE IF EXISTS website_capability_observations');
+  await pool.query('DROP TABLE IF EXISTS website_inspection_runs');
+  await pool.query('DROP TABLE IF EXISTS approved_business_contact_evidence');
+  await pool.query('DROP TABLE IF EXISTS contact_data_eligibility_decisions');
+  await pool.query('DROP TABLE IF EXISTS business_domain_verification_decisions');
+  await pool.query('DROP TABLE IF EXISTS business_domain_evidence');
+  await pool.query('ALTER TABLE IF EXISTS canonical_businesses DROP CONSTRAINT IF EXISTS canonical_businesses_origin_decision_fk');
+  await pool.query('DROP TABLE IF EXISTS canonical_business_lineage_operations');
+  await pool.query('DROP TABLE IF EXISTS canonical_business_aliases');
+  await pool.query('DROP TABLE IF EXISTS business_resolution_decisions');
+  await pool.query('DROP TABLE IF EXISTS candidate_business_match_evidence');
+  await pool.query('DROP TABLE IF EXISTS source_business_observations');
+  await pool.query('DROP TABLE IF EXISTS canonical_businesses');
   await pool.query('DROP TABLE IF EXISTS source_transport_audit_records CASCADE');
   await pool.query('DROP TABLE IF EXISTS connector_health_snapshots CASCADE');
   await pool.query('DROP TABLE IF EXISTS source_task_usage_events CASCADE');

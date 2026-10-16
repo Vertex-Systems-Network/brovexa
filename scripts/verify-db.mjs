@@ -60,6 +60,12 @@ function expectPostgresConstraint(expectedCode, expectedConstraint) {
 }
 
 async function resetTestDatabase() {
+  await pool.query('DROP TABLE IF EXISTS website_live_capability_observations');
+  await pool.query('DROP TABLE IF EXISTS website_live_retention_work_receipts');
+  await pool.query('DROP TABLE IF EXISTS website_live_inspection_runs');
+  await pool.query('DROP TABLE IF EXISTS website_live_inspection_grants');
+  await pool.query('DROP TABLE IF EXISTS website_capability_observations');
+  await pool.query('DROP TABLE IF EXISTS website_inspection_runs');
   await pool.query('DROP TABLE IF EXISTS approved_business_contact_evidence');
   await pool.query('DROP TABLE IF EXISTS contact_data_eligibility_decisions');
   await pool.query('DROP TABLE IF EXISTS business_domain_verification_decisions');
