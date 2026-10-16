@@ -129,6 +129,13 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
       // Retry known transient DNS and PostgreSQL conditions, never arbitrary errors.
       const code=error instanceof Error ?
         Object.getOwnPropertyDescriptor(error,'code')?.value : undefined;
+      // Deferred PostgreSQL authorization constraints run at COMMIT. A
+      // revoked/expired owner grant is never retryable without a fresh grant;
+      // keep SQL text and membership details out of canonical work effects.
+      const constraint=error instanceof Error ?
+        Object.getOwnPropertyDescriptor(error,'constraint')?.value : undefined;
+      if(code==='23514' && constraint==='website_live_evidence_active_grant_guard')
+        throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT');
       if(typeof code==='string' && new Set([
         'EAI_AGAIN','ETIMEDOUT','ECONNRESET','ECONNREFUSED','ENETUNREACH',
         'EHOSTUNREACH','08000','08001','08003','08006','40001','40P01','53300','57P01',

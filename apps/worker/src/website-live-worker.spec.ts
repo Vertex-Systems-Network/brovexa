@@ -126,3 +126,25 @@ describe('WEB-034 bounded trusted live request lookup',()=>{
   expect(d.loadRequest).not.toHaveBeenCalled();
  });
 });
+
+
+describe('WEB-036 deferred live grant authorization enforcement',()=>{
+ it('classifies an expired/revoked owner grant at COMMIT as permanent and redacts SQL',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  const error=Object.assign(new Error('private owner membership data'),{
+   code:'23514',constraint:'website_live_evidence_active_grant_guard',
+  });
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(error);
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'PermanentWorkError',code:'M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT',
+  });
+ });
+ it('does not mask other PostgreSQL constraint failures as an owner grant failure',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  const error=Object.assign(new Error('other constraint'),{code:'23514',constraint:'unrelated_constraint'});
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(error);
+  await expect(handler(ctx())).rejects.toBe(error);
+ });
+});
