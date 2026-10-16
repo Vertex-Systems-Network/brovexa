@@ -1,6 +1,7 @@
 import {describe,it,expect,vi} from 'vitest';
 import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import { M04LiveAcquisitionError } from './website-live-acquisition';
+import { M04LiveM02Error } from './website-live-m02-admission';
 import {createM04LiveWorkerHandlers,M04_LIVE_WORK_TYPE} from './website-live-worker';
 import * as nativeIntegration from './website-live-native-integration';
 import type {WorkHandlerContext} from './runtime';
@@ -209,5 +210,24 @@ describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
   });
   const result=await handler({...ctx(),isCancellationRequested:async()=>cancelled});
   expect(result.effectData).toMatchObject({inspectionId:'inspect.live1',replayed:false});
+ });
+});
+
+describe('WEB-047 permanent and redacted native M02 denials',()=>{
+ it('classifies a real M02 policy block as permanent without retrying',async()=>{
+  const integration=nativeIntegration;
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+   new M04LiveM02Error('M04_M02_ADMISSION_DENIED'));
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'PermanentWorkError',code:'M04_LIVE_M02_ADMISSION_DENIED'});
+ });
+ it('sanitizes malformed trusted M02 context as a permanent failure',async()=>{
+  const integration=nativeIntegration;
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+   new M04LiveM02Error('M04_M02_CONTEXT_INVALID'));
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'PermanentWorkError',code:'M04_LIVE_M02_CONTEXT_INVALID'});
  });
 });

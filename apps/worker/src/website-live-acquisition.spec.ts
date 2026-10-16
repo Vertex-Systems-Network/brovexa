@@ -106,3 +106,16 @@ describe('M04 live v2 permission and SSRF preflight', () => {
       .rejects.toBeInstanceOf(M04LiveAcquisitionError);
   });
 });
+
+describe('WEB-047 special-use DNS guardrails (no socket)',()=>{
+ it('rejects local, metadata, benchmarking, documentation and special-use IPv4 destinations',()=>{
+  for(const ip of [
+   '0.0.0.1','10.1.2.3','100.64.0.1','127.0.0.1','169.254.169.254',
+   '172.16.1.1','192.0.0.171','192.0.2.9','192.88.99.1',
+   '192.168.2.3','198.18.0.1','198.19.255.255','198.51.100.5',
+   '203.0.113.10','224.0.0.1','255.255.255.255',
+  ])expect(isPublicM04Ipv4(ip)).toBe(false);
+  expect(isPublicM04Ipv4('8.8.8.8')).toBe(true);
+  expect(isPublicM04Ipv4('1.1.1.1')).toBe(true);
+ });
+});

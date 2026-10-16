@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
 import { awaitM04LiveStage, M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import { M04LiveAcquisitionError } from './website-live-acquisition';
+import { M04LiveM02Error } from './website-live-m02-admission';
 import type { WorkHandler } from './runtime';
 import type { M04LiveReadRequest } from './website-live-acquisition';
 import { inspectAndPersistM04LiveRoot, type M04LiveNativeIntegrationDeps } from './website-live-native-integration';
@@ -128,6 +129,11 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
         // Policy denials, forbidden destinations and malformed evidence never retry.
         throw new PermanentWorkError(error.code);
       }
+      // The canonical runtime only understands explicit permanent/retryable
+      // errors. M02 authorization denials must not become unclassified failures.
+      if(error instanceof M04LiveM02Error)
+        throw new PermanentWorkError(error.code==='M04_M02_ADMISSION_DENIED'
+          ? 'M04_LIVE_M02_ADMISSION_DENIED' : 'M04_LIVE_M02_CONTEXT_INVALID');
       // Retry known transient DNS and PostgreSQL conditions, never arbitrary errors.
       const code=error instanceof Error ?
         Object.getOwnPropertyDescriptor(error,'code')?.value : undefined;
