@@ -1,0 +1,185 @@
+--- a/working/apps/worker/src/website-fixture-extractor.ts
++++ b/working/apps/worker/src/website-fixture-extractor.ts
+@@ -25,6 +25,12 @@
+ type ExtractionInput = Parameters<WebsiteInspectionDependencies['extract']>[0];
+ // A conservative static fixture parser must ignore evidence in intentionally
+ // inert or invisible HTML. This is not an attempt at computed-CSS rendering.
++const inertTextTags = new Set([
++  'script', 'style', 'template', 'textarea', 'noscript', 'iframe',
++  // HTML raw-text / RCDATA and legacy elements can contain literal '<a>'
++  // and '<meta>' strings that are not rendered child nodes.
++  'title', 'xmp', 'listing', 'noembed', 'noframes',
++]);
+ const voidTags = new Set([
+   'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+   'link', 'meta', 'param', 'source', 'track', 'wbr',
+@@ -37,6 +43,9 @@
+     /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse)|opacity\s*:\s*0(?:\.0+)?(?:%)?)(?:\s*!important)?\s*(?:;|$)/i.test(css);
+ }
+ 
++// Defense in depth: byte budgets alone permit hundreds of thousands of tiny
++// tags in a synthetic page, so bound parser work independently of response size.
++const MAX_FIXTURE_TAGS = 20_000;
+ const socialDomains = new Set([
+   'instagram.com', 'facebook.com', 'linkedin.com', 'youtube.com',
+   'youtu.be', 'x.com', 'twitter.com', 'tiktok.com',
+@@ -69,13 +78,16 @@
+   // Only explicit tags are inspected; content in comments, scripts, styles and
+   // templates is never interpreted as HTML elements.
+   let i = 0;
+-  let raw: 'script' | 'style' | 'template' | 'textarea' | 'noscript' | 'iframe' | null = null;
++  let raw: string | null = null;
+   while (i < html.length) {
+     if (raw) {
+       const closePattern = new RegExp(`<\\s*\\/\\s*${raw}\\s*>`, 'ig');
+       closePattern.lastIndex = i;
+       const match = closePattern.exec(html);
+       if (!match) break;
++      if (tags.length >= MAX_FIXTURE_TAGS) {
++        throw new WebsiteFixtureExtractionError('M04_FIXTURE_TAG_BUDGET');
++      }
+       tags.push({ name: raw, closing: true, text: match[0], attrs: Object.create(null) as Record<string, string> });
+       i = closePattern.lastIndex;
+       raw = null;
+@@ -83,6 +95,14 @@
+     }
+     const start = html.indexOf('<', i);
+     if (start < 0) break;
++    // HTML CDATA-like declarations are not evidence-bearing HTML elements.
++    // Treat their contents as inert (including any apparent nested tags).
++    if (html.slice(start, start + 9).toLowerCase() === '<![cdata[') {
++      const end = html.indexOf(']]>', start + 9);
++      if (end < 0) break;
++      i = end + 3;
++      continue;
++    }
+     if (html.startsWith('<!--', start)) {
+       const end = html.indexOf('-->', start + 4);
+       if (end < 0) break;
+@@ -108,11 +128,16 @@
+     const closing = parsed[1] === '/';
+     const name = (parsed[2] ?? '').toLowerCase();
+     const attrs = closing ? (Object.create(null) as Record<string, string>) : attributes(rawTag);
++    if (tags.length >= MAX_FIXTURE_TAGS) {
++      throw new WebsiteFixtureExtractionError('M04_FIXTURE_TAG_BUDGET');
++    }
+     tags.push({ name, closing, text: rawTag, attrs });
+-    if (!closing && (name === 'script' || name === 'style' || name === 'template' || name === 'textarea' ||
+-        name === 'noscript' || name === 'iframe')) {
+-      raw = name;
+-    }
++    if (!closing && name === 'plaintext') {
++      // HTML plaintext consumes the rest of the document; even a lexical
++      // </plaintext> sequence must never re-enable fixture evidence scanning.
++      break;
++    }
++    if (!closing && inertTextTags.has(name)) raw = name;
+   }
+   return tags;
+ }
+--- a/working/offline-tests/website-fixture-extractor.test.mjs
++++ b/working/offline-tests/website-fixture-extractor.test.mjs
+@@ -235,3 +235,52 @@
+   const r=await extract(evidence(html));
+   assert.equal(positive(r,'social_link'),true);
+ });
++
++// WEB-012: a static fixture parser must not interpret HTML raw-text and
++// metadata content as independently rendered links/forms/viewport metadata.
++test('WEB-012: title, xmp, listing, noembed, noframes content cannot forge visible social/viewport claims', async t => {
++  for (const element of ['title','xmp','listing','noembed','noframes']) {
++    const html = `<${element}><a href="https://instagram.com/forged">fake</a><meta name="viewport" content="width=device-width"></${element}>`;
++    await t.test(element, async () => {
++      const r = await extract(evidence(html));
++      assert.equal(observation(r,'social_link').observation, 'unknown');
++      assert.equal(observation(r,'mobile_viewport').observation, 'unknown');
++    });
++  }
++});
++
++test('WEB-012: plaintext consumes the remainder of the page even with a fake closing tag', async () => {
++  const html = '<plaintext></plaintext><a href="https://instagram.com/forged">fake</a><meta name="viewport" content="width=device-width">';
++  const r = await extract(evidence(html));
++  assert.equal(observation(r,'social_link').observation, 'unknown');
++  assert.equal(observation(r,'mobile_viewport').observation, 'unknown');
++});
++
++test('WEB-012: visible tags AFTER a genuine title or xmp close are still recognized', async () => {
++  const html = '<title><a href="https://instagram.com/forged"></title><xmp><meta name="viewport" content="width=device-width"></xmp>'+
++    '<a href="https://instagram.com/real">Real</a><meta name="viewport" content="width=device-width">';
++  const r = await extract(evidence(html));
++  assert.equal(positive(r,'social_link'), true);
++  assert.equal(positive(r,'mobile_viewport'), true);
++});
++
++test('WEB-013: CDATA-like blocks in HTML text cannot forge a link or viewport tag', async () => {
++  const html = '<![CDATA[<a href="https://instagram.com/forged">fake</a><meta name="viewport" content="width=device-width">]]>';
++  const r = await extract(evidence(html));
++  assert.equal(observation(r,'social_link').observation, 'unknown');
++  assert.equal(observation(r,'mobile_viewport').observation, 'unknown');
++});
++
++test('WEB-014: dense HTML tag floods fail closed within fixture byte budget', async () => {
++  const html = '<span></span>'.repeat(20_001);
++  const fixture = evidence(html);
++  fixture.request.limits.maxResponseBytes = 1_000_000;
++  await assert.rejects(extract(fixture), err =>
++    err instanceof WebsiteFixtureExtractionError && err.code === 'M04_FIXTURE_TAG_BUDGET');
++});
++
++test('WEB-014: ordinary bounded documents remain parseable after tag-budget enforcement', async () => {
++  const html = '<span></span>'.repeat(150) + '<a href="https://instagram.com/genuine">real</a>';
++  const result = await extract(evidence(html));
++  assert.equal(positive(result, 'social_link'), true);
++});
+--- a/working/apps/worker/src/website-inspection-runtime.spec.ts
++++ b/working/apps/worker/src/website-inspection-runtime.spec.ts
+@@ -443,3 +443,48 @@
+     expect(persist).not.toHaveBeenCalled();
+   });
+ });
++
++// WEB-012/013/014: native Vitest candidates. No live provider or socket activity.
++describe('M04-WEB-012/013/014 conservative fixture tokenizer', () => {
++  function observationFor(html: string, capability: string) {
++    const raw = new TextEncoder().encode(html);
++    const r = request();
++    r.limits.maxResponseBytes = 1_000_000;
++    return extractWebsiteCapabilitiesFromFixture({
++      body: raw, request: r, receiptId: 'receipt.fixture.1',
++    }).then(result => result.findings.find(item => item.capability === capability)?.observation);
++  }
++
++  it('does not promote raw-text title/xmp/listing/noembed/noframes strings into social evidence', async () => {
++    for (const tag of ['title', 'xmp', 'listing', 'noembed', 'noframes']) {
++      await expect(observationFor(
++        `<${tag}><a href="https://instagram.com/forged">fake</a></${tag}>`, 'social_link',
++      )).resolves.toBe('unknown');
++    }
++  });
++
++  it('refuses forged social links after plaintext or inside CDATA-like markup', async () => {
++    const forged = '<a href="https://instagram.com/forged">fake</a>';
++    await expect(observationFor(`<plaintext></plaintext>${forged}`, 'social_link'))
++      .resolves.toBe('unknown');
++    await expect(observationFor(`<![CDATA[${forged}]]>`, 'social_link'))
++      .resolves.toBe('unknown');
++  });
++
++  it('caps tag floods independently of the 1MB byte budget', async () => {
++    const html = '<span></span>'.repeat(20_001);
++    const body = new TextEncoder().encode(html);
++    const r = request();
++    r.limits.maxResponseBytes = 1_000_000;
++    await expect(extractWebsiteCapabilitiesFromFixture({
++      request: r, body, receiptId: 'receipt.fixture.1',
++    })).rejects.toMatchObject({ code: 'M04_FIXTURE_TAG_BUDGET' });
++  });
++
++  it('continues recognizing visible evidence after genuine raw-text element close', async () => {
++    await expect(observationFor(
++      '<title><a href="https://instagram.com/forged"></title>' +
++      '<a href="https://instagram.com/real">real</a>', 'social_link',
++    )).resolves.toBe('observed_present');
++  });
++});

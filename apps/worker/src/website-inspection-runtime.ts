@@ -106,6 +106,48 @@ function fail(code: string): never {
   throw new WebsiteInspectionRuntimeError(code);
 }
 
+/**
+ * WEB-010: the authorization adapter is an asynchronous trust boundary. Read
+ * only own data properties ONCE; accessor-backed receipts and provenance arrays
+ * could otherwise change between validation and the transport/digest handoff.
+ */
+function snapshotAdmission(raw: WebsiteAuthorizedFixture): WebsiteAuthorizedFixture {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    fail('M04_FIXTURE_ADMISSION_INVALID');
+  }
+  const read = (key: keyof WebsiteAuthorizedFixture): unknown => {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(raw, key); }
+    catch { fail('M04_FIXTURE_ADMISSION_INVALID'); }
+    if (!descriptor || !('value' in descriptor)) fail('M04_FIXTURE_ADMISSION_INVALID');
+    return descriptor.value;
+  };
+  const evidence = read('domainEvidenceIds');
+  if (!Array.isArray(evidence) || evidence.length === 0 || evidence.length > 32) {
+    fail('M04_FIXTURE_ADMISSION_INVALID');
+  }
+  const domainEvidenceIds: unknown[] = [];
+  for (let index = 0; index < evidence.length; index++) {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(evidence, String(index)); }
+    catch { fail('M04_FIXTURE_ADMISSION_INVALID'); }
+    if (!descriptor || !('value' in descriptor)) fail('M04_FIXTURE_ADMISSION_INVALID');
+    domainEvidenceIds.push(descriptor.value);
+  }
+  const keys = [
+    'decision', 'transportKind', 'workspaceId', 'inspectionId',
+    'canonicalBusinessId', 'verifiedDomain', 'verificationId', 'sourceKey',
+    'sourceAdmissionDecisionRef', 'sourcePolicyId', 'sourcePolicyVersion',
+    'transportPolicyId', 'transportPolicyVersion', 'canonicalUrl', 'receiptId',
+    'fixtureBodySha256', 'fixtureStatus', 'fixtureContentType', 'fixtureByteLength',
+    'maxResponseBytes', 'timeoutMs', 'expiresAt',
+  ] as const;
+  const snapshot: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  for (const key of keys) snapshot[key] = read(key);
+  snapshot.domainEvidenceIds = Object.freeze(domainEvidenceIds);
+  return Object.freeze(snapshot) as unknown as WebsiteAuthorizedFixture;
+}
+
 function checkIdenticalApproval(request: WebsiteInspectionRequest, admission: WebsiteAuthorizedFixture, nowMs: number): void {
   const valid = admission?.decision === 'allow' && admission.transportKind === 'test' &&
     admission.workspaceId === request.workspaceId &&
@@ -306,7 +348,7 @@ export async function executeWebsiteInspectionFixture(
   if (!Number.isFinite(Date.parse(request.requestedAt)) ||
       nowMs < Date.parse(request.requestedAt)) fail('M04_CLOCK_INVALID');
 
-  const admission = await dependencies.authorize(request);
+  const admission = snapshotAdmission(await dependencies.authorize(request));
   checkIdenticalApproval(request, admission, nowMs);
   const receiptId = admission.receiptId; // Pin provenance before injected execution.
   const authorizedExpiry = Date.parse(admission.expiresAt);
@@ -367,7 +409,12 @@ export async function executeWebsiteInspectionFixture(
     // produce 'assessed' evidence. Always retain explicit uncertainty.
     const reasons = [...extraction.reasonCodes];
     if (observations.length === 0 && reasons.length === 0) reasons.push('website.no_findings');
-    if (!reasons.includes('website.single_page_only')) reasons.push('website.single_page_only');
+    if (!reasons.includes('website.single_page_only')) {
+      // WEB-011: the mandatory uncertainty reason consumes a contract slot;
+      // never rely on downstream Zod to discover overflow after analysis.
+      if (reasons.length >= 16) fail('M04_EXTRACTION_REASON_INVALID');
+      reasons.push('website.single_page_only');
+    }
     result = dependencies.contracts.parseResult({
       version: '1.0.0', request,
       status: 'review_required',

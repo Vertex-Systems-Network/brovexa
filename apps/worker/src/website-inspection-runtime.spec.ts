@@ -394,3 +394,97 @@ describe('M04-WEB-009 untrusted extractor snapshots', () => {
     expect(persist).not.toHaveBeenCalled();
   });
 });
+
+// WEB-010/011 native test candidates; must run against actual Brovexa dependencies.
+describe('M04-WEB-010 trusted admission snapshot', () => {
+  it('refuses accessor-provided receipt without contacting exchange or DB', async () => {
+    const baseline = fixture();
+    const candidate = await baseline.authorize(request());
+    let accesses = 0;
+    Object.defineProperty(candidate, 'receiptId', {
+      enumerable: true, get() { accesses++; return accesses === 1 ? 'receipt.fixture.1' : 'receipt.forged'; },
+    });
+    const { deps, exchange, persist } = fixture({ authorize: async () => candidate });
+    await expect(executeWebsiteInspectionFixture(request(), deps)).rejects.toMatchObject({
+      code: 'M04_FIXTURE_ADMISSION_INVALID',
+    });
+    expect(accesses).toBe(0);
+    expect(exchange).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('pins authorization before the asynchronous fixture exchange can mutate it', async () => {
+    const baseline = fixture();
+    const record = await baseline.authorize(request());
+    const { deps } = fixture({
+      authorize: async () => record,
+      exchange: async () => {
+        record.receiptId = 'receipt.forged';
+        record.fixtureBodySha256 = '0'.repeat(64);
+        const body = new TextEncoder().encode('<form method="post"></form>');
+        return { status: 200, finalUrl: 'https://example.com/', contentType: 'text/html',
+          body, elapsedMs: 1 };
+      },
+    });
+    const result = await executeWebsiteInspectionFixture(request(), deps);
+    expect(result.transportReceiptIds).toEqual(['receipt.fixture.1']);
+  });
+});
+
+describe('M04-WEB-011 reason budget contract', () => {
+  it('fails before persistence when a mandatory single-page warning would exceed 16 reasons', async () => {
+    const codes = Array.from({ length: 16 }, (_, i) => `reason.${i}`);
+    const { deps, persist } = fixture({ extract: async () => ({
+      coverage: 'partial' as const, findings: [], reasonCodes: codes,
+    }) });
+    await expect(executeWebsiteInspectionFixture(request(), deps)).rejects.toMatchObject({
+      code: 'M04_EXTRACTION_REASON_INVALID',
+    });
+    expect(persist).not.toHaveBeenCalled();
+  });
+});
+
+// WEB-012/013/014: native Vitest candidates. No live provider or socket activity.
+describe('M04-WEB-012/013/014 conservative fixture tokenizer', () => {
+  function observationFor(html: string, capability: string) {
+    const raw = new TextEncoder().encode(html);
+    const r = request();
+    r.limits.maxResponseBytes = 1_000_000;
+    return extractWebsiteCapabilitiesFromFixture({
+      body: raw, request: r, receiptId: 'receipt.fixture.1',
+    }).then(result => result.findings.find(item => item.capability === capability)?.observation);
+  }
+
+  it('does not promote raw-text title/xmp/listing/noembed/noframes strings into social evidence', async () => {
+    for (const tag of ['title', 'xmp', 'listing', 'noembed', 'noframes']) {
+      await expect(observationFor(
+        `<${tag}><a href="https://instagram.com/forged">fake</a></${tag}>`, 'social_link',
+      )).resolves.toBe('unknown');
+    }
+  });
+
+  it('refuses forged social links after plaintext or inside CDATA-like markup', async () => {
+    const forged = '<a href="https://instagram.com/forged">fake</a>';
+    await expect(observationFor(`<plaintext></plaintext>${forged}`, 'social_link'))
+      .resolves.toBe('unknown');
+    await expect(observationFor(`<![CDATA[${forged}]]>`, 'social_link'))
+      .resolves.toBe('unknown');
+  });
+
+  it('caps tag floods independently of the 1MB byte budget', async () => {
+    const html = '<span></span>'.repeat(20_001);
+    const body = new TextEncoder().encode(html);
+    const r = request();
+    r.limits.maxResponseBytes = 1_000_000;
+    await expect(extractWebsiteCapabilitiesFromFixture({
+      request: r, body, receiptId: 'receipt.fixture.1',
+    })).rejects.toMatchObject({ code: 'M04_FIXTURE_TAG_BUDGET' });
+  });
+
+  it('continues recognizing visible evidence after genuine raw-text element close', async () => {
+    await expect(observationFor(
+      '<title><a href="https://instagram.com/forged"></title>' +
+      '<a href="https://instagram.com/real">real</a>', 'social_link',
+    )).resolves.toBe('observed_present');
+  });
+});

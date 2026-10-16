@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": [
+      "ES2023",
+      "DOM"
+    ]
+  },
+  "include": [
+    "apps/worker/src/website-inspection-runtime.ts",
+    "apps/worker/src/website-fixture-extractor.ts",
+    "apps/worker/src/website-fixture-authorization.ts",
+    "apps/worker/src/website-inspection-db-bridge.ts",
+    "apps/worker/src/website-inspection-pipeline.ts",
+    "apps/worker/src/website-inspection-runtime.spec.ts",
+    "types/*.d.ts"
+  ]
+}

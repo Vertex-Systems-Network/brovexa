@@ -25,6 +25,12 @@ type Capability = typeof CAPABILITIES[number];
 type ExtractionInput = Parameters<WebsiteInspectionDependencies['extract']>[0];
 // A conservative static fixture parser must ignore evidence in intentionally
 // inert or invisible HTML. This is not an attempt at computed-CSS rendering.
+const inertTextTags = new Set([
+  'script', 'style', 'template', 'textarea', 'noscript', 'iframe',
+  // HTML raw-text / RCDATA and legacy elements can contain literal '<a>'
+  // and '<meta>' strings that are not rendered child nodes.
+  'title', 'xmp', 'listing', 'noembed', 'noframes',
+]);
 const voidTags = new Set([
   'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
   'link', 'meta', 'param', 'source', 'track', 'wbr',
@@ -37,6 +43,9 @@ function concealed(attrs: Readonly<Record<string, string>>, tagName: string): bo
     /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse)|opacity\s*:\s*0(?:\.0+)?(?:%)?)(?:\s*!important)?\s*(?:;|$)/i.test(css);
 }
 
+// Defense in depth: byte budgets alone permit hundreds of thousands of tiny
+// tags in a synthetic page, so bound parser work independently of response size.
+const MAX_FIXTURE_TAGS = 20_000;
 const socialDomains = new Set([
   'instagram.com', 'facebook.com', 'linkedin.com', 'youtube.com',
   'youtu.be', 'x.com', 'twitter.com', 'tiktok.com',
@@ -69,13 +78,16 @@ function tagsOf(html: string): Array<{ name: string; closing: boolean; text: str
   // Only explicit tags are inspected; content in comments, scripts, styles and
   // templates is never interpreted as HTML elements.
   let i = 0;
-  let raw: 'script' | 'style' | 'template' | 'textarea' | 'noscript' | 'iframe' | null = null;
+  let raw: string | null = null;
   while (i < html.length) {
     if (raw) {
       const closePattern = new RegExp(`<\\s*\\/\\s*${raw}\\s*>`, 'ig');
       closePattern.lastIndex = i;
       const match = closePattern.exec(html);
       if (!match) break;
+      if (tags.length >= MAX_FIXTURE_TAGS) {
+        throw new WebsiteFixtureExtractionError('M04_FIXTURE_TAG_BUDGET');
+      }
       tags.push({ name: raw, closing: true, text: match[0], attrs: Object.create(null) as Record<string, string> });
       i = closePattern.lastIndex;
       raw = null;
@@ -83,6 +95,14 @@ function tagsOf(html: string): Array<{ name: string; closing: boolean; text: str
     }
     const start = html.indexOf('<', i);
     if (start < 0) break;
+    // HTML CDATA-like declarations are not evidence-bearing HTML elements.
+    // Treat their contents as inert (including any apparent nested tags).
+    if (html.slice(start, start + 9).toLowerCase() === '<![cdata[') {
+      const end = html.indexOf(']]>', start + 9);
+      if (end < 0) break;
+      i = end + 3;
+      continue;
+    }
     if (html.startsWith('<!--', start)) {
       const end = html.indexOf('-->', start + 4);
       if (end < 0) break;
@@ -108,11 +128,16 @@ function tagsOf(html: string): Array<{ name: string; closing: boolean; text: str
     const closing = parsed[1] === '/';
     const name = (parsed[2] ?? '').toLowerCase();
     const attrs = closing ? (Object.create(null) as Record<string, string>) : attributes(rawTag);
-    tags.push({ name, closing, text: rawTag, attrs });
-    if (!closing && (name === 'script' || name === 'style' || name === 'template' || name === 'textarea' ||
-        name === 'noscript' || name === 'iframe')) {
-      raw = name;
+    if (tags.length >= MAX_FIXTURE_TAGS) {
+      throw new WebsiteFixtureExtractionError('M04_FIXTURE_TAG_BUDGET');
     }
+    tags.push({ name, closing, text: rawTag, attrs });
+    if (!closing && name === 'plaintext') {
+      // HTML plaintext consumes the rest of the document; even a lexical
+      // </plaintext> sequence must never re-enable fixture evidence scanning.
+      break;
+    }
+    if (!closing && inertTextTags.has(name)) raw = name;
   }
   return tags;
 }
