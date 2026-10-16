@@ -20,3 +20,12 @@
 
 ## Restrictions
 No changes to main, PR #174, production DB, or deployment. Guard/regression tests only; do not label M04 production-accepted.
+
+## WEB-051 — elapsed-time COMMIT authorization regression (2026-10-17)
+- Exact code SHA: `d11c3bb2fcc8c69ef54a7c4f7eb459dc9f12bb2c`.
+- Native GitHub Actions run: https://github.com/Vertex-Systems-Network/brovexa/actions/runs/38981281539 — **SUCCESS, all 4/4 jobs**.
+- Real PostgreSQL 18 full-schema security now **13/13 PASS** (verified in the security job log).
+- New test stages a permitted same-tenant v2 receipt while its grant is valid, leaves the transaction open for 3.5 seconds after a 3-second wall-clock grant window, then forces the deferred fence. SQLSTATE `23514` / `website_live_evidence_active_grant_guard` is expected and observed.
+- Uses a disposable `*_test` DB and rolls back fixtures; no external HTTP/DNS, provider credentials, production DB or deployment.
+- QA-08 has one additional real-time expiry acceptance case. Multi-connection revoke/COMMIT races, crash/restart retention replay and authorized live staging remain OPEN.
+- QA-09 cross-branch `0018` reconciliation and final PR/main full-gate integration remain OPEN. This is a branch QA checkpoint, **not release acceptance**.
