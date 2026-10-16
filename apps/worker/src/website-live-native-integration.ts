@@ -18,6 +18,8 @@ export interface M04LiveNativeIntegrationDeps extends M04LiveAcquisitionDependen
   readonly getStoragePolicy: (scope: Readonly<{workspaceId:string;inspectionId:string}>) => Promise<PersistPolicy | null>;
   /** Independent RBAC result from authenticated backend, not a client boolean. */
   readonly authorizeDeletion: (scope: Readonly<{workspaceId:string;inspectionId:string}>) => Promise<boolean>;
+  /** Independent deletion RBAC check is deadline bounded and abortable. */
+  readonly deletionAuthorizationTimeoutMs?: number;
 }
 function own(o: unknown,k:string):unknown {
   if (o === null || typeof o !== 'object' || Array.isArray(o)) throw new Error('M04_LIVE_POLICY_INVALID');
@@ -65,7 +67,11 @@ export async function deleteAuthorizedM04LiveRootEvidence(
   scope: {workspaceId:string;inspectionId:string},deps:M04LiveNativeIntegrationDeps,
 ):Promise<boolean> {
   const stable=scopeOf(scope as M04LiveReadRequest);
-  if(!(await deps.authorizeDeletion(stable)))
+  const timeoutMs=deps.deletionAuthorizationTimeoutMs??5000;
+  const authorized=await awaitM04LiveStage(() => deps.authorizeDeletion(stable), {
+    timeoutMs, signal:deps.signal,
+  });
+  if(authorized!==true)
     throw new WebsiteLivePersistenceError('M04_LIVE_DB_INPUT_INVALID','Live evidence deletion requires explicit RBAC.');
   if(deps.signal?.aborted)throw new Error('M04_LIVE_CANCELLED');
   return deleteWebsiteLiveInspectionEvidence(deps.pool,stable);

@@ -17,6 +17,8 @@ export interface M04LiveWorkerDeps extends Omit<M04LiveNativeIntegrationDeps,'si
   readonly cancellationPollMs?: number;
   /** Bound each independent cancellation-store read; no unbounded initial polling. */
   readonly cancellationCheckTimeoutMs?: number;
+  /** Bound the tenant-scoped request-store lookup even when polling says not cancelled. */
+  readonly requestLoadTimeoutMs?: number;
 }
 function property(object:unknown,key:string):unknown {
   if(!object||typeof object!=='object'||Array.isArray(object))throw new PermanentWorkError('M04_LIVE_WORK_PAYLOAD_INVALID');
@@ -52,6 +54,9 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
   const cancellationTimeoutMs=deps.cancellationCheckTimeoutMs??5000;
   if(!Number.isSafeInteger(cancellationTimeoutMs)||cancellationTimeoutMs<100||cancellationTimeoutMs>30000)
     throw new RangeError('M04 live cancellation check timeout must be 100-30000ms.');
+  const requestLoadTimeoutMs=deps.requestLoadTimeoutMs??5000;
+  if(!Number.isSafeInteger(requestLoadTimeoutMs)||requestLoadTimeoutMs<100||requestLoadTimeoutMs>30000)
+    throw new RangeError('M04 live request lookup timeout must be 100-30000ms.');
   const handler:WorkHandler=async(context)=>{
     if(context.workType!==M04_LIVE_WORK_TYPE||context.workVersion!==M04_LIVE_WORK_VERSION||
        !uuid.test(context.workspaceId))throw new PermanentWorkError('M04_LIVE_WORK_CONTEXT_INVALID');
@@ -91,13 +96,10 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
       await poll();
       if(controller.signal.aborted)throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
       timer=setInterval(()=>{void poll();},pollMs);
-      // Cancel waiting on a stale/malicious DB adapter without resuming on its late result.
-      const raw=await new Promise<unknown>((resolve,reject)=>{
-        const cancelled=():void=>{controller.signal.removeEventListener('abort',cancelled);reject(new CancelledWorkError('M04_LIVE_WORK_CANCELLED'));};
-        controller.signal.addEventListener('abort',cancelled,{once:true});
-        void Promise.resolve().then(()=>deps.loadRequest(scope)).then(
-          value=>{controller.signal.removeEventListener('abort',cancelled);resolve(value);},
-          error=>{controller.signal.removeEventListener('abort',cancelled);reject(error);});
+      // Deadline and cancellation both fence a stale tenant-store callback.
+      // This does not cancel the database query; late results are discarded.
+      const raw=await awaitM04LiveStage(() => deps.loadRequest(scope), {
+        timeoutMs:requestLoadTimeoutMs, signal:controller.signal,
       });
       if(controller.signal.aborted)throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
       if(raw==null)throw new PermanentWorkError('M04_LIVE_WORK_REQUEST_MISSING');

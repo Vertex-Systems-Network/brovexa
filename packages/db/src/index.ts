@@ -33,6 +33,7 @@ export * from './entity-enrichment-persistence';
 export * from './entity-enrichment-schema';
 export * from './website-inspection-persistence';
 export * from './website-live-persistence';
+export * from './website-live-grant-persistence';
 export {
   AuthorizationError,
   assertWorkspaceCapability,

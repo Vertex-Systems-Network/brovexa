@@ -31,16 +31,16 @@ function own(object:unknown,key:string):unknown {
   return d.value;
 }
 
-export function createM04LiveM02HopAdmission(options:M04LiveM02AdapterOptions):(
-  hop:Readonly<M04LiveM02HopInput>,
-)=>Promise<M04LiveM02HopAdmission> {
-  if(typeof options?.loadContext!=='function')throw new TypeError('Trusted M02 context loader is required.');
-  return async hop=>{
+/** Pure admission boundary: individual work units may pass a freshly-loaded DB
+ * policy context without relying on mutable closure state shared across requests. */
+export function evaluateM04LiveM02HopContext(
+  hop: Readonly<M04LiveM02HopInput>,
+  raw: unknown,
+  now: Date,
+): M04LiveM02HopAdmission {
     const scoped=Object.freeze({workspaceId:hop.workspaceId,inspectionId:hop.inspectionId});
-    const raw=await options.loadContext(scoped);
     const workspaceId=own(raw,'workspaceId'),inspectionId=own(raw,'inspectionId');
     const expiresAt=own(raw,'expiresAt'),source=own(raw,'admissionInput');
-    const now=options.now?.()??new Date();
     const nowMs=now.getTime();
     const expiry=typeof expiresAt==='string'?Date.parse(expiresAt):NaN;
     if(workspaceId!==scoped.workspaceId||inspectionId!==scoped.inspectionId||
@@ -79,5 +79,17 @@ export function createM04LiveM02HopAdmission(options:M04LiveM02AdapterOptions):(
       decision:'allow' as const,transportKind:'network' as const,
       ...hop, expiresAt:expiresAt as string,
     });
+}
+
+/** Existing callback-based adapter is kept for independently trusted sources. */
+export function createM04LiveM02HopAdmission(options:M04LiveM02AdapterOptions):(
+  hop:Readonly<M04LiveM02HopInput>,
+)=>Promise<M04LiveM02HopAdmission> {
+  if(typeof options?.loadContext!=='function')throw new TypeError('Trusted M02 context loader is required.');
+  return async hop=>{
+    const raw=await options.loadContext(Object.freeze({
+      workspaceId:hop.workspaceId,inspectionId:hop.inspectionId,
+    }));
+    return evaluateM04LiveM02HopContext(hop,raw,options.now?.()??new Date());
   };
 }

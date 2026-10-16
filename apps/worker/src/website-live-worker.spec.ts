@@ -108,3 +108,21 @@ describe('WEB-032 bounded live worker cancellation-store polling',()=>{
   expect(d.loadRequest).toHaveBeenCalledOnce();
  });
 });
+
+
+describe('WEB-034 bounded trusted live request lookup',()=>{
+ it('fails retryably when tenant request store hangs while cancellation stays false',async()=>{
+  const d=deps(vi.fn(()=>new Promise<ReturnType<typeof request>>(()=>{})));
+  const handler=createM04LiveWorkerHandlers({...d,requestLoadTimeoutMs:100} as never)[M04_LIVE_WORK_TYPE];
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'RetryableWorkError',code:'M04_LIVE_STAGE_TIMEOUT',
+  });
+  expect(d.loadRequest).toHaveBeenCalledOnce();
+ });
+ it('rejects request lookup timeouts outside bounded contract before any I/O',()=>{
+  const d=deps();
+  expect(()=>createM04LiveWorkerHandlers({...d,requestLoadTimeoutMs:0} as never)).toThrow(RangeError);
+  expect(()=>createM04LiveWorkerHandlers({...d,requestLoadTimeoutMs:30_001} as never)).toThrow(RangeError);
+  expect(d.loadRequest).not.toHaveBeenCalled();
+ });
+});
