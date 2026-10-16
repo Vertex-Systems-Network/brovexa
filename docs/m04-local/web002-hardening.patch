@@ -1,0 +1,52 @@
+diff --git a/packages/db/src/website-inspection-persistence.ts b/packages/db/src/website-inspection-persistence.ts
+--- a/packages/db/src/website-inspection-persistence.ts
++++ b/packages/db/src/website-inspection-persistence.ts
+@@ -95,5 +95,6 @@ function validate(input: PersistWebsiteInspectionInput): void {
+   if (!/^source\.[a-z0-9_.-]+$/.test(r.sourceKey) ||
+       !id.test(r.sourceAdmissionDecisionRef) || r.sourceAdmissionDecision !== 'allow' ||
++      !r.sourcePolicySnapshot ||
+       !id.test(r.sourcePolicySnapshot.policyId) ||
+       !version.test(r.sourcePolicySnapshot.policyVersion) ||
+       !id.test(r.transportPolicyId) || !version.test(r.transportPolicyVersion) ||
+@@ -158,6 +159,9 @@ function validate(input: PersistWebsiteInspectionInput): void {
+          input.observations.some((o) => o.observation === 'unknown'))) ||
+       (input.status === 'unavailable' &&
+-        (input.coverage !== 'none' || input.reasonCodes.length === 0))) {
++        (input.coverage !== 'none' || input.reasonCodes.length === 0)) ||
++      (input.status === 'review_required' && input.reasonCodes.length === 0 &&
++        input.coverage === 'bounded' && input.observations.length > 0 &&
++        input.observations.every((o) => o.observation !== 'unknown'))) {
+     invalid('Inspection status contradicts coverage or provenance.');
+   }
+ }
+diff --git a/packages/db/src/website-inspection-persistence.spec.ts b/packages/db/src/website-inspection-persistence.spec.ts
+--- a/packages/db/src/website-inspection-persistence.spec.ts
++++ b/packages/db/src/website-inspection-persistence.spec.ts
+@@ -63,5 +63,27 @@ describe('M04 website inspection persistence', () => {
+     expect(s.connect).not.toHaveBeenCalled();
+   });
++  it('fails closed when source policy snapshot is missing instead of leaking a TypeError', async () => {
++    const s = mockPool();
++    const f = sample();
++    const missing = { ...f, request: { ...f.request, sourcePolicySnapshot: undefined } };
++    await expect(persistWebsiteInspectionResult(
++      s.pool, missing as unknown as PersistWebsiteInspectionInput,
++    )).rejects.toMatchObject({ code: 'WEBSITE_INSPECTION_INPUT_INVALID' });
++    expect(s.connect).not.toHaveBeenCalled();
++  });
++  it('keeps review_required persistence aligned with the frozen M04 contract', async () => {
++    const s = mockPool();
++    const f = sample();
++    const contradictory = { ...f, status: 'review_required' as const };
++    await expect(persistWebsiteInspectionResult(s.pool, contradictory))
++      .rejects.toMatchObject({ code: 'WEBSITE_INSPECTION_INPUT_INVALID' });
++    expect(s.connect).not.toHaveBeenCalled();
++
++    const limited = { ...f, status: 'review_required' as const,
++      reasonCodes: ['review_reason'] };
++    await expect(persistWebsiteInspectionResult(s.pool, limited))
++      .resolves.toEqual({ inspectionId: 'inspect.1', replayed: false });
++  });
+   it('rejects duplicate or foreign receipt evidence and false-negative partial coverage', async () => {
+     const s = mockPool(), f = sample();
+     for (const v of [
