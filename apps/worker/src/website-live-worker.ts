@@ -136,6 +136,8 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
         Object.getOwnPropertyDescriptor(error,'constraint')?.value : undefined;
       if(code==='23514' && constraint==='website_live_evidence_active_grant_guard')
         throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT');
+      if(code==='M04_LIVE_DB_GRANT_INACTIVE')
+        throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_ON_REPLAY');
       if(typeof code==='string' && new Set([
         'EAI_AGAIN','ETIMEDOUT','ECONNRESET','ECONNREFUSED','ENETUNREACH',
         'EHOSTUNREACH','08000','08001','08003','08006','40001','40P01','53300','57P01',

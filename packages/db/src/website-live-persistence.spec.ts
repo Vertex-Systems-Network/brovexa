@@ -60,6 +60,63 @@ describe('M04 live v2 persistence',()=>{
   const getter=Object.defineProperty({...orig.receipt},'bodySha256',{get(){throw Error('MALICIOUS_GETTER')}});
   expect(()=>snapshotWebsiteLiveInspection({...orig,receipt:getter})).toThrow('Missing own data');
  });
+ it('blocks an identical replay after owner authorization expires; no new observations are written',async()=>{
+  let hash='';
+  const query=vi.fn(async(sql:string,args?:unknown[])=>{
+    if(sql.startsWith('INSERT INTO website_live_inspection_runs')){
+      hash=String(args?.[25]);return {rows:[]};
+    }
+    if(sql.startsWith('SELECT workspace_id,payload_hash'))
+      return {rows:[{workspace_id:workspaceId,payload_hash:hash}]};
+    if(sql.startsWith('SELECT g.inspection_id'))return {rows:[]};
+    return {rows:[]};
+  });
+  const release=vi.fn();
+  const pool={connect:vi.fn(async()=>({query,release}))} as unknown as Pool;
+  await expect(persistWebsiteLiveInspectionResult(pool,sample()))
+    .rejects.toMatchObject({code:'M04_LIVE_DB_GRANT_INACTIVE'});
+  const sql=query.mock.calls.map(c=>c[0]);
+  expect(sql.some(x=>x.includes('FOR SHARE OF g,w,wm,u,wmr,wr,d,s'))).toBe(true);
+  expect(sql.some(x=>x.includes('g.expires_at > clock_timestamp()'))).toBe(true);
+  expect(sql.some(x=>x.includes('INSERT INTO website_live_capability_observations'))).toBe(false);
+  expect(sql.at(-1)).toBe('ROLLBACK');
+  expect(release).toHaveBeenCalledOnce();
+ });
+ it('allows a hash-identical replay with current owner, domain and M02 grant under transaction locks',async()=>{
+  let hash='';
+  const query=vi.fn(async(sql:string,args?:unknown[])=>{
+    if(sql.startsWith('INSERT INTO website_live_inspection_runs')){
+      hash=String(args?.[25]);return {rows:[]};
+    }
+    if(sql.startsWith('SELECT workspace_id,payload_hash'))
+      return {rows:[{workspace_id:workspaceId,payload_hash:hash}]};
+    if(sql.startsWith('SELECT g.inspection_id'))return {rows:[{inspection_id:'inspect.live1'}]};
+    return {rows:[]};
+  });
+  const pool={connect:vi.fn(async()=>({query,release:vi.fn()}))} as unknown as Pool;
+  await expect(persistWebsiteLiveInspectionResult(pool,sample()))
+    .resolves.toEqual({inspectionId:'inspect.live1',replayed:true});
+  expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
+  const auth=query.mock.calls.find(c=>c[0].startsWith('SELECT g.inspection_id'));
+  expect(auth?.[1]).toEqual([
+    'inspect.live1',workspaceId,'business.1','verification.1','example.com',
+    'https://example.com/','source.approved_web','admission.1','policy.1','1.0.0',
+    'transport.1','1.0.0',50000,1000,3600,
+    '2026-10-16T12:00:00.000Z','2026-10-16T12:00:00.500Z',
+  ]);
+ });
+ it('rejects same inspection ID with different tenant or evidence before checking replay grants',async()=>{
+  const query=vi.fn(async(sql:string)=>{
+    if(sql.startsWith('INSERT INTO website_live_inspection_runs'))return {rows:[]};
+    if(sql.startsWith('SELECT workspace_id,payload_hash'))
+      return {rows:[{workspace_id:'other-tenant',payload_hash:'0'.repeat(64)}]};
+    return {rows:[]};
+  });
+  const pool={connect:vi.fn(async()=>({query,release:vi.fn()}))} as unknown as Pool;
+  await expect(persistWebsiteLiveInspectionResult(pool,sample()))
+    .rejects.toMatchObject({code:'M04_LIVE_DB_ID_CONFLICT'});
+  expect(query.mock.calls.some(c=>c[0].startsWith('SELECT g.inspection_id'))).toBe(false);
+ });
  it('workspace-scoped RBAC deletion and capped expiry cleanup',async()=>{
   const s=mockPool();await deleteWebsiteLiveInspectionEvidence(s.pool,{workspaceId,inspectionId:'inspect.live1'});
   expect(s.query.mock.calls.at(-1)?.[0]).toContain('deletion_required=true');

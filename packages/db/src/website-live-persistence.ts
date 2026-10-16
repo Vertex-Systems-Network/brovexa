@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { withPgTransaction } from './client';
 
 /** M04-WEB-027: versioned live evidence. Never insert v2 into WEB-002 v1 tables. */
@@ -41,8 +41,8 @@ export interface PersistWebsiteLiveInspectionInput {
 }
 
 export class WebsiteLivePersistenceError extends Error {
-  readonly code: 'M04_LIVE_DB_INPUT_INVALID' | 'M04_LIVE_DB_ID_CONFLICT';
-  constructor(code: 'M04_LIVE_DB_INPUT_INVALID' | 'M04_LIVE_DB_ID_CONFLICT', message: string) {
+  readonly code: 'M04_LIVE_DB_INPUT_INVALID' | 'M04_LIVE_DB_ID_CONFLICT' | 'M04_LIVE_DB_GRANT_INACTIVE';
+  constructor(code: 'M04_LIVE_DB_INPUT_INVALID' | 'M04_LIVE_DB_ID_CONFLICT' | 'M04_LIVE_DB_GRANT_INACTIVE', message: string) {
     super(message);
     this.code = code;
     this.name = 'WebsiteLivePersistenceError';
@@ -201,6 +201,67 @@ export function snapshotWebsiteLiveInspection(input: unknown): PersistWebsiteLiv
   };
 }
 
+/** WEB-037: ON CONFLICT DO NOTHING does not fire the deferred INSERT grant
+ * trigger (migration 0021). A matching replay must independently prove the
+ * original grant is still authorized, and hold SHARE locks through COMMIT.
+ * This performs no network I/O and never reads or stores the raw body.
+ */
+async function assertActiveLiveGrantOnReplay(
+  client: PoolClient, input: PersistWebsiteLiveInspectionInput,
+): Promise<void> {
+  const r = input.request;
+  const result = await client.query<{ inspection_id: string }>(
+    `SELECT g.inspection_id
+     FROM website_live_inspection_grants AS g
+     JOIN workspaces AS w ON w.id=g.workspace_id AND w.status='active'
+     JOIN workspace_memberships AS wm
+       ON wm.id=g.approved_by_membership_id AND wm.workspace_id=g.workspace_id
+       AND wm.user_id=g.approved_by_user_id AND wm.status='active'
+     JOIN users AS u ON u.id=wm.user_id AND u.status='active'
+     JOIN workspace_membership_roles AS wmr
+       ON wmr.membership_id=wm.id AND wmr.workspace_id=wm.workspace_id
+     JOIN workspace_roles AS wr
+       ON wr.id=wmr.role_id AND wr.workspace_id=wm.workspace_id AND wr.kind='owner'
+     JOIN business_domain_verification_decisions AS d
+       ON d.id=g.domain_verification_id AND d.workspace_id=g.workspace_id
+       AND d.canonical_business_id=g.canonical_business_id
+       AND d.normalized_domain=g.verified_domain AND d.decision='verified'
+     JOIN source_admission_snapshots AS s
+       ON s.id=g.source_admission_decision_ref AND s.workspace_id=g.workspace_id
+       AND s.decision='allow' AND s.source_key=g.source_key
+       AND s.policy_id=g.source_policy_id AND s.policy_version=g.source_policy_version
+       AND s.request->>'targetUrl'=g.target_url
+       AND s.request->>'executionIntent'='execute'
+       AND s.request->>'operation'='fetch'
+       AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
+       AND s.request->>'rawPayloadRequested'='false'
+       AND s.request->>'exportRequested'='false'
+     WHERE g.inspection_id=$1 AND g.workspace_id=$2
+       AND g.canonical_business_id=$3 AND g.domain_verification_id=$4
+       AND g.verified_domain=$5 AND g.target_url=$6
+       AND g.source_key=$7 AND g.source_admission_decision_ref=$8
+       AND g.source_policy_id=$9 AND g.source_policy_version=$10
+       AND g.transport_policy_id=$11 AND g.transport_policy_version=$12
+       AND g.max_response_bytes >= $13 AND g.timeout_ms >= $14
+       AND g.retention_ttl_seconds >= $15
+       AND $16::timestamptz >= g.approved_at
+       AND $17::timestamptz <= g.expires_at
+       AND g.expires_at > clock_timestamp()
+     LIMIT 1
+     FOR SHARE OF g,w,wm,u,wmr,wr,d,s`,
+    [r.inspectionId,r.workspaceId,r.canonicalBusinessId,r.domainVerificationId,
+      r.verifiedDomain,r.targetUrl,r.sourceKey,r.sourceAdmissionDecisionRef,
+      r.sourcePolicyId,r.sourcePolicyVersion,r.transportPolicyId,r.transportPolicyVersion,
+      r.maxResponseBytes,r.timeoutMs,input.retentionTtlSeconds,
+      input.receipt.receivedAt,input.completedAt],
+  );
+  if (!result.rows[0]) {
+    throw new WebsiteLivePersistenceError(
+      'M04_LIVE_DB_GRANT_INACTIVE', 'Live evidence replay requires an active authorized grant.',
+    );
+  }
+}
+
 /** Atomic parent+receipt+observation write; same-ID replay is content-addressed. */
 export async function persistWebsiteLiveInspectionResult(
   pool: Pool, rawInput: PersistWebsiteLiveInspectionInput,
@@ -232,6 +293,9 @@ export async function persistWebsiteLiveInspectionResult(
       if (existing.rows[0]?.workspace_id !== r.workspaceId || existing.rows[0]?.payload_hash!==digest) {
         throw new WebsiteLivePersistenceError('M04_LIVE_DB_ID_CONFLICT','Inspection replay mismatch.');
       }
+      // An existing immutable row does not make its old network grant reusable.
+      // The 0021 deferred INSERT trigger is absent from an identical replay.
+      await assertActiveLiveGrantOnReplay(client, input);
       return {inspectionId:r.inspectionId,replayed:true};
     }
     for (const o of input.observations) await client.query(

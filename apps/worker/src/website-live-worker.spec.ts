@@ -148,3 +148,16 @@ describe('WEB-036 deferred live grant authorization enforcement',()=>{
   await expect(handler(ctx())).rejects.toBe(error);
  });
 });
+
+
+describe('WEB-037 live replay authorization',()=>{
+ it('maps a previously persisted but newly expired grant to a permanent sanitized work failure',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  const error=Object.assign(new Error('owner membership and SQL details'),{code:'M04_LIVE_DB_GRANT_INACTIVE'});
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(error);
+  await expect(handler(ctx())).rejects.toMatchObject({
+    name:'PermanentWorkError',code:'M04_LIVE_GRANT_NOT_ACTIVE_ON_REPLAY',
+  });
+ });
+});
