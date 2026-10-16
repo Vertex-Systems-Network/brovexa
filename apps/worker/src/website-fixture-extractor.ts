@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { WebsiteInspectionDependencies, WebsiteExtraction } from './website-inspection-runtime';
+import type { WebsiteExtraction } from './website-inspection-runtime';
 
 /**
  * M04-WEB-004: Conservative deterministic analysis of ONE trusted test fixture.
@@ -22,7 +22,15 @@ const CAPABILITIES = [
   'mobile_viewport', 'structured_data', 'social_link', 'https',
 ] as const;
 type Capability = typeof CAPABILITIES[number];
-type ExtractionInput = Parameters<WebsiteInspectionDependencies['extract']>[0];
+// The HTML parser needs only byte budget and verified canonical root, not a
+// test-only request. A separately authorized v2 live read may reuse the same
+// conservative HTML logic without forging a v1 test-only result.
+type ExtractionInput = {
+  readonly request: { readonly verifiedDomain: string; readonly targetUrl: string;
+    readonly limits: { readonly maxResponseBytes: number } };
+  readonly body: Uint8Array;
+  readonly receiptId: string;
+};
 // A conservative static fixture parser must ignore evidence in intentionally
 // inert or invisible HTML. This is not an attempt at computed-CSS rendering.
 const inertTextTags = new Set([
