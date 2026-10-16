@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { executeWebsiteInspectionFixture } from '../apps/worker/src/website-inspection-runtime.ts';
+import { createWebsiteFixturePipeline } from '../apps/worker/src/website-inspection-pipeline.ts';
 import { extractWebsiteCapabilitiesFromFixture } from '../apps/worker/src/website-fixture-extractor.ts';
 import { createWebsiteStoredFixtureAuthorizer } from '../apps/worker/src/website-fixture-authorization.ts';
 import { createWebsiteInspectionPersistenceHandoff } from '../apps/worker/src/website-inspection-db-bridge.ts';
@@ -94,4 +95,23 @@ test('forged domain in independent record fails before fixture transport and DB 
  const {deps,calls}=pipeline({store:{...record(),verifiedDomain:'imposter.example.com'}});
  await assert.rejects(executeWebsiteInspectionFixture(request(),deps),{code:'M04_FIXTURE_RECORD_INVALID'});
  assert.deepEqual(calls,['lookup']);
+});
+
+// WEB-021: cancellation is per pipeline invocation, never shared globally.
+test('WEB-021: per-call cancellation reaches runtime before fixture lookup', async () => {
+  const cancellation = new AbortController();
+  cancellation.abort();
+  let lookups = 0;
+  const run = createWebsiteFixturePipeline({
+    contracts: { parseRequest: value => value, parseResult: value => value },
+    lookup: async () => { lookups++; throw new Error('SHOULD_NOT_LOOKUP'); },
+    exchange: async () => { throw new Error('SHOULD_NOT_EXCHANGE'); },
+    storage: {
+      policyForWorkspace: async () => { throw new Error('SHOULD_NOT_READ_POLICY'); },
+      persist: async () => { throw new Error('SHOULD_NOT_PERSIST'); },
+    },
+  });
+  await assert.rejects(run({ }, { cancellationSignal: cancellation.signal }), error =>
+    error?.code === 'M04_FIXTURE_CANCELLED');
+  assert.equal(lookups, 0);
 });

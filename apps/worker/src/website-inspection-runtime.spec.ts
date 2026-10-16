@@ -562,3 +562,93 @@ describe('M04 WEB-019 independent monotonic exchange timing (candidate)', () => 
     expect(persist).not.toHaveBeenCalled();
   });
 });
+
+// WEB-020: pending native Vitest regressions, deliberately NOT executed yet.
+describe('M04-WEB-020 abortable test fixture exchange', () => {
+  it('aborts a never-settling exchange on its 100ms deadline before persistence', async () => {
+    const r = request();
+    r.limits.timeoutMs = 100;
+    let observedSignal: AbortSignal | undefined;
+    const { deps, persist } = fixture({
+      exchange: async (input: { signal: AbortSignal }) => {
+        observedSignal = input.signal;
+        return new Promise<never>(() => {});
+      },
+    });
+    await expect(executeWebsiteInspectionFixture(r, deps)).rejects.toMatchObject({
+      code: 'M04_FIXTURE_TIMEOUT',
+    });
+    expect(observedSignal?.aborted).toBe(true);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('does not authorize or run an already aborted work unit', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { deps, authorize, exchange, persist } = fixture({ cancellationSignal: controller.signal });
+    await expect(executeWebsiteInspectionFixture(request(), deps)).rejects.toMatchObject({
+      code: 'M04_FIXTURE_CANCELLED',
+    });
+    expect(authorize).not.toHaveBeenCalled();
+    expect(exchange).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight exchange and passes an aborted signal into its adapter', async () => {
+    const controller = new AbortController();
+    let seen: AbortSignal | undefined;
+    const { deps, persist } = fixture({
+      cancellationSignal: controller.signal,
+      exchange: async (input: { signal: AbortSignal }) => {
+        seen = input.signal;
+        controller.abort();
+        return new Promise<never>(() => {});
+      },
+    });
+    await expect(executeWebsiteInspectionFixture(request(), deps)).rejects.toMatchObject({
+      code: 'M04_FIXTURE_CANCELLED',
+    });
+    expect(seen?.aborted).toBe(true);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('stops before persistence when a worker cancels during extraction', async () => {
+    const controller = new AbortController();
+    const { deps, persist } = fixture({
+      cancellationSignal: controller.signal,
+      extract: async () => {
+        controller.abort();
+        return { coverage: 'partial' as const, findings: [], reasonCodes: [] };
+      },
+    });
+    await expect(executeWebsiteInspectionFixture(request(), deps)).rejects.toMatchObject({
+      code: 'M04_FIXTURE_CANCELLED',
+    });
+    expect(persist).not.toHaveBeenCalled();
+  });
+});
+
+// WEB-021: no global AbortController reuse between independent pipeline work units.
+describe('M04-WEB-021 pipeline per-inspection cancellation', () => {
+  it('does not call storage or fixture lookup for an already cancelled run', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const lookup = vi.fn(async () => { throw new Error('NEVER_LOOKUP'); });
+    const base = fixture();
+    const run = createWebsiteFixturePipeline({
+      contracts: base.deps.contracts,
+      lookup,
+      exchange: base.deps.exchange,
+      storage: {
+        policyForWorkspace: async () => { throw new Error('NEVER_READ_STORAGE'); },
+        persist: async () => { throw new Error('NEVER_PERSIST'); },
+      },
+      now: () => new Date(NOW),
+    });
+    await expect(run(request(), { cancellationSignal: controller.signal })).rejects.toMatchObject({
+      code: 'M04_FIXTURE_CANCELLED',
+    });
+    expect(lookup).not.toHaveBeenCalled();
+    expect(base.exchange).not.toHaveBeenCalled();
+  });
+});

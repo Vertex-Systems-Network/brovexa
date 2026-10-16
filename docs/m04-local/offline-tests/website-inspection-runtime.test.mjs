@@ -703,3 +703,84 @@ test('WEB-019 rejects a delayed injected exchange even when its elapsedMs is for
   assert.equal(calls.persist, 0);
   assert.equal(calls.extract, 0);
 });
+
+// WEB-020 staged cancellation/deadline regression candidates.
+// Written only: owner requested no test execution until M04 module completion.
+test('WEB-020: a hung exchange is aborted by a real deadline and cannot persist', async () => {
+  const r = req();
+  r.limits.timeoutMs = 100;
+  let signal;
+  const { deps, calls } = fixture({
+    async exchange(input) {
+      calls.exchange++;
+      signal = input.signal;
+      return new Promise(() => {});
+    },
+  });
+  await rejectsCode(executeWebsiteInspectionFixture(r, deps), 'M04_FIXTURE_TIMEOUT');
+  assert.equal(signal?.aborted, true);
+  assert.equal(calls.persist, 0);
+  assert.equal(calls.extract, 0);
+});
+
+test('WEB-020: already cancelled work never requests authorization or transport', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const { deps, calls } = fixture({ cancellationSignal: controller.signal });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_CANCELLED');
+  assert.equal(calls.authorize, 0);
+  assert.equal(calls.exchange, 0);
+  assert.equal(calls.persist, 0);
+});
+
+test('WEB-020: worker cancellation aborts pending exchange and skips persistence', async () => {
+  const controller = new AbortController();
+  let fixtureSignal;
+  const { deps, calls } = fixture({
+    cancellationSignal: controller.signal,
+    async exchange(input) {
+      calls.exchange++;
+      fixtureSignal = input.signal;
+      controller.abort();
+      return new Promise(() => {});
+    },
+  });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_CANCELLED');
+  assert.equal(fixtureSignal.aborted, true);
+  assert.equal(calls.extract, 0);
+  assert.equal(calls.persist, 0);
+});
+
+test('WEB-020: late exchange fulfillment after deadline never extracts or persists', async () => {
+  const r = req();
+  r.limits.timeoutMs = 100;
+  let release;
+  const { deps, calls } = fixture({
+    async exchange(input) {
+      calls.exchange++;
+      return new Promise(resolve => { release = () => resolve({
+        status: 200, finalUrl: input.url, contentType: 'text/html',
+        body: Uint8Array.from(defaultBody), elapsedMs: 1,
+      }); });
+    },
+  });
+  await rejectsCode(executeWebsiteInspectionFixture(r, deps), 'M04_FIXTURE_TIMEOUT');
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.persist, 0);
+  assert.equal(calls.extract, 0);
+});
+
+test('WEB-020: cancellation after fixture extraction forbids persistence', async () => {
+  const controller = new AbortController();
+  const { deps, calls } = fixture({
+    cancellationSignal: controller.signal,
+    async extract() {
+      calls.extract++;
+      controller.abort();
+      return { coverage: 'partial', reasonCodes: [], findings: [finding()] };
+    },
+  });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_CANCELLED');
+  assert.equal(calls.persist, 0);
+});

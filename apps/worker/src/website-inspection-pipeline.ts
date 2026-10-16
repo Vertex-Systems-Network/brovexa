@@ -32,15 +32,20 @@ export interface WebsiteFixturePipelineDependencies {
   now?: () => Date;
 }
 
+export interface WebsiteFixtureRunOptions {
+  /** WEB-021: per-work-unit signal, never shared between concurrent inspections. */
+  cancellationSignal?: AbortSignal;
+}
+
 export function createWebsiteFixturePipeline(dependencies: WebsiteFixturePipelineDependencies):
-  (request: unknown) => Promise<WebsiteInspectionResult> {
+  (request: unknown, options?: WebsiteFixtureRunOptions) => Promise<WebsiteInspectionResult> {
   const authorize = createWebsiteStoredFixtureAuthorizer(dependencies.lookup);
   const handoff = createWebsiteInspectionPersistenceHandoff({
     parseResult: (raw) => dependencies.contracts.parseResult(raw),
     policyForWorkspace: dependencies.storage.policyForWorkspace,
     persist: dependencies.storage.persist,
   });
-  return (rawRequest) => executeWebsiteInspectionFixture(rawRequest, {
+  return (rawRequest, options) => executeWebsiteInspectionFixture(rawRequest, {
     contracts: dependencies.contracts,
     authorize,
     exchange: dependencies.exchange,
@@ -49,5 +54,6 @@ export function createWebsiteFixturePipeline(dependencies: WebsiteFixturePipelin
     extract: extractWebsiteCapabilitiesFromFixture,
     persist: async (result) => { await handoff(result); },
     ...(dependencies.now ? { now: dependencies.now } : {}),
+    ...(options?.cancellationSignal ? { cancellationSignal: options.cancellationSignal } : {}),
   });
 }

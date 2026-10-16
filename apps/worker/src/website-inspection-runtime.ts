@@ -64,6 +64,8 @@ export interface WebsiteFixtureExchangeInput {
   maxResponseBytes: number;
   timeoutMs: number;
   acceptedContentTypes: readonly ['text/html'];
+  /** WEB-020: deadline/cancellation signal; test fixture adapters must honor it. */
+  signal: AbortSignal;
 }
 
 export interface WebsiteFixtureExchange {
@@ -100,11 +102,81 @@ export interface WebsiteInspectionDependencies {
   }): Promise<WebsiteExtraction>;
   /** Storage adapter may map to WEB-002 after that interface is merged and validated. */
   persist?(result: WebsiteInspectionResult): Promise<void>;
+  /** Optional per-inspection worker cancellation. Does not cancel DB commits already begun. */
+  cancellationSignal?: AbortSignal;
   now?: () => Date;
 }
 
 function fail(code: string): never {
   throw new WebsiteInspectionRuntimeError(code);
+}
+
+/** Abort before any side effects; a signal from another work unit is never reused. */
+function assertNotCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) fail('M04_FIXTURE_CANCELLED');
+}
+
+/**
+ * WEB-020: enforce a real timer even when an injected exchange never settles.
+ * A rejected race does not kill an uncooperative callback; the callback is
+ * required to observe input.signal. Both late fulfilment and rejection are
+ * consumed and can never advance to extraction or persistence.
+ */
+function exchangeWithDeadline(
+  exchange: WebsiteInspectionDependencies['exchange'],
+  input: Omit<WebsiteFixtureExchangeInput, 'signal'>,
+  cancellationSignal?: AbortSignal,
+): Promise<WebsiteFixtureExchange> {
+  assertNotCancelled(cancellationSignal);
+  const controller = new AbortController();
+  return new Promise<WebsiteFixtureExchange>((resolve, reject) => {
+    let finished = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = (): void => {
+      if (timer !== undefined) clearTimeout(timer);
+      cancellationSignal?.removeEventListener('abort', onCancel);
+    };
+    const rejectOnce = (error: unknown): void => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      reject(error);
+    };
+    const resolveOnce = (value: WebsiteFixtureExchange): void => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      resolve(value);
+    };
+    const abortWith = (code: string): void => {
+      if (finished) return;
+      controller.abort();
+      rejectOnce(new WebsiteInspectionRuntimeError(code));
+    };
+    const onCancel = (): void => abortWith('M04_FIXTURE_CANCELLED');
+    cancellationSignal?.addEventListener('abort', onCancel, { once: true });
+    // Close the race between the initial .aborted check and listener install.
+    if (cancellationSignal?.aborted) {
+      onCancel();
+      return;
+    }
+    timer = setTimeout(() => abortWith('M04_FIXTURE_TIMEOUT'), input.timeoutMs);
+    // Defer callback so synchronous cancellation can prevent invocation.
+    void Promise.resolve().then(() => {
+      if (finished) return undefined;
+      return exchange({ ...input, signal: controller.signal });
+    }).then(
+      (response) => {
+        if (finished) return;
+        if (response === undefined) {
+          rejectOnce(new WebsiteInspectionRuntimeError('M04_FIXTURE_RESPONSE_INVALID'));
+        } else {
+          resolveOnce(response);
+        }
+      },
+      (error: unknown) => rejectOnce(error),
+    );
+  });
 }
 
 /**
@@ -349,6 +421,7 @@ export async function executeWebsiteInspectionFixture(
   rawRequest: unknown,
   dependencies: WebsiteInspectionDependencies,
 ): Promise<WebsiteInspectionResult> {
+  assertNotCancelled(dependencies.cancellationSignal);
   const parsed = dependencies.contracts.parseRequest(rawRequest);
   // Snapshot the parsed request before ANY injected async callback can mutate its
   // URL, policy, budget or receipt bindings between checks (TOCTOU).
@@ -378,6 +451,7 @@ export async function executeWebsiteInspectionFixture(
       nowMs < Date.parse(request.requestedAt)) fail('M04_CLOCK_INVALID');
 
   const admission = snapshotAdmission(await dependencies.authorize(request));
+  assertNotCancelled(dependencies.cancellationSignal);
   checkIdenticalApproval(request, admission, nowMs);
   const receiptId = admission.receiptId; // Pin provenance before injected execution.
   const authorizedExpiry = Date.parse(admission.expiresAt);
@@ -392,11 +466,12 @@ export async function executeWebsiteInspectionFixture(
   // persistence from a completed exchange that under-reports a slow transport;
   // it does NOT interrupt a hung adapter or enable live network transport.
   const exchangeStartMs = performance.now();
-  const rawResponse = await dependencies.exchange({
+  const rawResponse = await exchangeWithDeadline(dependencies.exchange, {
     transportKind: 'test', transportRequestId: request.inspectionId,
     url: request.targetUrl, maxResponseBytes: request.limits.maxResponseBytes,
     timeoutMs: request.limits.timeoutMs, acceptedContentTypes: ['text/html'],
-  });
+  }, dependencies.cancellationSignal);
+  assertNotCancelled(dependencies.cancellationSignal);
   const actualElapsedMs = performance.now() - exchangeStartMs;
   if (!Number.isFinite(actualElapsedMs) || actualElapsedMs < 0 ||
       actualElapsedMs > request.limits.timeoutMs) fail('M04_FIXTURE_TIMEOUT');
@@ -431,6 +506,8 @@ export async function executeWebsiteInspectionFixture(
     } catch {
       untrustedExtraction = { coverage: 'partial', findings: [], reasonCodes: ['website.analysis_failed'] };
     }
+    // A worker cancellation must not turn into an 'analysis_failed' success.
+    assertNotCancelled(dependencies.cancellationSignal);
     // Snapshot untrusted findings BEFORE schema validation and persistence mapping.
     const extraction = snapshotExtraction(untrustedExtraction);
     validateExtraction(extraction);
@@ -465,6 +542,7 @@ export async function executeWebsiteInspectionFixture(
   // or its nested evidence by mutating its argument before/after the await.
   // The public contract parser above already established a JSON-compatible
   // result; clone only that validated, bounded object, never raw page bytes.
+  assertNotCancelled(dependencies.cancellationSignal);
   if (dependencies.persist) {
     let persistedCopy: WebsiteInspectionResult;
     try { persistedCopy = structuredClone(result); }
