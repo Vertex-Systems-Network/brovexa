@@ -6,6 +6,7 @@ import {
   type M04LiveReadRequest,
   type M04LivePermit,
   type M04LiveAcquisitionDependencies,
+  type M04LiveM02HopInput,
 } from './website-live-acquisition';
 import { inspectAuthorizedM04LiveRoot } from './website-live-assessment';
 
@@ -31,11 +32,7 @@ function deps() {
     enabled: true as const, now: () => new Date('2026-10-16T11:00:00.000Z'),
     loadPermit: async () => permit,
     resolveAddresses: async () => ['8.8.8.8'],
-    admitM02Hop: async (input: {
-      workspaceId: string; inspectionId: string; canonicalUrl: string;
-      resolvedIpv4: string; maxResponseBytes: number; timeoutMs: number;
-      transportPolicyId: string; transportPolicyVersion: string;
-    }) => ({ ...input, decision: 'allow' as const, transportKind: 'network' as const,
+    admitM02Hop: async (input: M04LiveM02HopInput) => ({ ...input, decision: 'allow' as const, transportKind: 'network' as const,
       expiresAt: '2026-10-16T11:02:00.000Z' }),
     transport: async () => ({ status: 200, contentType: 'text/html',
       contentEncoding: 'identity', body: new TextEncoder().encode('<html></html>') }),

@@ -85,6 +85,9 @@ export interface M04LiveM02HopAdmission {
   readonly timeoutMs: number;
   readonly transportPolicyId: string;
   readonly transportPolicyVersion: string;
+  readonly sourceKey: string;
+  readonly sourcePolicyId: string;
+  readonly sourcePolicyVersion: string;
   readonly expiresAt: string;
 }
 export interface M04LiveM02HopInput {
@@ -96,6 +99,9 @@ export interface M04LiveM02HopInput {
   readonly timeoutMs: number;
   readonly transportPolicyId: string;
   readonly transportPolicyVersion: string;
+  readonly sourceKey: string;
+  readonly sourcePolicyId: string;
+  readonly sourcePolicyVersion: string;
 }
 
 export interface M04LiveAcquisitionDependencies {
@@ -341,12 +347,15 @@ export async function acquireAuthorizedM04LiveRoot(
     maxResponseBytes:bytes,timeoutMs,
     transportPolicyId:scope.transportPolicyId,
     transportPolicyVersion:scope.transportPolicyVersion,
+    sourceKey:scope.sourceKey,sourcePolicyId:scope.sourcePolicyId,
+    sourcePolicyVersion:scope.sourcePolicyVersion,
   });
   const rawAdmission = await deps.admitM02Hop(hop);
   const admitted: Record<string,unknown> = Object.create(null) as Record<string,unknown>;
   for (const key of [
     'decision','workspaceId','inspectionId','transportKind','canonicalUrl','resolvedIpv4',
-    'maxResponseBytes','timeoutMs','transportPolicyId','transportPolicyVersion','expiresAt',
+    'maxResponseBytes','timeoutMs','transportPolicyId','transportPolicyVersion',
+    'sourceKey','sourcePolicyId','sourcePolicyVersion','expiresAt',
   ]) admitted[key] = ownValue(rawAdmission,key);
   const hopTime = deps.now?.() ?? new Date();
   const hopExpiry = typeof admitted.expiresAt==='string' ? Date.parse(admitted.expiresAt) : NaN;
@@ -356,6 +365,8 @@ export async function acquireAuthorizedM04LiveRoot(
       admitted.maxResponseBytes !== bytes || admitted.timeoutMs !== timeoutMs ||
       admitted.transportPolicyId !== hop.transportPolicyId ||
       admitted.transportPolicyVersion !== hop.transportPolicyVersion ||
+      admitted.sourceKey !== hop.sourceKey || admitted.sourcePolicyId !== hop.sourcePolicyId ||
+      admitted.sourcePolicyVersion !== hop.sourcePolicyVersion ||
       !Number.isFinite(hopExpiry) || hopExpiry <= hopTime.getTime() ||
       hopExpiry > hopTime.getTime() + 300_000) {
     fail('M04_LIVE_M02_HOP_BLOCKED');
