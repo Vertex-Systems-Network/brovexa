@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
 import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
+import { M04LiveAcquisitionError } from './website-live-acquisition';
 import type { WorkHandler } from './runtime';
 import type { M04LiveReadRequest } from './website-live-acquisition';
 import { inspectAndPersistM04LiveRoot, type M04LiveNativeIntegrationDeps } from './website-live-native-integration';
@@ -99,10 +100,22 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
       if(controller.signal.aborted)throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
       if(error instanceof M04LiveAsyncBoundaryError) {
         if(error.code==='M04_LIVE_CANCELLED') throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
-        // A slow policy/DNS/storage callback is a transient infrastructure fault,
-        // never a permanent failure of the tenant's inspection request.
         throw new RetryableWorkError('M04_LIVE_STAGE_TIMEOUT');
       }
+      if(error instanceof M04LiveAcquisitionError) {
+        if(error.code==='M04_LIVE_CANCELLED') throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
+        if(error.code==='M04_LIVE_TIMEOUT'||error.code==='M04_LIVE_TRANSPORT_FAILED')
+          throw new RetryableWorkError(error.code);
+        // Policy denials, forbidden destinations and malformed evidence never retry.
+        throw new PermanentWorkError(error.code);
+      }
+      // Retry known transient DNS and PostgreSQL conditions, never arbitrary errors.
+      const code=error instanceof Error ?
+        Object.getOwnPropertyDescriptor(error,'code')?.value : undefined;
+      if(typeof code==='string' && new Set([
+        'EAI_AGAIN','ETIMEDOUT','ECONNRESET','ECONNREFUSED','ENETUNREACH',
+        'EHOSTUNREACH','08000','08001','08003','08006','40001','40P01','53300','57P01',
+      ]).has(code)) throw new RetryableWorkError('M04_LIVE_TRANSIENT_DEPENDENCY');
       throw error;
     }finally{ended=true;if(timer!==undefined)clearInterval(timer);}
   };

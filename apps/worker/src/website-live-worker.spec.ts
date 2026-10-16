@@ -1,5 +1,6 @@
 import {describe,it,expect,vi} from 'vitest';
 import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
+import { M04LiveAcquisitionError } from './website-live-acquisition';
 import {createM04LiveWorkerHandlers,M04_LIVE_WORK_TYPE} from './website-live-worker';
 import type {WorkHandlerContext} from './runtime';
 vi.mock('./website-live-native-integration',()=>({
@@ -50,6 +51,32 @@ describe('M04 live worker registration',()=>{
   const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
   await expect(handler(ctx())).rejects.toMatchObject({
     name:'RetryableWorkError',code:'M04_LIVE_STAGE_TIMEOUT',
+  });
+ });
+ it('retries transport timeout but never retries a forbidden DNS destination',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+    new M04LiveAcquisitionError('M04_LIVE_TRANSPORT_FAILED'),
+  );
+  await expect(handler(ctx())).rejects.toMatchObject({
+    name:'RetryableWorkError',code:'M04_LIVE_TRANSPORT_FAILED',
+  });
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+    new M04LiveAcquisitionError('M04_LIVE_DNS_NONPUBLIC'),
+  );
+  await expect(handler(ctx())).rejects.toMatchObject({
+    name:'PermanentWorkError',code:'M04_LIVE_DNS_NONPUBLIC',
+  });
+ });
+ it('treats transient PostgreSQL failures as retryable with a non-sensitive code',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+    Object.assign(new Error('connection secrets must not leak'),{code:'08006'}),
+  );
+  await expect(handler(ctx())).rejects.toMatchObject({
+    name:'RetryableWorkError',code:'M04_LIVE_TRANSIENT_DEPENDENCY',
   });
  });
  it('cancels before any request on worker cancellation',async()=>{
