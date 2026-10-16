@@ -45,15 +45,22 @@ export function createWebsiteFixturePipeline(dependencies: WebsiteFixturePipelin
     policyForWorkspace: dependencies.storage.policyForWorkspace,
     persist: dependencies.storage.persist,
   });
-  return (rawRequest, options) => executeWebsiteInspectionFixture(rawRequest, {
+  return (rawRequest, options) => {
+    const cancellationSignal = options?.cancellationSignal;
+    return executeWebsiteInspectionFixture(rawRequest, {
     contracts: dependencies.contracts,
     authorize,
     exchange: dependencies.exchange,
     // Do not expose an arbitrary extractor here; the only supported path
     // must derive findings deterministically from the attested fixture bytes.
     extract: extractWebsiteCapabilitiesFromFixture,
-    persist: async (result) => { await handoff(result); },
+    // Keep each worker cancellation signal local to THIS invocation. A
+    // cancelled policy read must not reach the DB persistence callback.
+    persist: async (result) => {
+      await handoff(result, { cancellationSignal });
+    },
     ...(dependencies.now ? { now: dependencies.now } : {}),
-    ...(options?.cancellationSignal ? { cancellationSignal: options.cancellationSignal } : {}),
-  });
+    ...(cancellationSignal ? { cancellationSignal } : {}),
+    });
+  };
 }

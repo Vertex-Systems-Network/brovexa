@@ -88,3 +88,62 @@ describe('M04 WEB-018 tenant policy & storage acknowledgement boundary (candidat
     expect(invoked).toBe(0);
   });
 });
+
+// WEB-024: native Vitest candidates; do not run until M04 completion gate.
+describe('M04 WEB-024 cancellable tenant policy/DB write boundary (staged)', () => {
+  it('does not call policy lookup or DB when cancellation precedes handoff', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    let lookups = 0;
+    let writes = 0;
+    const handoff = createWebsiteInspectionPersistenceHandoff({
+      parseResult: raw => raw as WebsiteInspectionResult,
+      policyForWorkspace: async () => { lookups++; return policy(); },
+      persist: async () => { writes++; return { inspectionId: 'inspection.1', replayed: false }; },
+    });
+    await expect(handoff(sample(), { cancellationSignal: controller.signal }))
+      .rejects.toMatchObject({ code: 'M04_PERSISTENCE_CANCELLED' });
+    expect(lookups).toBe(0);
+    expect(writes).toBe(0);
+  });
+
+  it('does not persist if the worker cancels during the tenant-policy read', async () => {
+    const controller = new AbortController();
+    let allowPolicy: ((value: WebsiteInspectionStoragePolicy) => void) | undefined;
+    let startLookup: (() => void) | undefined;
+    const started = new Promise<void>(resolve => { startLookup = resolve; });
+    let writes = 0;
+    const handoff = createWebsiteInspectionPersistenceHandoff({
+      parseResult: raw => raw as WebsiteInspectionResult,
+      policyForWorkspace: () => {
+        startLookup?.();
+        return new Promise<WebsiteInspectionStoragePolicy>(done => { allowPolicy = done; });
+      },
+      persist: async () => { writes++; return { inspectionId: 'inspection.1', replayed: false }; },
+    });
+    const pending = handoff(sample(), { cancellationSignal: controller.signal });
+    await started;
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: 'M04_PERSISTENCE_CANCELLED' });
+    allowPolicy?.(policy()); // Late policy result must not trigger any DB write.
+    await Promise.resolve();
+    expect(writes).toBe(0);
+  });
+
+  it('does not claim cancellation rolls back a commit already in flight', async () => {
+    const controller = new AbortController();
+    let dbWrites = 0;
+    const handoff = createWebsiteInspectionPersistenceHandoff({
+      parseResult: raw => raw as WebsiteInspectionResult,
+      policyForWorkspace: async () => policy(),
+      persist: async () => {
+        dbWrites++;
+        controller.abort(); // A commit may already have happened.
+        return { inspectionId: 'inspection.1', replayed: false };
+      },
+    });
+    await expect(handoff(sample(), { cancellationSignal: controller.signal }))
+      .resolves.toEqual({ inspectionId: 'inspection.1', replayed: false });
+    expect(dbWrites).toBe(1);
+  });
+});

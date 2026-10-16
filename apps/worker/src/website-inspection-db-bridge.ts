@@ -166,6 +166,61 @@ export interface WebsiteInspectionPersistenceHandoffDependencies {
   }>;
 }
 
+/** A per-work-unit cancellation fence for the policy-to-DB handoff. */
+export interface WebsitePersistenceRunOptions {
+  cancellationSignal?: AbortSignal;
+}
+
+function assertPersistenceNotCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_CANCELLED');
+  }
+}
+
+/**
+ * WEB-024: interrupt waiting for the tenant-policy read if the worker cancels.
+ * The underlying lookup must still manage its own DB query cancellation.
+ * NEVER use this Promise race around persist(): DB commits cannot be rolled
+ * back simply because the caller stopped awaiting a Promise.
+ */
+function readPolicyWithCancellation(
+  lookup: WebsiteInspectionPersistenceHandoffDependencies['policyForWorkspace'],
+  workspace: string,
+  signal?: AbortSignal,
+): Promise<WebsiteInspectionStoragePolicy> {
+  assertPersistenceNotCancelled(signal);
+  if (!signal) return lookup(workspace);
+  return new Promise<WebsiteInspectionStoragePolicy>((resolve, reject) => {
+    let settled = false;
+    const cleanup = (): void => signal.removeEventListener('abort', cancel);
+    const cancel = (): void => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new WebsiteInspectionBridgeError('M04_PERSISTENCE_CANCELLED'));
+    };
+    signal.addEventListener('abort', cancel, { once: true });
+    if (signal.aborted) { cancel(); return; }
+    void Promise.resolve().then(() => {
+      assertPersistenceNotCancelled(signal);
+      return lookup(workspace);
+    }).then(
+      value => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(value);
+      },
+      error => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
 /**
  * Integration adapter: strict schema -> trusted workspace storage policy ->
  * allow-listed DB record -> ack binding. No SQL/network performed in this file.
@@ -173,15 +228,23 @@ export interface WebsiteInspectionPersistenceHandoffDependencies {
  */
 export function createWebsiteInspectionPersistenceHandoff(
   dependencies: WebsiteInspectionPersistenceHandoffDependencies,
-): (value: unknown) => Promise<{ inspectionId: string; replayed: boolean }> {
-  return async (raw: unknown) => {
+): (value: unknown, options?: WebsitePersistenceRunOptions) => Promise<{ inspectionId: string; replayed: boolean }> {
+  return async (raw: unknown, options?: WebsitePersistenceRunOptions) => {
+    const signal = options?.cancellationSignal;
+    assertPersistenceNotCancelled(signal);
     // Snapshot before crossing the asynchronous tenant-policy trust boundary.
     const result = structuredClone(dependencies.parseResult(raw));
     if (!result?.request || !workspaceId.test(result.request.workspaceId)) {
       throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_WORKSPACE_INVALID');
     }
-    const policy = await dependencies.policyForWorkspace(result.request.workspaceId);
+    const policy = await readPolicyWithCancellation(
+      dependencies.policyForWorkspace, result.request.workspaceId, signal,
+    );
+    assertPersistenceNotCancelled(signal);
     const payload = toWebsiteInspectionPersistencePayload(result, policy);
+    // Last cancellation fence BEFORE the irreversible database callback.
+    assertPersistenceNotCancelled(signal);
+    // Do not race a database commit with an abort Promise. Always wait for ACK.
     const acknowledgement = snapshotAcknowledgement(await dependencies.persist(payload));
     if (acknowledgement.inspectionId !== payload.request.inspectionId) {
       throw new WebsiteInspectionBridgeError('M04_PERSISTENCE_ACK_MISMATCH');
