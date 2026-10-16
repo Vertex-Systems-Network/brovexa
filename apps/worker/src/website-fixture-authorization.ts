@@ -41,16 +41,16 @@ function snapshotStoredDecision(value: unknown): WebsiteStoredFixtureDecision {
   const invalid = (): never => {
     throw new WebsiteFixtureAuthorizationError('M04_FIXTURE_RECORD_INVALID');
   };
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) invalid();
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return invalid();
   const own = (object: object, field: string): unknown => {
     let descriptor: PropertyDescriptor | undefined;
     try { descriptor = Object.getOwnPropertyDescriptor(object, field); }
     catch { return invalid(); }
-    if (!descriptor || !('value' in descriptor)) invalid();
+    if (!descriptor || !('value' in descriptor)) return invalid();
     return descriptor.value;
   };
   const ids = own(value, 'domainEvidenceIds');
-  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 32) invalid();
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 32) return invalid();
   const evidence: unknown[] = [];
   for (let i = 0; i < ids.length; i++) evidence.push(own(ids, String(i)));
   const pinned: Record<string, unknown> = Object.create(null) as Record<string, unknown>;

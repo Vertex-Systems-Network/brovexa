@@ -57,7 +57,7 @@ export function createWebsiteFixturePipeline(dependencies: WebsiteFixturePipelin
     // Keep each worker cancellation signal local to THIS invocation. A
     // cancelled policy read must not reach the DB persistence callback.
     persist: async (result) => {
-      await handoff(result, { cancellationSignal });
+      await handoff(result, cancellationSignal ? { cancellationSignal } : {});
     },
     ...(dependencies.now ? { now: dependencies.now } : {}),
     ...(cancellationSignal ? { cancellationSignal } : {}),

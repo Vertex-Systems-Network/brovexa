@@ -25,3 +25,11 @@ Date: 2026-10-16. Scope: **all M04 work allowed without live HTTP, DNS, crawling
 4. Independent security review and exact-head full gate.
 
 No test/check should be represented as PASS unless actually executed. One combined batch is being pushed to the isolated M04 checkpoint branch, not main.
+
+## Local verification of consolidated worker seam
+
+- Isolated TypeScript on the six fixture/bridge/extractor worker sources, using local typings only: **PASS** (`tsc --noEmit -p working/tsconfig.json`). This does not typecheck the native DB/worker packages or the new native composition module against the repository's exact toolchain.
+- Node 22 offline fixture, authorization, extraction, bridge, pipeline and cancellation tests: **255/255 PASS, 0 FAIL**.
+- Two pre-existing offline tests expected the unsafe earlier behavior of dropping `request.limits`. These were changed to assert exact retained page/byte/timeout budgets. Three TypeScript narrowing defects, an optional cancellation argument defect, and missing offline-only performance typings were corrected.
+- Native PostgreSQL 18, Valkey, Vitest with real Zod/pg dependencies and migration up/down: **NOT RUN** (native workspace checkout blocked by DNS and required binaries unavailable here). DB migrations and code are a source-level candidate only; no release/merge acceptance is claimed.
+- The isolated checkpoint branch is push-only development. The native DATABASE PR #174 must be reconciled before protected integration.

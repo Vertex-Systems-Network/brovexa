@@ -77,12 +77,12 @@ function snapshotAcknowledgement(value: unknown): { inspectionId: string; replay
     let descriptor: PropertyDescriptor | undefined;
     try { descriptor = Object.getOwnPropertyDescriptor(value, field); }
     catch { return invalid(); }
-    if (!descriptor || !('value' in descriptor)) invalid();
+    if (!descriptor || !('value' in descriptor)) return invalid();
     return descriptor.value;
   };
   const inspectionId = own('inspectionId');
   const replayed = own('replayed');
-  if (typeof inspectionId !== 'string' || typeof replayed !== 'boolean') invalid();
+  if (typeof inspectionId !== 'string' || typeof replayed !== 'boolean') return invalid();
   return Object.freeze({ inspectionId, replayed });
 }
 

@@ -63,7 +63,7 @@ test('full fixture-only pipeline: exact policy, digest, extraction, allow-listed
   const saved=calls.persist[0];
   assert.equal(saved.request.workspaceId,W);
   assert.equal(saved.request.domainVerification.verificationId,'verify.pipeline');
-  assert.equal(saved.request.limits,undefined);
+  assert.deepEqual(saved.request.limits,{maxPages:1,maxResponseBytes:4096,timeoutMs:1500});
   assert.equal(saved.request.inspectionId,'inspect.pipeline');
   assert.equal(saved.deletionRequired,true);
   assert.equal(saved.retentionTtlSeconds,86400);

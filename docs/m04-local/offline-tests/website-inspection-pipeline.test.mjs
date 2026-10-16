@@ -72,7 +72,7 @@ test('complete fixture-only pipeline binds verified-domain record, authorized by
  assert.equal(stored.request.inspectionId,'inspect.pipeline.1');
  assert.equal(stored.deletionRequired,true);
  assert.equal(stored.retentionTtlSeconds,7200);
- assert.equal('limits' in stored.request,false);
+ assert.deepEqual(stored.request.limits,{maxPages:1,maxResponseBytes:10000,timeoutMs:5000});
  assert.equal(JSON.stringify(stored).includes(sampleHtml),false);
  assert.equal(JSON.stringify(stored).includes('Social</a>'),false);
 });
