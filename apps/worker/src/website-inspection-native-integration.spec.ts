@@ -6,7 +6,7 @@ const workspaceId = '550e8400-e29b-41d4-a716-446655440000';
 const inspectionId = 'inspection.001';
 function setup() {
   const connect = vi.fn(async () => { throw new Error('unexpected database connection'); });
-  const query = vi.fn(async () => ({ rows: [{ id: inspectionId }] }));
+  const query = vi.fn(async (_sql: string, _args?: readonly unknown[]) => ({ rows: [{ id: inspectionId }] }));
   const pool = { connect, query } as unknown as ReturnType<typeof createPgPool>;
   const loadRequest = vi.fn(async () => null);
   const lookup = vi.fn(async () => null);
