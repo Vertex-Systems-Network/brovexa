@@ -182,7 +182,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 --> statement-breakpoint
 CREATE CONSTRAINT TRIGGER website_runs_assessed_observations_guard
   AFTER INSERT ON website_inspection_runs

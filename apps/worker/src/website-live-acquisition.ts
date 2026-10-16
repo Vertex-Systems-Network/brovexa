@@ -305,7 +305,7 @@ export async function acquireAuthorizedM04LiveRoot(
   const timeoutMs = requestTimeout as number;
   const identity = Object.freeze({workspaceId:scope.workspaceId,inspectionId:scope.inspectionId});
   const originalPermit = await awaitM04LiveStage(
-    () => deps.loadPermit(identity), { timeoutMs, signal: deps.signal },
+    () => deps.loadPermit(identity), { timeoutMs, ...(deps.signal ? {signal: deps.signal} : {}) },
   );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   const permit: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
@@ -328,7 +328,7 @@ export async function acquireAuthorizedM04LiveRoot(
   }
   const resolve = deps.resolveAddresses ?? resolve4;
   const resolved = await awaitM04LiveStage(
-    () => resolve(scope.verifiedDomain), { timeoutMs, signal: deps.signal },
+    () => resolve(scope.verifiedDomain), { timeoutMs, ...(deps.signal ? {signal: deps.signal} : {}) },
   );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   // The resolver may be injected. NEVER call its .some/.map/iterator or any
@@ -364,7 +364,7 @@ export async function acquireAuthorizedM04LiveRoot(
     sourcePolicyVersion:scope.sourcePolicyVersion,
   });
   const rawAdmission = await awaitM04LiveStage(
-    () => deps.admitM02Hop(hop), { timeoutMs, signal: deps.signal },
+    () => deps.admitM02Hop(hop), { timeoutMs, ...(deps.signal ? {signal: deps.signal} : {}) },
   );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
   const admitted: Record<string,unknown> = Object.create(null) as Record<string,unknown>;

@@ -54,6 +54,7 @@ test('identical replay is idempotent and does not duplicate observation writes',
  let hash;const m=mock(async(sql,params)=>{
   if(sql.startsWith('INSERT INTO website_live_inspection_runs')){hash=params[25];return {rows:[]}};
   if(sql.startsWith('SELECT workspace_id'))return{rows:[{workspace_id:workspaceId,payload_hash:hash}]};
+  if(sql.includes('FROM website_live_inspection_grants AS g'))return {rows:[{inspection_id:'inspect.live1'}]};
   return{rows:[]};});
  assert.deepEqual(await persistWebsiteLiveInspectionResult(m.pool,base()),{inspectionId:'inspect.live1',replayed:true});
  assert.equal(m.calls.some(x=>x.sql.startsWith('INSERT INTO website_live_capability_observations')),false);

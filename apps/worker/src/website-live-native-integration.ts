@@ -47,7 +47,7 @@ export async function inspectAndPersistM04LiveRoot(
      policyTimeout<100||policyTimeout>30_000)throw new Error('M04_LIVE_POLICY_INVALID');
   const source=await awaitM04LiveStage(
     () => deps.getStoragePolicy(scope),
-    { timeoutMs: policyTimeout, signal: deps.signal },
+    { timeoutMs: policyTimeout, ...(deps.signal ? {signal: deps.signal} : {}) },
   );
   if(deps.signal?.aborted)throw new Error('M04_LIVE_CANCELLED');
   const workspaceId=own(source,'workspaceId'),inspectionId=own(source,'inspectionId');
@@ -69,7 +69,7 @@ export async function deleteAuthorizedM04LiveRootEvidence(
   const stable=scopeOf(scope as M04LiveReadRequest);
   const timeoutMs=deps.deletionAuthorizationTimeoutMs??5000;
   const authorized=await awaitM04LiveStage(() => deps.authorizeDeletion(stable), {
-    timeoutMs, signal:deps.signal,
+    timeoutMs, ...(deps.signal ? {signal: deps.signal} : {}),
   });
   if(authorized!==true)
     throw new WebsiteLivePersistenceError('M04_LIVE_DB_INPUT_INVALID','Live evidence deletion requires explicit RBAC.');
