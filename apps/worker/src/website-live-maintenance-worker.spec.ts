@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { purgeExpiredWebsiteLiveInspectionEvidence } from '@brovexa/db';
+import { purgeExpiredWebsiteLiveInspectionEvidenceForWork } from '@brovexa/db';
 import { createM04LiveRetentionWorkerHandlers, M04_LIVE_RETENTION_WORK_TYPE } from './website-live-maintenance-worker';
 import type { WorkHandlerContext } from './runtime';
 
 vi.mock('@brovexa/db', () => ({
-  purgeExpiredWebsiteLiveInspectionEvidence: vi.fn(async () => 3),
+  purgeExpiredWebsiteLiveInspectionEvidenceForWork: vi.fn(async () => ({deleted:3,replayed:false})),
 }));
 const workspaceId='550e8400-e29b-41d4-a716-446655440000';
 const context=():WorkHandlerContext=>({
@@ -24,7 +24,7 @@ describe('M04 WEB-033 opt-in retention work unit',()=>{
     const handlers=createM04LiveRetentionWorkerHandlers(d as never);
     expect(Object.keys(handlers)).toEqual([M04_LIVE_RETENTION_WORK_TYPE]);
     expect(d.authorizeWorkspaceMaintenance).not.toHaveBeenCalled();
-    expect(purgeExpiredWebsiteLiveInspectionEvidence).not.toHaveBeenCalled();
+    expect(purgeExpiredWebsiteLiveInspectionEvidenceForWork).not.toHaveBeenCalled();
   });
   it('rejects queue-supplied tenant IDs and extra parameters without accessing the DB',async()=>{
     const d=config();
@@ -40,10 +40,10 @@ describe('M04 WEB-033 opt-in retention work unit',()=>{
     expect(d.authorizeWorkspaceMaintenance).toHaveBeenCalledWith(workspaceId);
   });
   it('purges at most the configured cap and returns a stable work effect',async()=>{
-    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidence).mockResolvedValue(3);
+    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork).mockResolvedValue({deleted:3,replayed:false});
     const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
     const result=await handler(context());
-    expect(purgeExpiredWebsiteLiveInspectionEvidence).toHaveBeenCalledWith(expect.anything(),workspaceId,20);
+    expect(purgeExpiredWebsiteLiveInspectionEvidenceForWork).toHaveBeenCalledWith(expect.anything(),workspaceId,'work.retention1',20);
     expect(result.effectKey).toMatch(/^m04\.website_live_retention\.[0-9a-f]{64}$/);
     expect(result.effectData).toEqual({workspaceId,deleted:3,maxRows:20,version:'2.0.0'});
   });
@@ -53,7 +53,7 @@ describe('M04 WEB-033 opt-in retention work unit',()=>{
       .rejects.toMatchObject({code:'M04_LIVE_RETENTION_CANCELLED'});
   });
   it('retries temporary PostgreSQL failures without exposing details',async()=>{
-    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidence).mockRejectedValueOnce(
+    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork).mockRejectedValueOnce(
       Object.assign(new Error('internal DB connection secret'), {code:'08006'}),
     );
     const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
@@ -62,7 +62,7 @@ describe('M04 WEB-033 opt-in retention work unit',()=>{
     });
   });
   it('rejects an impossible database deletion acknowledgement',async()=>{
-    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidence).mockResolvedValueOnce(21);
+    vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork).mockResolvedValueOnce({deleted:21,replayed:false});
     const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
     await expect(handler(context())).rejects.toMatchObject({code:'M04_LIVE_RETENTION_ACK_INVALID'});
   });
@@ -71,4 +71,30 @@ describe('M04 WEB-033 opt-in retention work unit',()=>{
     const handler=createM04LiveRetentionWorkerHandlers(d as never)[M04_LIVE_RETENTION_WORK_TYPE];
     await expect(handler(context())).rejects.toMatchObject({code:'M04_LIVE_RETENTION_DEPENDENCY_TIMEOUT'});
   });
+});
+
+
+describe('WEB-038 canonical retention work replay',()=>{
+ it('replay returns the persisted effect count without deleting more rows',async()=>{
+  vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork)
+    .mockResolvedValueOnce({deleted:3,replayed:false})
+    .mockResolvedValueOnce({deleted:3,replayed:true});
+  const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
+  const first=await handler(context());
+  const again=await handler({...context(),attempt:2});
+  expect(again.effectKey).toEqual(first.effectKey);
+  expect(again.effectData).toEqual(first.effectData);
+  expect(purgeExpiredWebsiteLiveInspectionEvidenceForWork).toHaveBeenCalledWith(
+    expect.anything(),workspaceId,'work.retention1',20,
+  );
+ });
+ it('denies a reused work ID with a changed scope instead of reaping again',async()=>{
+  vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork).mockRejectedValueOnce(
+    Object.assign(new Error('internal workspace details'),{code:'M04_LIVE_DB_ID_CONFLICT'}),
+  );
+  const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
+  await expect(handler(context())).rejects.toMatchObject({
+    name:'PermanentWorkError',code:'M04_LIVE_RETENTION_WORK_SCOPE_CONFLICT',
+  });
+ });
 });

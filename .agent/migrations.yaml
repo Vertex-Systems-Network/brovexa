@@ -2,7 +2,7 @@ version: 1
 policy: serialized-reservation
 
 latest_integrated_migration: "0017_entity_enrichment_source_connector_key_constraints"
-next_unreserved_number: "0022"
+next_unreserved_number: "0023"
 
 rules:
   - Reserve a migration number before creating migration files.
@@ -89,6 +89,12 @@ reservations:
   - number: "0021"
     name: website_live_commit_authorization_guard
     task_id: M04-WEB-036
+    branch: checkpoint/m04-local-web006-20261016
+    owner: M04-DEVELOPMENT
+    status: IMPLEMENTED
+  - number: "0022"
+    name: website_live_retention_work_receipts
+    task_id: M04-WEB-038
     branch: checkpoint/m04-local-web006-20261016
     owner: M04-DEVELOPMENT
     status: IMPLEMENTED

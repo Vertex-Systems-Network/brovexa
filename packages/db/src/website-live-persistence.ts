@@ -321,6 +321,69 @@ export async function deleteWebsiteLiveInspectionEvidence(
   return result.rows.length>0;
 }
 
+/** WEB-038: one durable retention effect per canonical work unit.
+ * Advisory transaction locking serializes duplicate deliveries of the same
+ * unit before either can DELETE. Receipt and deletion COMMIT atomically: a
+ * crash after COMMIT is replayed from its receipt instead of deleting the
+ * next batch of evidence. Different units may purge disjoint SKIP LOCKED rows.
+ */
+export async function purgeExpiredWebsiteLiveInspectionEvidenceForWork(
+  pool: Pool, workspaceId: string, workUnitId: string, maxRows = 100,
+): Promise<{ deleted: number; replayed: boolean }> {
+  if (!uuid.test(workspaceId) || typeof workUnitId !== 'string' || !id.test(workUnitId) ||
+      !numberBetween(maxRows, 1, 500)) fail('Invalid retention work scope.');
+  return withPgTransaction(pool, async client => {
+    // Collision on hashtext only serializes unrelated work; it never merges
+    // receipts, whose full IDs are checked in the database.
+    await client.query(
+      'SELECT pg_advisory_xact_lock(23082699, hashtext($1::text))',
+      [workspaceId + ':' + workUnitId],
+    );
+    const existing = await client.query<{
+      workspace_id: string; max_rows: number; deleted_count: number;
+    }>(
+      `SELECT workspace_id,max_rows,deleted_count
+       FROM website_live_retention_work_receipts WHERE work_unit_id=$1 FOR SHARE`,
+      [workUnitId],
+    );
+    const prior = existing.rows[0];
+    if (prior) {
+      if (prior.workspace_id !== workspaceId || prior.max_rows !== maxRows ||
+          !numberBetween(prior.deleted_count, 0, maxRows)) {
+        throw new WebsiteLivePersistenceError(
+          'M04_LIVE_DB_ID_CONFLICT', 'Retention work unit was already used with different scope.',
+        );
+      }
+      return { deleted: prior.deleted_count, replayed: true };
+    }
+    const rows = await client.query<{ id: string }>(
+      `SELECT id FROM website_live_inspection_runs WHERE workspace_id=$1
+       AND received_at + retention_ttl_seconds * interval '1 second' <= now()
+       AND deletion_required=true
+       ORDER BY received_at,id LIMIT $2 FOR UPDATE SKIP LOCKED`,
+      [workspaceId, maxRows],
+    );
+    const selectedIds = rows.rows.map(row => row.id);
+    let deleted = 0;
+    if (selectedIds.length) {
+      const removed = await client.query<{ id: string }>(
+        `DELETE FROM website_live_inspection_runs
+         WHERE workspace_id=$1 AND id=ANY($2::text[]) AND deletion_required=true
+         RETURNING id`,
+        [workspaceId, selectedIds],
+      );
+      deleted = removed.rows.length;
+    }
+    if (!numberBetween(deleted, 0, maxRows)) fail('Invalid retention deletion acknowledgement.');
+    await client.query(
+      `INSERT INTO website_live_retention_work_receipts
+        (work_unit_id,workspace_id,max_rows,deleted_count) VALUES ($1,$2,$3,$4)`,
+      [workUnitId, workspaceId, maxRows, deleted],
+    );
+    return { deleted, replayed: false };
+  });
+}
+
 /** Deterministic, bounded expiry sweep; must be called by authorized maintenance job. */
 export async function purgeExpiredWebsiteLiveInspectionEvidence(
   pool: Pool, workspaceId: string, maxRows = 100,

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { purgeExpiredWebsiteLiveInspectionEvidence, type createPgPool } from '@brovexa/db';
+import { purgeExpiredWebsiteLiveInspectionEvidenceForWork, type createPgPool } from '@brovexa/db';
 import { CancelledWorkError, PermanentWorkError, RetryableWorkError } from './errors';
 import { awaitM04LiveStage, M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import type { WorkHandler, WorkHandlerContext } from './runtime';
@@ -47,7 +47,10 @@ export function createM04LiveRetentionWorkerHandlers(
   const handler: WorkHandler = async (context: WorkHandlerContext) => {
     if (context.workType !== M04_LIVE_RETENTION_WORK_TYPE ||
         context.workVersion !== M04_LIVE_RETENTION_WORK_VERSION ||
-        !uuid.test(context.workspaceId) || !maintenancePayloadValid(context.payload)) {
+        !uuid.test(context.workspaceId) ||
+        typeof context.workUnitId !== 'string' ||
+        !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(context.workUnitId) ||
+        !maintenancePayloadValid(context.payload)) {
       throw new PermanentWorkError('M04_LIVE_RETENTION_WORK_INVALID');
     }
     const workspaceId = context.workspaceId;
@@ -63,7 +66,12 @@ export function createM04LiveRetentionWorkerHandlers(
       if (authorized !== true) throw new PermanentWorkError('M04_LIVE_RETENTION_UNAUTHORIZED');
       await checkCancellation();
       // Commit fence only: once PostgreSQL begins, wait for its actual acknowledgement.
-      const deleted = await purgeExpiredWebsiteLiveInspectionEvidence(deps.pool, workspaceId, maxRows);
+      const acknowledgement = await purgeExpiredWebsiteLiveInspectionEvidenceForWork(
+        deps.pool, workspaceId, context.workUnitId, maxRows,
+      );
+      // The deletion and durable receipt have already COMMITted. Return the
+      // same work effect on retry; never try to compensate by deleting again.
+      const deleted = acknowledgement.deleted;
       await checkCancellation();
       if (!Number.isSafeInteger(deleted) || deleted < 0 || deleted > maxRows) {
         throw new RetryableWorkError('M04_LIVE_RETENTION_ACK_INVALID');
@@ -81,6 +89,8 @@ export function createM04LiveRetentionWorkerHandlers(
       }
       const code = error instanceof Error
         ? Object.getOwnPropertyDescriptor(error, 'code')?.value : undefined;
+      if(code==='M04_LIVE_DB_ID_CONFLICT')
+        throw new PermanentWorkError('M04_LIVE_RETENTION_WORK_SCOPE_CONFLICT');
       if (typeof code === 'string' && new Set([
         '08000','08001','08003','08006','40001','40P01','53300','57P01',
       ]).has(code)) {
