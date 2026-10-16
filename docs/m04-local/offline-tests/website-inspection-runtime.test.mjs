@@ -393,27 +393,66 @@ test('attested receipt is bound to the exact inspection ID before any exchange',
   assert.equal(calls.persist, 0);
 });
 
-test('fixture body getter cannot switch attested bytes before extraction', async () => {
-  const modified = new TextEncoder().encode('<p>UNATTESTED_PAGE_CONTENT</p>');
+test('WEB-016: fixture body getter cannot execute or switch attested bytes', async () => {
   let reads = 0;
   const { deps, calls } = fixture({ exchange: async input => ({
     status: 200, finalUrl: input.url, contentType: 'text/html', elapsedMs: 1,
-    get body() { reads++; return reads === 1 ? Uint8Array.from(defaultBody) : modified; },
+    get body() { reads++; return Uint8Array.from(defaultBody); },
+  }) });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_RESPONSE_INVALID');
+  assert.equal(reads, 0);
+  assert.equal(calls.persist, 0);
+  assert.equal(calls.extract, 0);
+});
+
+test('WEB-016: getter-backed exchange status is rejected without invoking side effects', async () => {
+  let reads = 0;
+  const { deps, calls } = fixture({ exchange: async input => ({
+    get status() { reads++; throw new Error('GETTER_EXECUTION_FORBIDDEN'); },
+    finalUrl: input.url, contentType: 'text/html', elapsedMs: 1,
+    body: Uint8Array.from(defaultBody),
+  }) });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_RESPONSE_INVALID');
+  assert.equal(reads, 0);
+  assert.equal(calls.persist, 0);
+});
+
+test('WEB-016: typed-array iterator overrides never run during attested byte copy', async () => {
+  const source = Uint8Array.from(defaultBody);
+  let invoked = 0;
+  Object.defineProperty(source, Symbol.iterator, { value() {
+    invoked++;
+    throw new Error('UNTRUSTED_ITERATOR_EXECUTED');
+  } });
+  const { deps, calls } = fixture({ exchange: async input => ({
+    status: 200, finalUrl: input.url, contentType: 'text/html', elapsedMs: 1,
+    body: source,
   }) });
   const result = await executeWebsiteInspectionFixture(req(), deps);
   assert.equal(result.status, 'review_required');
-  assert.equal(reads, 1);
-  assert.deepEqual(calls.body, defaultBody);
+  assert.equal(invoked, 0);
   assert.equal(calls.persist, 1);
+  assert.deepEqual(calls.body, defaultBody);
 });
 
-test('switching fixture body on initial read is blocked by original admission digest', async () => {
+test('WEB-016: typed-array proxies cannot impersonate response bytes', async () => {
+  const proxy = new Proxy(Uint8Array.from(defaultBody), {});
+  const { deps, calls } = fixture({ exchange: async input => ({
+    status: 200, finalUrl: input.url, contentType: 'text/html', elapsedMs: 1,
+    body: proxy,
+  }) });
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_RESPONSE_INVALID');
+  assert.equal(calls.persist, 0);
+  assert.equal(calls.extract, 0);
+});
+
+test('WEB-016: switching fixture body on initial read is rejected before digest', async () => {
   const malicious = new TextEncoder().encode('<p>UNATTESTED_PAGE_CONTENT</p>');
   const { deps, calls } = fixture({ exchange: async input => ({
     status: 200, finalUrl: input.url, contentType: 'text/html', elapsedMs: 1,
     get body() { return malicious; },
   }) });
-  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_ATTESTATION_MISMATCH');
+  await rejectsCode(executeWebsiteInspectionFixture(req(), deps), 'M04_FIXTURE_RESPONSE_INVALID');
   assert.equal(calls.persist, 0);
   assert.equal(calls.extract, 0);
 });

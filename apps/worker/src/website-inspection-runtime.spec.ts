@@ -488,3 +488,36 @@ describe('M04-WEB-012/013/014 conservative fixture tokenizer', () => {
     )).resolves.toBe('observed_present');
   });
 });
+
+
+// WEB-016 native regression candidates: deliberately not run until M04 gate.
+describe('M04-WEB-016 transport response own-data and byte-copy safety', () => {
+  it('rejects response metadata accessors without executing getter code', async () => {
+    let reads = 0;
+    const { deps, persist } = fixture({ exchange: async () => ({
+      get status() { reads++; throw new Error('GETTER_EXECUTION'); },
+      finalUrl: 'https://example.com/', contentType: 'text/html', elapsedMs: 1,
+      body: new TextEncoder().encode('<form method="post"></form>'),
+    }) });
+    await expect(executeWebsiteInspectionFixture(request(), deps))
+      .rejects.toMatchObject({ code: 'M04_FIXTURE_RESPONSE_INVALID' });
+    expect(reads).toBe(0);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('copies attested bytes without invoking a Uint8Array iterator override', async () => {
+    const body = new TextEncoder().encode('<form method="post"></form>');
+    let calls = 0;
+    Object.defineProperty(body, Symbol.iterator, { value() {
+      calls++; throw new Error('SHOULD_NOT_RUN');
+    } });
+    const { deps, persist } = fixture({ exchange: async () => ({
+      status: 200, finalUrl: 'https://example.com/', contentType: 'text/html',
+      elapsedMs: 1, body,
+    }) });
+    const result = await executeWebsiteInspectionFixture(request(), deps);
+    expect(result.coverage).toBe('partial');
+    expect(calls).toBe(0);
+    expect(persist).toHaveBeenCalledOnce();
+  });
+});
