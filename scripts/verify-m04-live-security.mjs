@@ -6,7 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { createPgPool, applyPendingMigrations } from '../packages/db/dist/index.js';
+import { createPgPool, applyPendingMigrations, purgeExpiredWebsiteLiveInspectionEvidenceForWork } from '../packages/db/dist/index.js';
 import { resolve } from 'node:path';
 import { validateM04QaEnvironment } from './verify-m04-qa-guard.mjs';
 
@@ -247,6 +247,38 @@ try{
    await client.query('UPDATE website_live_inspection_runs SET timeout_ms=1500 WHERE id=$1',[id]);
  },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
  await client.query('ROLLBACK');
- console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; all fixtures rolled back)`);
+
+ // WEB-052: two real PostgreSQL pool connections must serialize duplicate
+ // retention work and persist only one idempotent receipt. The empty,
+ // disposable tenant is committed for visibility across both connections
+ // and deleted (with cascading receipt cleanup) regardless of outcome.
+ const raceWorkspace = randomUUID();
+ const raceWorkId = `m04.qa.${slug}.retention.concurrent`;
+ await pool.query(
+   'INSERT INTO workspaces(id,slug,display_name) VALUES ($1,$2,$3)',
+   [raceWorkspace,`m04-qa-retention-${slug}`,'M04 Disposable Retention Concurrency'],
+ );
+ try {
+   const results = await Promise.all([
+     purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceWorkspace,raceWorkId,1),
+     purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceWorkspace,raceWorkId,1),
+   ]);
+   assert.deepEqual(results.map(result=>result.deleted),[0,0]);
+   assert.deepEqual(results.map(result=>result.replayed).sort(),[false,true],
+     'exactly one concurrent delivery must be the committed original');
+   const receipt = await pool.query(
+     'SELECT workspace_id,max_rows,deleted_count FROM website_live_retention_work_receipts WHERE work_unit_id=$1',
+     [raceWorkId],
+   );
+   assert.equal(receipt.rows.length,1);
+   assert.equal(receipt.rows[0].workspace_id,raceWorkspace);
+   assert.equal(receipt.rows[0].max_rows,1);
+   assert.equal(receipt.rows[0].deleted_count,0);
+   checks++;
+   console.log('M04 native PG18 live security: concurrent retention replay is idempotent PASS');
+ } finally {
+   await pool.query('DELETE FROM workspaces WHERE id=$1',[raceWorkspace]);
+ }
+ console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; disposable fixtures cleaned)`);
 }catch(error){try{await client.query('ROLLBACK')}catch{} console.error(`Brovexa M04 native full-schema security FAILED after ${checks} passes: ${error?.message}`); process.exitCode=1;}
 finally{client.release();await pool.end();}
