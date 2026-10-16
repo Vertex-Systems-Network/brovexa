@@ -105,8 +105,10 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
       if(raw==null)throw new PermanentWorkError('M04_LIVE_WORK_REQUEST_MISSING');
       const request=parseRequestForWork(raw,scope);
       const result=await inspectAndPersistM04LiveRoot(request,{...deps,signal:controller.signal});
-      await poll();
-      if(controller.signal.aborted)throw new CancelledWorkError('M04_LIVE_WORK_CANCELLED');
+      // The evidence transaction has COMMITted by the time this promise
+      // resolves. A subsequent cancellation poll must not convert a durable
+      // success into a cancelled delivery (and force a stale-grant replay).
+      // Cancellation during pre-commit awaits remains enforced in integration.
       const hash=createHash('sha256').update(JSON.stringify([scope.workspaceId,scope.inspectionId,'v2'])).digest('hex');
       return {effectKey:`m04.website_live.${hash}`,effectData:{
         inspectionId:result.inspectionId,replayed:result.replayed,version:'2.0.0',
@@ -136,8 +138,19 @@ export function createM04LiveWorkerHandlers(deps:M04LiveWorkerDeps):Readonly<Rec
         Object.getOwnPropertyDescriptor(error,'constraint')?.value : undefined;
       if(code==='23514' && constraint==='website_live_evidence_active_grant_guard')
         throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT');
+      if(code==='23514' && constraint==='website_live_registry_current_guard')
+        throw new PermanentWorkError('M04_LIVE_SOURCE_REGISTRY_REVOKED');
+      if(code==='23514' && new Set([
+        'website_live_grant_owner_guard','website_live_grant_source_guard',
+        'website_live_grant_commit_guard',
+      ]).has(constraint))
+        throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT');
       if(code==='M04_LIVE_DB_GRANT_INACTIVE')
         throw new PermanentWorkError('M04_LIVE_GRANT_NOT_ACTIVE_ON_REPLAY');
+      if(code==='M04_LIVE_DB_INPUT_INVALID'||code==='M04_LIVE_DB_ID_CONFLICT'||
+         code==='M04_LIVE_GRANT_INVALID'||code==='M04_LIVE_GRANT_CONFLICT'||
+         code==='M04_LIVE_GRANT_INACTIVE')
+        throw new PermanentWorkError('M04_LIVE_AUTHORIZATION_OR_EVIDENCE_INVALID');
       if(typeof code==='string' && new Set([
         'EAI_AGAIN','ETIMEDOUT','ECONNRESET','ECONNREFUSED','ENETUNREACH',
         'EHOSTUNREACH','08000','08001','08003','08006','40001','40P01','53300','57P01',

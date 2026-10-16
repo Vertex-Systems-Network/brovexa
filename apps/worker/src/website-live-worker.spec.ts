@@ -161,3 +161,52 @@ describe('WEB-037 live replay authorization',()=>{
   });
  });
 });
+
+
+describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
+ it('redacts current connector/policy revocation at COMMIT into a permanent result',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+   Object.assign(new Error('private M02 connector policy JSON'),{
+    code:'23514',constraint:'website_live_registry_current_guard',
+   }),
+  );
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'PermanentWorkError',code:'M04_LIVE_SOURCE_REGISTRY_REVOKED',
+  });
+ });
+ it('does not retry a failed source or owner authorization check',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  for(const constraint of ['website_live_grant_source_guard','website_live_grant_commit_guard']){
+   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+    Object.assign(new Error('internal domain verification SQL'),{code:'23514',constraint}),
+   );
+   await expect(handler(ctx())).rejects.toMatchObject({
+    name:'PermanentWorkError',code:'M04_LIVE_GRANT_NOT_ACTIVE_AT_COMMIT',
+   });
+  }
+ });
+ it('treats malformed or conflicting persisted evidence as permanent and redacted',async()=>{
+  const integration=await import('./website-live-native-integration');
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
+   Object.assign(new Error('private persisted row details'),{code:'M04_LIVE_DB_ID_CONFLICT'}),
+  );
+  await expect(handler(ctx())).rejects.toMatchObject({
+   name:'PermanentWorkError',code:'M04_LIVE_AUTHORIZATION_OR_EVIDENCE_INVALID',
+  });
+ });
+ it('acknowledges a committed inspection even if a cancellation becomes visible afterward',async()=>{
+  const integration=await import('./website-live-native-integration');
+  let cancelled=false;
+  const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
+  vi.mocked(integration.inspectAndPersistM04LiveRoot).mockImplementationOnce(async()=>{
+   cancelled=true; // the transaction has already committed
+   return {inspectionId:'inspect.live1',replayed:false};
+  });
+  const result=await handler({...ctx(),isCancellationRequested:async()=>cancelled});
+  expect(result.effectData).toMatchObject({inspectionId:'inspect.live1',replayed:false});
+ });
+});

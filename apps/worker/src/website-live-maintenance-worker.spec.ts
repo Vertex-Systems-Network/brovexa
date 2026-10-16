@@ -98,3 +98,26 @@ describe('WEB-038 canonical retention work replay',()=>{
   });
  });
 });
+
+
+describe('WEB-046 post-commit retention acknowledgement fence',()=>{
+ it('returns the committed deletion receipt without another cancellation check',async()=>{
+  const grant=config();
+  const handler=createM04LiveRetentionWorkerHandlers(grant as never)[M04_LIVE_RETENTION_WORK_TYPE];
+  vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork)
+   .mockResolvedValueOnce({deleted:2,replayed:false});
+  let polls=0;
+  const result=await handler({...context(),isCancellationRequested:async()=>++polls>2});
+  expect(result.effectData).toMatchObject({deleted:2,maxRows:20});
+  expect(polls).toBe(2);
+ });
+ it('returns the same durable effect on retry after an earlier COMMIT',async()=>{
+  const handler=createM04LiveRetentionWorkerHandlers(config() as never)[M04_LIVE_RETENTION_WORK_TYPE];
+  vi.mocked(purgeExpiredWebsiteLiveInspectionEvidenceForWork)
+   .mockResolvedValueOnce({deleted:2,replayed:true});
+  let polls=0;
+  const result=await handler({...context(),attempt:2,isCancellationRequested:async()=>++polls>2});
+  expect(result.effectData).toMatchObject({deleted:2,maxRows:20});
+  expect(polls).toBe(2);
+ });
+});

@@ -69,10 +69,11 @@ export function createM04LiveRetentionWorkerHandlers(
       const acknowledgement = await purgeExpiredWebsiteLiveInspectionEvidenceForWork(
         deps.pool, workspaceId, context.workUnitId, maxRows,
       );
-      // The deletion and durable receipt have already COMMITted. Return the
-      // same work effect on retry; never try to compensate by deleting again.
+      // The deletion and durable receipt have already COMMITted. Do not poll
+      // for cancellation after this point: a late cancellation cannot undo a
+      // durable DELETE, and marking it cancelled would orphan the effect.
+      // On redelivery the persisted work-unit receipt returns this same count.
       const deleted = acknowledgement.deleted;
-      await checkCancellation();
       if (!Number.isSafeInteger(deleted) || deleted < 0 || deleted > maxRows) {
         throw new RetryableWorkError('M04_LIVE_RETENTION_ACK_INVALID');
       }
