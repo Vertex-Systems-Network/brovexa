@@ -25,6 +25,12 @@ Updated: **2026-10-16**
 
 M03 is implementation-complete with verified native gates; external production integrations are separately gated. Supervisor control-plane `DEGRADED`, if reported, refers to other lane-local coordination and is not evidence that the M03 source code remains unintegrated.
 
+### M04 unmerged native checkpoint (2026-10-17)
+
+The isolated `checkpoint/m04-local-web006-20261016` branch contains the in-progress **M04 Website & Digital Presence Intelligence** implementation and QA. It is **not integrated into main** and must not be conflated with the table's integrated-main product progress. At code SHA `d11c3bb2fcc8c69ef54a7c4f7eb459dc9f12bb2c`, native checkpoint run [#38981281539](https://github.com/Vertex-Systems-Network/brovexa/actions/runs/38981281539) passed **4/4** Node24/pnpm11 quality, PostgreSQL18 migration/RBAC, Valkey, and M04 security jobs; 13/13 PostgreSQL live grant/evidence scenarios passed with rolled-back fixtures. WEB-051 additionally verifies that real wall-clock grant expiry while a transaction is open is rejected by the deferred evidence COMMIT fence.
+
+**Still open:** real authorized staging-domain worker/network end-to-end, independent multi-connection revocation races, retention crash replay, reconciliation of the incompatible migration `0018` in separate draft PR #174, final exact merged-tree gates and deployment authorization. `main`, draft PR #174 and production remain untouched by this checkpoint. Detailed evidence and boundaries: [M04 QA-08/09 acceptance](docs/m04-local/QA08-QA09-WEB049-WEB050-ACCEPTANCE-20261017.md).
+
 ### Overall delivery estimate
 
 **Weighted program delivery: ~35% complete** (portfolio approximation; M03's final 10% does not imply a precise portfolio reweighting).
