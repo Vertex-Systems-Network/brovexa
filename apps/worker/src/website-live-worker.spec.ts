@@ -2,6 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import { M04LiveAsyncBoundaryError } from './website-live-async-boundary';
 import { M04LiveAcquisitionError } from './website-live-acquisition';
 import {createM04LiveWorkerHandlers,M04_LIVE_WORK_TYPE} from './website-live-worker';
+import * as nativeIntegration from './website-live-native-integration';
 import type {WorkHandlerContext} from './runtime';
 vi.mock('./website-live-native-integration',()=>({
   inspectAndPersistM04LiveRoot:vi.fn(async(req:{inspectionId:string})=>({inspectionId:req.inspectionId,replayed:false})),
@@ -44,7 +45,7 @@ describe('M04 live worker registration',()=>{
    version:'2.0.0',bodyIncluded:false,executionMode:'live'});
  });
  it('classifies a timed-out trusted asynchronous stage as retryable',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
     new M04LiveAsyncBoundaryError('M04_LIVE_TIMEOUT'),
   );
@@ -54,7 +55,7 @@ describe('M04 live worker registration',()=>{
   });
  });
  it('retries transport timeout but never retries a forbidden DNS destination',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
     new M04LiveAcquisitionError('M04_LIVE_TRANSPORT_FAILED'),
@@ -70,7 +71,7 @@ describe('M04 live worker registration',()=>{
   });
  });
  it('treats transient PostgreSQL failures as retryable with a non-sensitive code',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const d=deps(),handler=createM04LiveWorkerHandlers(d as never)[M04_LIVE_WORK_TYPE];
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
     Object.assign(new Error('connection secrets must not leak'),{code:'08006'}),
@@ -130,7 +131,7 @@ describe('WEB-034 bounded trusted live request lookup',()=>{
 
 describe('WEB-036 deferred live grant authorization enforcement',()=>{
  it('classifies an expired/revoked owner grant at COMMIT as permanent and redacts SQL',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   const error=Object.assign(new Error('private owner membership data'),{
    code:'23514',constraint:'website_live_evidence_active_grant_guard',
@@ -141,7 +142,7 @@ describe('WEB-036 deferred live grant authorization enforcement',()=>{
   });
  });
  it('does not mask other PostgreSQL constraint failures as an owner grant failure',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   const error=Object.assign(new Error('other constraint'),{code:'23514',constraint:'unrelated_constraint'});
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(error);
@@ -152,7 +153,7 @@ describe('WEB-036 deferred live grant authorization enforcement',()=>{
 
 describe('WEB-037 live replay authorization',()=>{
  it('maps a previously persisted but newly expired grant to a permanent sanitized work failure',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   const error=Object.assign(new Error('owner membership and SQL details'),{code:'M04_LIVE_DB_GRANT_INACTIVE'});
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(error);
@@ -165,7 +166,7 @@ describe('WEB-037 live replay authorization',()=>{
 
 describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
  it('redacts current connector/policy revocation at COMMIT into a permanent result',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
    Object.assign(new Error('private M02 connector policy JSON'),{
@@ -177,7 +178,7 @@ describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
   });
  });
  it('does not retry a failed source or owner authorization check',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   for(const constraint of ['website_live_grant_source_guard','website_live_grant_commit_guard']){
    vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
@@ -189,7 +190,7 @@ describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
   }
  });
  it('treats malformed or conflicting persisted evidence as permanent and redacted',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockRejectedValueOnce(
    Object.assign(new Error('private persisted row details'),{code:'M04_LIVE_DB_ID_CONFLICT'}),
@@ -199,7 +200,7 @@ describe('WEB-045 safe replay and PostgreSQL revocation error mapping',()=>{
   });
  });
  it('acknowledges a committed inspection even if a cancellation becomes visible afterward',async()=>{
-  const integration=await import('./website-live-native-integration');
+  const integration=nativeIntegration;
   let cancelled=false;
   const handler=createM04LiveWorkerHandlers(deps() as never)[M04_LIVE_WORK_TYPE];
   vi.mocked(integration.inspectAndPersistM04LiveRoot).mockImplementationOnce(async()=>{

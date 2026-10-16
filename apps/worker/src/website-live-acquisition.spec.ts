@@ -48,6 +48,9 @@ describe('M04 live v2 permission and SSRF preflight', () => {
       maxResponseBytes: valid.maxResponseBytes, timeoutMs: valid.timeoutMs,
       transportPolicyId: valid.transportPolicyId,
       transportPolicyVersion: valid.transportPolicyVersion,
+      sourceKey: valid.sourceKey,
+      sourcePolicyId: valid.sourcePolicyId,
+      sourcePolicyVersion: valid.sourcePolicyVersion,
       expiresAt: '2026-10-16T11:02:00.000Z',
     }) };
     await expect(acquireAuthorizedM04LiveRoot(valid, blocked))
