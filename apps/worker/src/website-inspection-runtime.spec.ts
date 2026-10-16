@@ -521,3 +521,25 @@ describe('M04-WEB-016 transport response own-data and byte-copy safety', () => {
     expect(persist).toHaveBeenCalledOnce();
   });
 });
+
+
+// WEB-017 native regression candidates; intentionally deferred until M04 QA.
+describe('M04-WEB-017 storage adapter evidence isolation', () => {
+  it('never returns evidence mutated by the persistence adapter', async () => {
+    const { deps } = fixture({
+      persist: async (stored: Awaited<ReturnType<typeof executeWebsiteInspectionFixture>>) => {
+        stored.status = 'assessed';
+        stored.coverage = 'bounded';
+        stored.reasonCodes.length = 0;
+        stored.transportReceiptIds.length = 0;
+        stored.observations[0]!.evidenceReferenceIds[0] = 'attacker.forged';
+      },
+    });
+    const result = await executeWebsiteInspectionFixture(request(), deps);
+    expect(result.status).toBe('review_required');
+    expect(result.coverage).toBe('partial');
+    expect(result.reasonCodes).toContain('website.single_page_only');
+    expect(result.transportReceiptIds).toEqual(['receipt.fixture.1']);
+    expect(result.observations[0]?.evidenceReferenceIds).toEqual(['evidence.form.1']);
+  });
+});

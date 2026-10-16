@@ -657,3 +657,32 @@ test('WEB-011: 15 extractor reasons plus mandatory uncertainty code fits contrac
   assert.equal(result.reasonCodes[15],'website.single_page_only');
   assert.equal(calls.persist,1);
 });
+
+
+// WEB-017 persistence-isolation regression candidates; intentionally deferred.
+test('WEB-017: storage adapter mutation never rewrites the returned inspection evidence', async () => {
+  const { deps } = fixture({
+    persist: async stored => {
+      stored.status = 'assessed';
+      stored.coverage = 'bounded';
+      stored.reasonCodes.splice(0, stored.reasonCodes.length);
+      stored.transportReceiptIds.splice(0, stored.transportReceiptIds.length);
+      stored.observations[0].evidenceReferenceIds[0] = 'attacker.forged';
+      stored.request.domainVerification.evidenceIds[0] = 'attacker.domain';
+    },
+  });
+  const result = await executeWebsiteInspectionFixture(req(), deps);
+  assert.equal(result.status, 'review_required');
+  assert.equal(result.coverage, 'partial');
+  assert.ok(result.reasonCodes.includes('website.single_page_only'));
+  assert.deepEqual(result.transportReceiptIds, ['receipt.fixture1']);
+  assert.deepEqual(result.observations[0].evidenceReferenceIds, ['evidence.form1']);
+  assert.deepEqual(result.request.domainVerification.evidenceIds, ['domain.evidence']);
+});
+
+test('WEB-017: rejected persistence propagates without an artificial success result', async () => {
+  const { deps } = fixture({
+    persist: async () => { throw new Error('DATABASE_COMMIT_REJECTED'); },
+  });
+  await assert.rejects(executeWebsiteInspectionFixture(req(), deps), /DATABASE_COMMIT_REJECTED/);
+});
