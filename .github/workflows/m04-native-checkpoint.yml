@@ -82,15 +82,16 @@ jobs:
         run: npm install --global pnpm@11.23.0
       - name: Install frozen monorepo dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify disposable QA target and full schema migration/RBAC
+      - name: Verify disposable QA target and full migration UP/DOWN/reapply
         run: |
           node scripts/verify-m04-qa.mjs --preflight
           pnpm run verify:db
-          pnpm run verify:identity
       - name: Verify native M04 owner grants, tenant FKs and registry revocation
         run: |
           export BROVEXA_M04_QA_PNPM_VERSION="$(pnpm --version)"
           node scripts/verify-m04-live-security.mjs
+      - name: Verify complete tenant and RBAC integration
+        run: pnpm run verify:identity
 
   native-valkey:
     runs-on: ubuntu-latest
