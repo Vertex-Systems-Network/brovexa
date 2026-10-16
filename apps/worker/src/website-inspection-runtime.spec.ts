@@ -84,7 +84,7 @@ describe('M04-WEB-003 native contracts and fixture-only handoff', () => {
     const projected = toWebsiteInspectionPersistencePayload(result, {
       workspaceId: WORKSPACE, retentionTtlSeconds: 86400, deletionRequired: true,
     });
-    expect(projected.request).not.toHaveProperty('limits');
+    expect(projected.request.limits).toEqual(request().limits);
     expect(projected).not.toHaveProperty('body');
     expect(projected.deletionRequired).toBe(true);
     expect(projected.observations[0]?.transportReceiptIds).toEqual(['receipt.fixture.1']);
@@ -199,7 +199,7 @@ describe('M04-WEB-004 deterministic fixture intelligence and DB handoff', () => 
     await expect(handoff(result)).resolves.toEqual({ inspectionId: request().inspectionId, replayed: false });
     expect(stored).toHaveBeenCalledOnce();
     const storedPayload = stored.mock.calls[0]?.[0];
-    expect(storedPayload?.request).not.toHaveProperty('limits');
+    expect(storedPayload?.request.limits).toEqual(request().limits);
     expect(storedPayload).not.toHaveProperty('rawHtml');
   });
 });
@@ -262,8 +262,8 @@ describe('M04-WEB-003 attested request/fixture snapshot invariants', () => {
     expect(persist).not.toHaveBeenCalled();
   });
 
-  it('never analyzes later getter-swapped unapproved HTML after attestation', async () => {
-    const { deps } = fixture();
+  it('rejects accessor-backed HTML before any untrusted getter or persistence runs', async () => {
+    const { deps, persist } = fixture();
     let bodyReads = 0;
     const stable = new TextEncoder().encode('<form method="post"></form>');
     const original = deps.exchange;
@@ -278,9 +278,11 @@ describe('M04-WEB-003 attested request/fixture snapshot invariants', () => {
         },
       };
     });
-    const result = await executeWebsiteInspectionFixture(request(), deps);
-    expect(result.status).toBe('review_required');
-    expect(bodyReads).toBe(1);
+    await expect(executeWebsiteInspectionFixture(request(), deps))
+      .rejects.toMatchObject({ code: 'M04_FIXTURE_RESPONSE_INVALID' });
+    expect(bodyReads).toBe(0);
+    expect(deps.extract).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
   });
 });
 
@@ -315,7 +317,7 @@ describe('M04 test-only inspection pipeline with native Zod contracts', () => {
     expect(actual.observations).toHaveLength(8);
     expect(actual.observations.find(x => x.capability === 'social_link')?.observation).toBe('observed_present');
     expect(database).toHaveBeenCalledOnce();
-    expect(database.mock.calls[0]?.[0].request).not.toHaveProperty('limits');
+    expect(database.mock.calls[0]?.[0].request.limits).toEqual(request().limits);
   });
 
   it('rejects cross-workspace fixture even when untrusted request is schema-valid', async () => {
