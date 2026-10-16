@@ -1,0 +1,134 @@
+# M04 QA only: isolated checkpoint branch, no production credentials, PR merge or deployment.
+name: M04 checkpoint native acceptance
+
+on:
+  push:
+    branches:
+      - checkpoint/m04-local-web006-20261016
+    paths:
+      - '.github/workflows/m04-native-checkpoint.yml'
+      - 'apps/worker/**'
+      - 'packages/db/**'
+      - 'packages/contracts/**'
+      - 'packages/queue/**'
+      - 'scripts/verify-m04-*.mjs'
+      - 'scripts/verify-db.mjs'
+      - 'scripts/verify-identity*.mjs'
+      - 'scripts/verify-queue.mjs'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m04-native-checkpoint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.23.0
+      - name: Install frozen monorepo dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify native toolchain and M04 safety guards
+        run: |
+          test "$(node --version)" = 'v24.20.0'
+          test "$(pnpm --version)" = '11.23.0'
+          node --test scripts/verify-m04-qa-guard.test.mjs scripts/verify-m04-reset-order.test.mjs scripts/verify-m04-workflow-guard.test.mjs
+      - name: Full package TypeScript build, typecheck and native Vitest
+        run: pnpm run quality:runtime
+
+  native-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_DB: brovexa_m04_qa_ci_test
+          POSTGRES_USER: brovexa
+          POSTGRES_PASSWORD: brovexa-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brovexa -d brovexa_m04_qa_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m04_qa_ci_test
+      BROVEXA_DB_TEST_ALLOW_RESET: 'true'
+      BROVEXA_M04_QA_ISOLATED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.23.0
+      - name: Install frozen monorepo dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify disposable QA target and full schema migration/RBAC
+        run: |
+          node scripts/verify-m04-qa.mjs --preflight
+          pnpm run verify:db
+          pnpm run verify:identity
+
+  native-valkey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_DB: brovexa_m04_qa_queue_test
+          POSTGRES_USER: brovexa
+          POSTGRES_PASSWORD: brovexa-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brovexa -d brovexa_m04_qa_queue_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      valkey:
+        image: ghcr.io/valkey-io/valkey:9.1.1-alpine3.24@sha256:de31910896150d5e754a07d57d227cfdde4e258ddd0d1aa4607f2d2f95843715
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://brovexa:brovexa-test-only@127.0.0.1:5432/brovexa_m04_qa_queue_test
+      QUEUE_REDIS_URL: redis://127.0.0.1:6379
+      BROVEXA_DB_TEST_ALLOW_RESET: 'true'
+      BROVEXA_M04_QA_ISOLATED: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.20.0
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.23.0
+      - name: Install frozen monorepo dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify queue retry, cancellation and recovery on disposable services
+        run: pnpm run verify:queue
