@@ -46,7 +46,7 @@ jobs:
         run: |
           test "$(node --version)" = 'v24.20.0'
           test "$(pnpm --version)" = '11.23.0'
-          node --test scripts/verify-m04-qa-guard.test.mjs scripts/verify-m04-reset-order.test.mjs scripts/verify-m04-workflow-guard.test.mjs
+          node --test scripts/verify-m04-qa-guard.test.mjs scripts/verify-m04-reset-order.test.mjs scripts/verify-m04-workflow-guard.test.mjs scripts/verify-m04-migration-contract.test.mjs
       - name: Full package TypeScript build, typecheck and native Vitest
         run: pnpm run quality:runtime
 
