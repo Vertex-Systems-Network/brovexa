@@ -29,3 +29,11 @@ No changes to main, PR #174, production DB, or deployment. Guard/regression test
 - Uses a disposable `*_test` DB and rolls back fixtures; no external HTTP/DNS, provider credentials, production DB or deployment.
 - QA-08 has one additional real-time expiry acceptance case. Multi-connection revoke/COMMIT races, crash/restart retention replay and authorized live staging remain OPEN.
 - QA-09 cross-branch `0018` reconciliation and final PR/main full-gate integration remain OPEN. This is a branch QA checkpoint, **not release acceptance**.
+
+## WEB-052 — real PostgreSQL concurrent retention idempotency (2026-10-17)
+- Exact verified source SHA: `8426ba1eef6ccd64ecb54fa3ef83408208d5b23c`.
+- Native GitHub Actions run: https://github.com/Vertex-Systems-Network/brovexa/actions/runs/38981650821 — **SUCCESS 4/4 jobs**.
+- Native PG18 M04 live security expanded to **14/14 PASS**, confirmed from the security job log.
+- Two concurrent real PG pool connections attempted identical retention work IDs against a disposable, visible test tenant. One fresh transaction persisted one immutable receipt; the other replayed the same zero-row effect. Exactly one scoped receipt remained; test tenant/receipt were deleted by cascading cleanup.
+- This verifies two-connection zero-row deduplication, **not** active multi-connection owner/registry revocation or actual crash-after-COMMIT recovery. Those extended QA-08 checks stay OPEN.
+- No real site requests, tenant production data, PR #174 changes, `main` merges, or deployments.
