@@ -31,6 +31,7 @@ export * from './entity-resolution-persistence';
 export * from './entity-resolution-schema';
 export * from './entity-enrichment-persistence';
 export * from './entity-enrichment-schema';
+export * from './website-inspection-persistence';
 export {
   AuthorizationError,
   assertWorkspaceCapability,

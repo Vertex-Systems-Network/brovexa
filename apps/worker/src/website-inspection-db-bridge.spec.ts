@@ -70,6 +70,7 @@ describe('M04 WEB-018 tenant policy & storage acknowledgement boundary (candidat
     });
     await handoff(sample());
     expect(recorded?.retentionTtlSeconds).toBe(86400);
+    expect(recorded?.request.limits).toEqual({ maxPages: 1, maxResponseBytes: 1024, timeoutMs: 1000 });
     expect(recorded?.request.workspaceId).toBe(workspaceId);
   });
 

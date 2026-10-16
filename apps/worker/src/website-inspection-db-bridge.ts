@@ -2,8 +2,8 @@ import type { WebsiteInspectionResult } from '@brovexa/contracts';
 
 /**
  * M04-WEB-003 -> WEB-002 integration seam. No DB import until #174 is integrated.
- * Explicitly projects WEB-001's request onto WEB-002's persisted columns, omitting
- * the runtime limits (which the persistence interface does not store).
+ * Explicitly projects WEB-001 request fields including safety budgets onto
+ * WEB-002 storage. The migration records budgets for traceable provenance.
  * Caller MUST parse the result with WebsiteInspectionResultSchema first.
  */
 export class WebsiteInspectionBridgeError extends Error {
@@ -19,7 +19,7 @@ const workspaceId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 
 export interface WebsiteInspectionPersistencePayload {
   version: '1.0.0';
-  request: Omit<WebsiteInspectionResult['request'], 'limits'>;
+  request: WebsiteInspectionResult['request'];
   status: WebsiteInspectionResult['status'];
   coverage: WebsiteInspectionResult['coverage'];
   transportReceiptIds: readonly string[];
@@ -128,6 +128,11 @@ export function toWebsiteInspectionPersistencePayload(
       },
       transportPolicyId: request.transportPolicyId,
       transportPolicyVersion: request.transportPolicyVersion,
+      limits: {
+        maxPages: request.limits.maxPages,
+        maxResponseBytes: request.limits.maxResponseBytes,
+        timeoutMs: request.limits.timeoutMs,
+      },
       executionMode: request.executionMode,
       networkRequested: request.networkRequested,
       credentialedFetchRequested: request.credentialedFetchRequested,

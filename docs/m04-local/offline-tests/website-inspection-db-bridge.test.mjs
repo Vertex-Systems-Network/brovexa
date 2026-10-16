@@ -27,7 +27,7 @@ test('bridge maps validated contract to WEB-002 payload, scoped and deleting by 
   const record=toWebsiteInspectionPersistencePayload(evidence(), policy());
   assert.equal(record.deletionRequired,true);
   assert.equal(record.retentionTtlSeconds,86400);
-  assert.equal('limits' in record.request,false);
+  assert.deepEqual(record.request.limits,{maxPages:1,maxResponseBytes:1024,timeoutMs:1000});
   assert.equal(record.request.workspaceId,WORKSPACE);
   assert.deepEqual(record.observations[0].transportReceiptIds,['receipt.1']);
 });
