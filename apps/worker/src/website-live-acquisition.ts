@@ -331,18 +331,26 @@ export async function acquireAuthorizedM04LiveRoot(
     () => resolve(scope.verifiedDomain), { timeoutMs, signal: deps.signal },
   );
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');
-  // Reject a mixed public/private DNS answer, not merely the chosen first IP.
-  if (!Array.isArray(resolved) || resolved.length < 1 || resolved.length > 32 ||
-      resolved.some(address => typeof address !== 'string' || !isPublicM04Ipv4(address))) {
-    fail('M04_LIVE_DNS_NONPUBLIC');
-  }
-  // A resolver callback is untrusted; require own data elements and pin one immutable A record.
+  // The resolver may be injected. NEVER call its .some/.map/iterator or any
+  // accessor while validating DNS evidence; an own .some may be attacker code.
+  // A dense own-data array is required, and EVERY address must be public.
+  if (!Array.isArray(resolved)) fail('M04_LIVE_DNS_NONPUBLIC');
   const addresses: string[] = [];
-  for (let i = 0; i < resolved.length; i += 1) {
-    const item = Object.getOwnPropertyDescriptor(resolved, String(i));
-    if (!item || !('value' in item) || typeof item.value !== 'string' ||
-        !isPublicM04Ipv4(item.value)) fail('M04_LIVE_DNS_NONPUBLIC');
-    addresses.push(item.value);
+  try {
+    const count = Object.getOwnPropertyDescriptor(resolved, 'length');
+    if (!count || !('value' in count) || !Number.isSafeInteger(count.value) ||
+        count.value < 1 || count.value > 32 ||
+        Reflect.ownKeys(resolved).length !== count.value + 1) {
+      fail('M04_LIVE_DNS_NONPUBLIC');
+    }
+    for (let i = 0; i < count.value; i += 1) {
+      const item = Object.getOwnPropertyDescriptor(resolved, String(i));
+      if (!item || !('value' in item) || typeof item.value !== 'string' ||
+          !isPublicM04Ipv4(item.value)) fail('M04_LIVE_DNS_NONPUBLIC');
+      addresses.push(item.value);
+    }
+  } catch {
+    fail('M04_LIVE_DNS_NONPUBLIC');
   }
   const chosen = addresses[0]!;
   if (deps.signal?.aborted) fail('M04_LIVE_CANCELLED');

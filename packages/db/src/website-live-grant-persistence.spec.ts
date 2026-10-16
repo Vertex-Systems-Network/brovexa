@@ -116,5 +116,21 @@ describe('WEB-035 owner-grant persistence',()=>{
   expect(sql).toContain("s.decision='allow'");
   expect(sql).toContain('g.expires_at>now()');
   expect(sql).toContain('g.workspace_id=$1 AND g.inspection_id=$2');
+  expect(sql).toContain("d.normalized_domain=g.verified_domain AND d.decision='verified'");
+  expect(sql).toContain("s.request->>'targetUrl'=g.target_url");
+  expect(sql).toContain("s.request->>'workspaceId'=g.workspace_id::text");
+  expect(sql).toContain("s.request->>'requestId'=s.request_id");
+  expect(sql).toContain("s.request->>'sourceTaskId'=s.source_task_id");
+  expect(sql).toContain("s.request->>'robotsDecision' IN ('allowed','not_applicable')");
+  expect(sql).toContain("s.request->>'rawPayloadRequested'='false'");
+  expect(sql).toContain("s.request->>'exportRequested'='false'");
+  expect(sql).toContain('g.approved_at<=now()');
+ });
+ it('never returns an approved grant if the tenant-scoped authorization query returns no matching row',async()=>{
+  const p=fakePool();
+  await expect(getWebsiteLiveGrant(p.pool,{workspaceId,inspectionId:'inspect.1'}))
+   .resolves.toBeNull();
+  expect(p.query).toHaveBeenCalledOnce();
+  expect(p.query.mock.calls[0]?.[1]).toEqual([workspaceId,'inspect.1']);
  });
 });

@@ -59,6 +59,35 @@ describe('M04 live v2 permission and SSRF preflight', () => {
       .rejects.toMatchObject({ code: 'M04_LIVE_DNS_NONPUBLIC' });
     expect(isPublicM04Ipv4('169.254.169.254')).toBe(false);
   });
+  it('never invokes a resolver-controlled .some hook during DNS admission', async () => {
+    let invoked = false;
+    const addresses = ['8.8.8.8'];
+    Object.setPrototypeOf(addresses, {
+      some: () => { invoked = true; throw new Error('resolver controlled array method'); },
+    });
+    const read = await acquireAuthorizedM04LiveRoot(valid, {
+      ...deps(), resolveAddresses: async () => addresses,
+    });
+    expect(read.receipt.remoteIpv4).toBe('8.8.8.8');
+    expect(invoked).toBe(false);
+  });
+  it('rejects accessor-backed and sparse DNS responses without executing the getter', async () => {
+    let invoked = false;
+    const accessor = ['8.8.8.8'];
+    Object.defineProperty(accessor, '0', {
+      configurable: true, enumerable: true,
+      get: () => { invoked = true; throw new Error('unsafe DNS property getter'); },
+    });
+    await expect(acquireAuthorizedM04LiveRoot(valid, {
+      ...deps(), resolveAddresses: async () => accessor,
+    })).rejects.toMatchObject({ code: 'M04_LIVE_DNS_NONPUBLIC' });
+    expect(invoked).toBe(false);
+    const sparse = new Array<string>(2);
+    sparse[0] = '8.8.8.8';
+    await expect(acquireAuthorizedM04LiveRoot(valid, {
+      ...deps(), resolveAddresses: async () => sparse,
+    })).rejects.toMatchObject({ code: 'M04_LIVE_DNS_NONPUBLIC' });
+  });
   it('retains distinct live v2 provenance; no raw body in the report', async () => {
     const report = await inspectAuthorizedM04LiveRoot(valid, deps());
     expect(report.version).toBe('2.0.0');

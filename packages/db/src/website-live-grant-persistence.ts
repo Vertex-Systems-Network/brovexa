@@ -204,6 +204,26 @@ export async function getWebsiteLiveGrant(pool:Pool,scope:{workspaceId:string;in
      FROM website_live_inspection_grants g
      JOIN source_admission_snapshots s
        ON s.id=g.source_admission_decision_ref AND s.workspace_id=g.workspace_id
+       AND s.decision='allow' AND s.source_key=g.source_key
+       AND s.policy_id=g.source_policy_id AND s.policy_version=g.source_policy_version
+       AND s.request->>'workspaceId'=g.workspace_id::text
+       AND s.request->>'requestId'=s.request_id
+       AND s.request->>'sourceTaskId'=s.source_task_id
+       AND s.request->>'sourceKey'=g.source_key
+       AND s.request->>'connectorKey'=s.connector_key
+       AND s.request->>'connectorVersion'=s.connector_version
+       AND s.request->'policySnapshot'->>'policyId'=g.source_policy_id
+       AND s.request->'policySnapshot'->>'policyVersion'=g.source_policy_version
+       AND s.request->>'targetUrl'=g.target_url
+       AND s.request->>'executionIntent'='execute'
+       AND s.request->>'operation'='fetch'
+       AND s.request->>'robotsDecision' IN ('allowed','not_applicable')
+       AND s.request->>'rawPayloadRequested'='false'
+       AND s.request->>'exportRequested'='false'
+     JOIN business_domain_verification_decisions d
+       ON d.id=g.domain_verification_id AND d.workspace_id=g.workspace_id
+       AND d.canonical_business_id=g.canonical_business_id
+       AND d.normalized_domain=g.verified_domain AND d.decision='verified'
      JOIN workspaces w ON w.id=g.workspace_id AND w.status='active'
      JOIN workspace_memberships wm ON wm.id=g.approved_by_membership_id
        AND wm.workspace_id=g.workspace_id AND wm.user_id=g.approved_by_user_id
@@ -212,9 +232,9 @@ export async function getWebsiteLiveGrant(pool:Pool,scope:{workspaceId:string;in
      JOIN workspace_membership_roles wmr ON wmr.membership_id=wm.id AND wmr.workspace_id=wm.workspace_id
      JOIN workspace_roles wr ON wr.id=wmr.role_id AND wr.workspace_id=wm.workspace_id AND wr.kind='owner'
      WHERE g.workspace_id=$1 AND g.inspection_id=$2
-       AND g.expires_at>now() AND s.decision='allow'
-       AND s.source_key=g.source_key AND s.policy_id=g.source_policy_id
-       AND s.policy_version=g.source_policy_version
+       AND g.approved_at<=now() AND g.expires_at>now()
+       -- Re-evaluate exact source scope at EVERY trusted worker read. Historical
+       -- grant existence is not permission if the verification/admission changed.
      LIMIT 1`,
     [scope.workspaceId,scope.inspectionId],
   );
