@@ -87,6 +87,10 @@ jobs:
           node scripts/verify-m04-qa.mjs --preflight
           pnpm run verify:db
           pnpm run verify:identity
+      - name: Verify native M04 owner grants, tenant FKs and registry revocation
+        run: |
+          export BROVEXA_M04_QA_PNPM_VERSION="$(pnpm --version)"
+          node scripts/verify-m04-live-security.mjs
 
   native-valkey:
     runs-on: ubuntu-latest
