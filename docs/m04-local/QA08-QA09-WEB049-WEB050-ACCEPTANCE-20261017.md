@@ -37,3 +37,12 @@ No changes to main, PR #174, production DB, or deployment. Guard/regression test
 - Two concurrent real PG pool connections attempted identical retention work IDs against a disposable, visible test tenant. One fresh transaction persisted one immutable receipt; the other replayed the same zero-row effect. Exactly one scoped receipt remained; test tenant/receipt were deleted by cascading cleanup.
 - This verifies two-connection zero-row deduplication, **not** active multi-connection owner/registry revocation or actual crash-after-COMMIT recovery. Those extended QA-08 checks stay OPEN.
 - No real site requests, tenant production data, PR #174 changes, `main` merges, or deployments.
+
+## WEB-053 — native persisted replay scope checks (2026-10-17)
+- Exact tested code SHA: `8f8b6a72bf02d258b11337e6dc890568fbb7d997`.
+- [Native CI #38985135657](https://github.com/Vertex-Systems-Network/brovexa/actions/runs/38985135657): **4/4 SUCCESS** (quality/typecheck/Vitest, PostgreSQL 18 migration+identity, Valkey, M04 full-schema).
+- Native PostgreSQL 18 M04 security: **17/17 PASS** confirmed in the security job logs.
+- A real committed zero-row maintenance receipt was reloaded after a simulated lost acknowledgement, replayed with the same work ID and workspace without executing a second delete.
+- Changed max-row budget for a committed work ID failed with `M04_LIVE_DB_ID_CONFLICT`; different workspace reuse of the same work ID also failed, without creating a foreign receipt.
+- Two-connection same-work-ID replay remains covered by WEB-052. Test-created workspaces and receipts are cleaned up. No live external network or production operations.
+- **Scope warning:** This tests durable receipt replay of a zero-row maintenance work unit, **not** actual process termination after a nonzero cleanup COMMIT. Actual crash/restart with deleted evidence and owner/registry revocation races remain unverified release gates.
