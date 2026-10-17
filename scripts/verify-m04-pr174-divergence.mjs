@@ -6,7 +6,7 @@
  * adapt/mutate the journal or retrofit unreserved schema on a live target.
  */
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {cp,mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
@@ -149,6 +149,96 @@ try{
   const redone=await applyPendingMigrations(pool,candidateDir);
   assert.deepEqual(redone,[previewName],'Only preview 0027 should reapply after rollback');
   console.log('M04 QA09 PR174: empty-table 0027 DOWN/reapply is reversible without 0018 history rewrite PASS');
+
+  // Retained prior inspection evidence makes a rollback unsafe, even if it
+  // originally entered after the new limits were enforced. Use only real,
+  // valid test rows; never disable FKs, defer retention or forge admissions.
+  const w=randomUUID(),b='m04.qa.legacy.'+randomUUID().slice(0,8);
+  const e='m04.qa.evidence.'+randomUUID().slice(0,8);
+  const d='m04.qa.verified.'+randomUUID().slice(0,8);
+  const inspection='m04.qa.legacy.inspection.'+randomUUID().slice(0,8);
+  await pool.query(
+    "INSERT INTO workspaces(id,slug,display_name) VALUES($1,$2,'M04 Legacy Compatibility Test')",
+    [w,'m04-legacy-'+randomUUID().slice(0,8)],
+  );
+  await pool.query(
+    "INSERT INTO canonical_businesses(id,workspace_id,display_name) VALUES($1,$2,'M04 Legacy Business')",
+    [b,w],
+  );
+  await pool.query(`INSERT INTO business_domain_evidence
+     (id,workspace_id,canonical_business_id,normalized_domain,kind,effect,
+      source_key,source_reference_ids,source_policy_id,source_policy_version,
+      source_admission_decision_ref,storage_class,retention_ttl_seconds,
+      deletion_required,observed_at,recorded_at)
+     VALUES($1,$2,$3,'example.com','official_website','supports_domain',
+      'source.m04.preview','["m04.qa.legacy.reference"]'::jsonb,
+      'policy.m04.preview','1.0.0','m04.qa.legacy.admission',
+      'EVIDENCE_MINIMAL',3600,true,
+      clock_timestamp()-interval '10 seconds',clock_timestamp()-interval '9 seconds')`,
+    [e,w,b]);
+  await pool.query(`INSERT INTO business_domain_verification_decisions
+     (id,workspace_id,canonical_business_id,normalized_domain,decision,method,
+      confidence,evidence_ids,reason_codes,evaluated_at)
+     VALUES($1,$2,$3,'example.com','verified','deterministic',0.99,
+      $4::jsonb,'["domain_independent_support"]'::jsonb,clock_timestamp())`,
+    [d,w,b,JSON.stringify([e])]);
+  const inputColumns=[
+    'id','workspace_id','canonical_business_id','domain_verification_id',
+    'verified_domain','target_url','source_key','source_admission_decision_ref',
+    'source_policy_id','source_policy_version','transport_policy_id',
+    'transport_policy_version','status','coverage','transport_receipt_ids',
+    'reason_codes','payload_hash','retention_ttl_seconds','deletion_required',
+    'requested_at','completed_at',
+  ];
+  const inspectionValues=[
+    inspection,w,b,d,'example.com','https://example.com/','source.m04.preview',
+    'm04.qa.legacy.admission','policy.m04.preview','1.0.0',
+    'transport.m04.preview','1.0.0','unavailable','none','[]',
+    '["website.unavailable"]','a'.repeat(64),3600,true,
+    new Date(Date.now()-1000).toISOString(),new Date().toISOString(),
+  ];
+  const insertLegacy=async withBudget=>{
+    const names=withBudget?[...inputColumns,'max_pages','max_response_bytes','timeout_ms']:inputColumns;
+    const vals=withBudget?[...inspectionValues,1,1024,500]:inspectionValues;
+    return pool.query(
+      'INSERT INTO website_inspection_runs ('+names.join(',')+') VALUES ('+
+      vals.map((_,i)=>'
+
+  console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
+  console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
+  console.log('M04 QA09 PR174: canonical 0018 checksum collision rejected without journal mutation PASS');
+  console.log('M04 QA09 PR174: no 0019+ applied; forward-migration decision remains integration-owner gated PASS');
+}finally{
+  await pool.end();
+  await rm(scratch,{recursive:true,force:true});
+}
++(i+1)).join(',')+')',vals);
+  };
+  await insertLegacy(true);
+  await assert.rejects(()=>rollbackLatestMigration(pool,candidateDir),
+    error=>error?.code==='23514' &&
+      error?.constraint==='website_legacy_budget_rollback_requires_empty',
+    'Cannot discard budget columns while valid website evidence is retained');
+  await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+  assert.equal(await rollbackLatestMigration(pool,candidateDir),previewName);
+  await insertLegacy(false);
+  const journalBeforeBlocked=await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id');
+  await assert.rejects(()=>applyPendingMigrations(pool,candidateDir),
+    error=>error?.code==='23514' &&
+      error?.constraint==='website_legacy_budget_provenance_required',
+    'Cannot invent absent page/byte/timeout limits for a historical row');
+  const journalAfterBlocked=await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id');
+  assert.deepEqual(journalAfterBlocked.rows,journalBeforeBlocked.rows,
+    'Blocked upgrade cannot write a new migration receipt or alter applied 0018');
+  const unchangedLegacy=await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',[inspection]);
+  assert.equal(unchangedLegacy.rows[0].total,1,'A blocked repair must preserve historical evidence');
+  await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+  assert.deepEqual(await applyPendingMigrations(pool,candidateDir),[previewName]);
+  console.log('M04 QA09 PR174: populated-evidence upgrade and rollback both fail closed, journal unchanged PASS');
+
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
