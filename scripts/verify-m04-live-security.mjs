@@ -402,6 +402,50 @@ try{
    }
  }
 
+ // WEB-057: once the evidence commit fence obtains FOR SHARE locks on
+ // owner authority, a different connection cannot revoke that owner before
+ // the approved evidence transaction commits. Use a bounded lock_timeout
+ // to prove the revoker is blocked, never an unbounded race/sleep.
+ const fenceRaceId=`m04.qa.${slug}.owner.fence-first`;
+ await client.query('BEGIN');
+ try {
+   await insertGrant(grant(fenceRaceId));
+   await client.query('COMMIT');
+ } catch(e) {
+   await client.query('ROLLBACK');
+   throw e;
+ }
+ await client.query('BEGIN');
+ try {
+   await insertLiveEvidence(fenceRaceId);
+   const revoker=await pool.connect();
+   try {
+     await revoker.query('BEGIN');
+     await revoker.query("SET LOCAL lock_timeout='350ms'");
+     await assert.rejects(
+       () => revoker.query(
+         "UPDATE workspace_memberships SET status='suspended' WHERE id=$1",
+         [membershipA],
+       ),
+       error=>error?.code==='55P03',
+       'concurrent owner revocation must wait for evidence COMMIT fence',
+     );
+   } finally {
+     await revoker.query('ROLLBACK');
+     revoker.release();
+   }
+   await client.query('COMMIT');
+   const persisted=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_runs WHERE id=$1',
+     [fenceRaceId],
+   );
+   assert.equal(persisted.rows[0].total,1);
+   checks++;
+   console.log('M04 native PG18 live security: evidence fence locks owner against concurrent revocation until COMMIT PASS');
+ } finally {
+   await client.query('ROLLBACK');
+ }
+
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
  // retention work and persist only one idempotent receipt. The empty,
  // disposable tenant is committed for visibility across both connections
