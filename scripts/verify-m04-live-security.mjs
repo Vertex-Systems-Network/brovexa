@@ -315,6 +315,31 @@ try{
    assert.equal(foreignRows.rows[0].count,0);
    checks++;
    console.log('M04 native PG18 live security: cross-tenant retention receipt takeover denied PASS');
+
+   // WEB-054: two different tenants racing the very same globally unique
+   // work ID must serialize at the advisory lock and return a controlled
+   // scope conflict, not an unhandled PostgreSQL primary-key violation.
+   const sharedRaceId = `m04.qa.${slug}.retention.two-tenant-race`;
+   const contested = await Promise.allSettled([
+     purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceWorkspace,sharedRaceId,1),
+     purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceOtherWorkspace,sharedRaceId,1),
+   ]);
+   const admitted = contested.filter(result=>result.status==='fulfilled');
+   const denied = contested.filter(result=>result.status==='rejected');
+   assert.equal(admitted.length,1,'one tenant must win the global work-id claim');
+   assert.deepEqual(admitted[0].value,{deleted:0,replayed:false});
+   assert.equal(denied.length,1,'one tenant must receive a controlled conflict');
+   assert.equal(denied[0].reason?.code,'M04_LIVE_DB_ID_CONFLICT');
+   const unique = await pool.query(
+     'SELECT workspace_id,deleted_count,max_rows FROM website_live_retention_work_receipts WHERE work_unit_id=$1',
+     [sharedRaceId],
+   );
+   assert.equal(unique.rows.length,1);
+   assert.ok([raceWorkspace,raceOtherWorkspace].includes(unique.rows[0].workspace_id));
+   assert.equal(unique.rows[0].deleted_count,0);
+   assert.equal(unique.rows[0].max_rows,1);
+   checks++;
+   console.log('M04 native PG18 live security: simultaneous cross-tenant work-ID claim fails closed PASS');
  } finally {
    await pool.query('DELETE FROM workspaces WHERE id=ANY($1::uuid[])',[[raceWorkspace,raceOtherWorkspace]]);
  }
