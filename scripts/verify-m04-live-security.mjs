@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Native M04 live authorization acceptance against full Brovexa PG18 schema.
- * Disposable localhost *_test database only. Transactional and committed fixtures are cleaned.
+ * Disposable localhost *_test database only. Transactional fixtures roll back.
+ * WEB-055's committed, append-only registry fixture is scoped to this isolated QA database.
  * No HTTP/DNS, queue invocation, production secrets or live reads.
  */
 import assert from 'node:assert/strict';
@@ -32,8 +33,8 @@ const businessA=`m04.qa.${slug}.a`, businessB=`m04.qa.${slug}.b`;
 const admissionA=`m04.qa.${slug}.admit.a`, admissionB=`m04.qa.${slug}.admit.b`;
 const domainA=`m04.qa.${slug}.domain.a`, domainB=`m04.qa.${slug}.domain.b`;
 const evidenceA=`m04.qa.${slug}.evidence.a`, evidenceB=`m04.qa.${slug}.evidence.b`;
-const SOURCE='source.m04qa', POLICY='policy.m04qa', CONNECTOR='connector.m04qa';
-const BLOCKED_POLICY='policy.m04qa.blocked';
+const SOURCE=`source.m04qa.${slug}`, POLICY=`policy.m04qa.${slug}`, CONNECTOR=`connector.m04qa.${slug}`;
+const BLOCKED_POLICY=`policy.m04qa.blocked.${slug}`;
 const blockedPolicyId=randomUUID(), blockedConnectorId=randomUUID();
 const blockedAdmission=`m04.qa.${slug}.admit.blocked`;
 let checks = 0;
@@ -339,50 +340,12 @@ try{
    checks++;
    console.log('M04 native PG18 live security: fresh work ID purges next row, nonexpired evidence survives PASS');
  } finally {
-   // Committed fixture cleanup in strict FK dependency order. It must also
-   // run on assertion failures, and must never truncate non-fixture tables.
-   await client.query('BEGIN');
-   try {
-     await client.query('DELETE FROM website_live_inspection_runs WHERE workspace_id=$1',[workspaceA]);
-     await client.query('DELETE FROM website_live_inspection_grants WHERE workspace_id=$1',[workspaceA]);
-     await client.query(
-       'DELETE FROM source_admission_snapshots WHERE id=ANY($1::text[])',
-       [[admissionA,admissionB,blockedAdmission]],
-     );
-     await client.query(
-       'DELETE FROM business_domain_verification_decisions WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query(
-       'DELETE FROM business_domain_evidence WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query(
-       'DELETE FROM canonical_businesses WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query(
-       'DELETE FROM workspace_membership_roles WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query(
-       'DELETE FROM workspace_roles WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query(
-       'DELETE FROM workspace_memberships WHERE workspace_id=ANY($1::uuid[])',
-       [[workspaceA,workspaceB]],
-     );
-     await client.query('DELETE FROM workspaces WHERE id=ANY($1::uuid[])',[[workspaceA,workspaceB]]);
-     await client.query('DELETE FROM connector_definitions WHERE id=ANY($1::uuid[])',[[connectorId,blockedConnectorId]]);
-     await client.query('DELETE FROM connector_policies WHERE id=ANY($1::uuid[])',[[policyId,blockedPolicyId]]);
-     await client.query('DELETE FROM source_capabilities WHERE id=$1',[capabilityId]);
-     await client.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[[userA,userB,otherMember]]);
-     await client.query('COMMIT');
-   } catch (e) {
-     await client.query('ROLLBACK');
-     throw e;
-   }
+   // Source registry and source admission lifecycle history is append-only:
+   // committed test fixtures CANNOT be deleted via normal SQL. Never bypass
+   // immutability triggers or truncate unrelated rows. Native checkpoint CI
+   // destroys its entire dedicated *_test PostgreSQL service after the job.
+   // Unique QA source/policy/connector keys permit safe repeat local runs.
+   console.log('WEB-055 durable fixture remains in disposable QA database until database teardown');
  }
 
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
@@ -480,6 +443,6 @@ try{
  } finally {
    await pool.query('DELETE FROM workspaces WHERE id=ANY($1::uuid[])',[[raceWorkspace,raceOtherWorkspace]]);
  }
- console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; disposable fixtures cleaned)`);
+ console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; rollback/race fixtures cleaned, durable WEB-055 fixture isolated)`);
 }catch(error){try{await client.query('ROLLBACK')}catch{} console.error(`Brovexa M04 native full-schema security FAILED after ${checks} passes: ${error?.message}`); process.exitCode=1;}
 finally{client.release();await pool.end();}
