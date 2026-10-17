@@ -35,6 +35,7 @@ const domainA=`m04.qa.${slug}.domain.a`, domainB=`m04.qa.${slug}.domain.b`;
 const evidenceA=`m04.qa.${slug}.evidence.a`, evidenceB=`m04.qa.${slug}.evidence.b`;
 const SOURCE=`source.m04qa.${slug}`, POLICY=`policy.m04qa.${slug}`, CONNECTOR=`connector.m04qa.${slug}`;
 const BLOCKED_POLICY=`policy.m04qa.blocked.${slug}`;
+const BLOCKED_CONNECTOR=`${CONNECTOR}.blocked`;
 const blockedPolicyId=randomUUID(), blockedConnectorId=randomUUID();
 const blockedAdmission=`m04.qa.${slug}.admit.blocked`;
 let checks = 0;
@@ -102,32 +103,32 @@ async function insertSeed(){
 
   // A historical allow snapshot can outlive a subsequently blocked registry policy.
   // Separate immutable registry revision: never bypass append-only triggers or mutate source rows.
-  const blockedEnvelope={policyId:BLOCKED_POLICY,version:'1.0.0',sourceKey:SOURCE,connectorKey:CONNECTOR,
+  const blockedEnvelope={policyId:BLOCKED_POLICY,version:'1.0.0',sourceKey:SOURCE,connectorKey:BLOCKED_CONNECTOR,
     state:'BLOCKED',accessMethod:'public_web'};
   await client.query(`INSERT INTO connector_policies(id,policy_id,version,source_key,connector_key,state,access_method,reviewed_at,next_review_at,envelope)
     VALUES($1,$2,'1.0.0',$3,$4,'BLOCKED','public_web',clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour',$5::jsonb)`,
-    [blockedPolicyId,BLOCKED_POLICY,SOURCE,CONNECTOR,JSON.stringify(blockedEnvelope)]);
-  const blockedDefinition={connectorKey:CONNECTOR,version:'2.0.0',sourceKey:SOURCE,capabilityVersion:'1.0.0',
+    [blockedPolicyId,BLOCKED_POLICY,SOURCE,BLOCKED_CONNECTOR,JSON.stringify(blockedEnvelope)]);
+  const blockedDefinition={connectorKey:BLOCKED_CONNECTOR,version:'2.0.0',sourceKey:SOURCE,capabilityVersion:'1.0.0',
     policyId:BLOCKED_POLICY,policyVersion:'1.0.0',accessMethod:'public_web',credentialMode:'none',
     status:'approved',activation:'enabled',implementationVersion:'2.0.0'};
   await client.query(`INSERT INTO connector_definitions(id,connector_key,version,source_key,capability_version,policy_id,policy_version,
     access_method,credential_mode,status,activation,implementation_version,envelope)
     VALUES($1,$2,'2.0.0',$3,'1.0.0',$4,'1.0.0','public_web','none','approved','enabled','2.0.0',$5::jsonb)`,
-    [blockedConnectorId,CONNECTOR,SOURCE,BLOCKED_POLICY,JSON.stringify(blockedDefinition)]);
+    [blockedConnectorId,BLOCKED_CONNECTOR,SOURCE,BLOCKED_POLICY,JSON.stringify(blockedDefinition)]);
   const reqId=`m04-qa-req-${slug}-blocked`, taskId=`m04-qa-task-${slug}-blocked`;
   const policySnapshot={policyId:BLOCKED_POLICY,policyVersion:'1.0.0'};
   const request={requestId:reqId,workspaceId:workspaceA,sourceTaskId:taskId,sourceKey:SOURCE,
-    connectorKey:CONNECTOR,connectorVersion:'2.0.0',policySnapshot,operation:'fetch',storageClass:'REFERENCE_ONLY',
+    connectorKey:BLOCKED_CONNECTOR,connectorVersion:'2.0.0',policySnapshot,operation:'fetch',storageClass:'REFERENCE_ONLY',
     executionIntent:'execute',targetUrl:'https://example.com/',robotsDecision:'allowed',rawPayloadRequested:false,exportRequested:false};
   const evaluatedAt=new Date().toISOString();
-  const admission={decision:'allow',sourceKey:SOURCE,connectorKey:CONNECTOR,connectorVersion:'2.0.0',
+  const admission={decision:'allow',sourceKey:SOURCE,connectorKey:BLOCKED_CONNECTOR,connectorVersion:'2.0.0',
     policySnapshot,reasonCodes:[],warnings:[],operation:'fetch',storageClass:'REFERENCE_ONLY',evaluatedAt};
   await client.query(`INSERT INTO source_admission_snapshots(id,workspace_id,source_task_id,request_id,source_capability_id,
     connector_policy_db_id,connector_definition_id,source_key,capability_version,connector_key,connector_version,
     policy_id,policy_version,decision,reason_codes,warnings,request,admission,evaluated_at)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,'1.0.0',$9,'2.0.0',$10,'1.0.0','allow','[]'::jsonb,'[]'::jsonb,
     $11::jsonb,$12::jsonb,$13::timestamptz)`,
-    [blockedAdmission,workspaceA,taskId,reqId,capabilityId,blockedPolicyId,blockedConnectorId,SOURCE,CONNECTOR,
+    [blockedAdmission,workspaceA,taskId,reqId,capabilityId,blockedPolicyId,blockedConnectorId,SOURCE,BLOCKED_CONNECTOR,
       BLOCKED_POLICY,JSON.stringify(request),JSON.stringify(admission),evaluatedAt]);
 
 }
@@ -198,6 +199,25 @@ async function insertSupersedingDomainDecision(id,{db=client,decision='rejected'
     VALUES($1,$2,$3,'example.com',$4,'deterministic',0.95,$5::jsonb,
            '["m04.domain_reassessed"]'::jsonb,clock_timestamp())`,
     [id,workspaceA,businessA,decision,JSON.stringify([evidenceA])]);
+}
+
+
+/** WEB-060: new append-only connector revision for the same M02 connector.
+ * No UPDATE/DELETE of historic registry records; a separate connection may
+ * INSERT in order to adversarially interleave the deferred COMMIT fence.
+ */
+async function insertConnectorRevision({db=client,version='9.0.0',disabled=true}={}){
+  const status=disabled?'disabled':'approved';
+  const activation=disabled?'disabled':'enabled';
+  const envelope={connectorKey:CONNECTOR,version,sourceKey:SOURCE,
+    capabilityVersion:'1.0.0',policyId:POLICY,policyVersion:'1.0.0',
+    accessMethod:'public_web',credentialMode:'none',status,activation,
+    implementationVersion:version};
+  await db.query(`INSERT INTO connector_definitions
+    (id,connector_key,version,source_key,capability_version,policy_id,policy_version,
+     access_method,credential_mode,status,activation,implementation_version,envelope)
+    VALUES($1,$2,$3,$4,'1.0.0',$5,'1.0.0','public_web','none',$6,$7,$3,$8::jsonb)`,
+    [randomUUID(),CONNECTOR,version,SOURCE,POLICY,status,activation,JSON.stringify(envelope)]);
 }
 
 function grant(id,{workspace=workspaceA,business=businessA,domainId=domainA,host='example.com',admission=admissionA,
@@ -317,6 +337,26 @@ try{
    await insertLiveEvidence(id);
    await client.query('UPDATE website_live_inspection_runs SET timeout_ms=1500 WHERE id=$1',[id]);
  },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
+ // WEB-060: new immutable revision of the same source connector
+ // must supersede historical approval, including when the new revision is
+ // re-enabled. Both cases use SAVEPOINT rollback and do not touch baseline.
+ await scenario('new disabled connector revision denies historic grant',async()=>{
+   await insertConnectorRevision();
+   await insertGrant(grant(`m04.qa.${slug}.connector.disabled.grant`));
+ },{allowed:false,code:'23514',constraint:'website_live_current_connector_revision_guard'});
+
+ await scenario('new enabled connector revision still requires fresh admission',async()=>{
+   await insertConnectorRevision({disabled:false});
+   await insertGrant(grant(`m04.qa.${slug}.connector.revision.grant`));
+ },{allowed:false,code:'23514',constraint:'website_live_current_connector_revision_guard'});
+
+ await scenario('new disabled connector revision denies previously approved evidence',async()=>{
+   const id=`m04.qa.${slug}.connector.disabled.evidence`;
+   await insertGrant(grant(id));
+   await insertConnectorRevision();
+   await insertLiveEvidence(id);
+ },{allowed:false,code:'23514',constraint:'website_live_current_connector_revision_guard'});
+
  // WEB-059: A newer append-only domain decision must revoke the older
  // verified snapshot, even though its foreign key and evidence still exist.
  await scenario('newer rejected domain decision denies historical verified grant',async()=>{
@@ -623,6 +663,65 @@ try{
    checks++;
    console.log('M04 native PG18 live security: concurrent newer rejected decision blocks pending evidence COMMIT PASS');
  } finally {await client.query('ROLLBACK');}
+
+ // WEB-060: when evidence COMMIT validation wins the connector lock,
+ // an append-only later registry revision cannot become effective until the
+ // authorized evidence transaction has completed.
+ const registryFenceId=`m04.qa.${slug}.connector.fence-first`;
+ await client.query('BEGIN');
+ try {
+   await insertGrant(grant(registryFenceId));
+   await client.query('COMMIT');
+ }catch(error){await client.query('ROLLBACK');throw error;}
+ await client.query('BEGIN');
+ try {
+   await insertLiveEvidence(registryFenceId);
+   const connectorRevoker=await pool.connect();
+   try {
+     await connectorRevoker.query('BEGIN');
+     await connectorRevoker.query("SET LOCAL lock_timeout='350ms'");
+     await assert.rejects(
+       ()=>insertConnectorRevision({db:connectorRevoker,version:'10.0.0'}),
+       error=>error?.code==='55P03',
+       'connector revision INSERT must wait until authorized evidence COMMIT',
+     );
+   }finally{
+     await connectorRevoker.query('ROLLBACK');
+     connectorRevoker.release();
+   }
+   await client.query('COMMIT');
+   const persisted=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_runs WHERE id=$1',
+     [registryFenceId],
+   );
+   assert.equal(persisted.rows[0].total,1);
+   checks++;
+   console.log('M04 native PG18 live security: connector revision waits on current COMMIT fence PASS');
+ }finally{await client.query('ROLLBACK');}
+
+ // Opposite ordering: an independently committed disabled revision makes
+ // the pending grant/evidence stale even though its pinned admission is allow.
+ const registryRevokeId=`m04.qa.${slug}.connector.revocation-first`;
+ await client.query('BEGIN');
+ try{
+   await insertGrant(grant(registryRevokeId),{deferCommitFence:true});
+   await insertLiveEvidence(registryRevokeId,{deferCommitFence:true});
+   await insertConnectorRevision({db:pool,version:'10.0.0'});
+   await assert.rejects(
+     ()=>client.query('SET CONSTRAINTS ALL IMMEDIATE'),
+     error=>error?.code==='23514' &&
+       error?.constraint==='website_live_current_connector_revision_guard',
+     'stale admitted connector must not authorize an evidence COMMIT',
+   );
+   await client.query('ROLLBACK');
+   const escaped=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_runs WHERE id=$1',
+     [registryRevokeId],
+   );
+   assert.equal(escaped.rows[0].total,0);
+   checks++;
+   console.log('M04 native PG18 live security: committed disabled revision rejects pending evidence PASS');
+ }finally{await client.query('ROLLBACK');}
 
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
  // retention work and persist only one idempotent receipt. The empty,
