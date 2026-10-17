@@ -132,6 +132,61 @@ async function insertSeed(){
 
 }
 
+
+/** WEB-058: an append-only M02 allow snapshot with an approval review window
+ * that will expire while the PostgreSQL transaction is open. Each caller
+ * operates inside a savepoint, so no short-lived rows survive that scenario.
+ */
+async function insertShortReviewRegistry(){
+  const policy=`${POLICY}.review-short`;
+  const admission=`m04.qa.${slug}.admit.review-short`;
+  const definitionVersion='3.0.0';
+  const policyDbId=randomUUID(),definitionId=randomUUID();
+  const envelope={policyId:policy,version:'1.0.0',sourceKey:SOURCE,
+    connectorKey:CONNECTOR,state:'APPROVED',accessMethod:'public_web'};
+  await client.query(`INSERT INTO connector_policies
+    (id,policy_id,version,source_key,connector_key,state,access_method,
+     reviewed_at,next_review_at,envelope)
+    VALUES($1,$2,'1.0.0',$3,$4,'APPROVED','public_web',
+           clock_timestamp()-interval '1 hour',
+           clock_timestamp()+interval '2 seconds',$5::jsonb)`,
+    [policyDbId,policy,SOURCE,CONNECTOR,JSON.stringify(envelope)]);
+  const definition={connectorKey:CONNECTOR,version:definitionVersion,
+    sourceKey:SOURCE,capabilityVersion:'1.0.0',policyId:policy,
+    policyVersion:'1.0.0',accessMethod:'public_web',credentialMode:'none',
+    status:'approved',activation:'enabled',implementationVersion:definitionVersion};
+  await client.query(`INSERT INTO connector_definitions
+    (id,connector_key,version,source_key,capability_version,policy_id,policy_version,
+     access_method,credential_mode,status,activation,implementation_version,envelope)
+    VALUES($1,$2,$3,$4,'1.0.0',$5,'1.0.0','public_web','none',
+           'approved','enabled',$3,$6::jsonb)`,
+    [definitionId,CONNECTOR,definitionVersion,SOURCE,policy,JSON.stringify(definition)]);
+  const requestId=`m04-qa-req-${slug}-review-short`;
+  const sourceTaskId=`m04-qa-task-${slug}-review-short`;
+  const policySnapshot={policyId:policy,policyVersion:'1.0.0'};
+  const request={requestId,workspaceId:workspaceA,sourceTaskId,
+    sourceKey:SOURCE,connectorKey:CONNECTOR,connectorVersion:definitionVersion,
+    policySnapshot,operation:'fetch',storageClass:'REFERENCE_ONLY',
+    executionIntent:'execute',targetUrl:'https://example.com/',
+    robotsDecision:'allowed',rawPayloadRequested:false,exportRequested:false};
+  const evaluatedAt=new Date().toISOString();
+  const approved={decision:'allow',sourceKey:SOURCE,connectorKey:CONNECTOR,
+    connectorVersion:definitionVersion,policySnapshot,
+    reasonCodes:[],warnings:[],operation:'fetch',storageClass:'REFERENCE_ONLY',
+    evaluatedAt};
+  await client.query(`INSERT INTO source_admission_snapshots
+    (id,workspace_id,source_task_id,request_id,source_capability_id,
+     connector_policy_db_id,connector_definition_id,source_key,capability_version,
+     connector_key,connector_version,policy_id,policy_version,decision,reason_codes,
+     warnings,request,admission,evaluated_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,'1.0.0',$9,$10,$11,'1.0.0',
+           'allow','[]'::jsonb,'[]'::jsonb,$12::jsonb,$13::jsonb,$14::timestamptz)`,
+    [admission,workspaceA,sourceTaskId,requestId,capabilityId,policyDbId,
+      definitionId,SOURCE,CONNECTOR,definitionVersion,policy,
+      JSON.stringify(request),JSON.stringify(approved),evaluatedAt]);
+  return {policy,admission};
+}
+
 function grant(id,{workspace=workspaceA,business=businessA,domainId=domainA,host='example.com',admission=admissionA,
   approvalUser=userA,approvalMembership=membershipA,expiryMinutes=3,policy=POLICY,retentionTtlSeconds=3600}={}){
   return {id,workspace,business,domainId,host,admission,approvalUser,approvalMembership,expiryMinutes,policy,retentionTtlSeconds};
@@ -152,7 +207,7 @@ async function insertGrant(g,{deferCommitFence=false}={}){
 }
 
 /** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
-async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false,retentionTtlSeconds=3600}={}){
+async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false,retentionTtlSeconds=3600,admission=admissionA,policy=POLICY}={}){
   await client.query('SET CONSTRAINTS ALL DEFERRED');
   const sql=[
     'INSERT INTO website_live_inspection_runs',
@@ -168,7 +223,7 @@ async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,comp
     "'[\"website.single_page_only\"]'::jsonb,repeat('c',64),$12)"
   ].join(' ');
   await client.query(sql,[
-    inspectionId,workspaceA,businessA,domainA,SOURCE,admissionA,POLICY,maxBytes,
+    inspectionId,workspaceA,businessA,domainA,SOURCE,admission,policy,maxBytes,
     inspectionId+'.receipt',ip,completedAfterMinutes,retentionTtlSeconds
   ]);
   if(completedAfterMinutes===0 && ip==='8.8.8.8' && maxBytes===25000){
@@ -249,6 +304,28 @@ try{
    await insertLiveEvidence(id);
    await client.query('UPDATE website_live_inspection_runs SET timeout_ms=1500 WHERE id=$1',[id]);
  },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
+ // WEB-058: current append-only connector policy expires while the grant
+ // is staged in an open transaction. A historical allow snapshot must not
+ // authorize a COMMIT after the review window ends.
+ await scenario('connector policy review expiry denies deferred grant COMMIT',async()=>{
+   const {policy,admission}=await insertShortReviewRegistry();
+   const id=`m04.qa.${slug}.registry.review.grant`;
+   await insertGrant(grant(id,{policy,admission}),{deferCommitFence:true});
+   await client.query('SELECT pg_sleep(2.5)');
+   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+ },{allowed:false,code:'23514',constraint:'website_live_registry_current_guard'});
+
+ // The same timestamp fence must also protect live EVIDENCE when a grant
+ // originally passed and the registry becomes expired before evidence COMMIT.
+ await scenario('connector policy review expiry denies deferred evidence COMMIT',async()=>{
+   const {policy,admission}=await insertShortReviewRegistry();
+   const id=`m04.qa.${slug}.registry.review.evidence`;
+   await insertGrant(grant(id,{policy,admission}));
+   await insertLiveEvidence(id,{policy,admission,deferCommitFence:true});
+   await client.query('SELECT pg_sleep(2.5)');
+   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+ },{allowed:false,code:'23514',constraint:'website_live_registry_current_guard'});
+
  await client.query('ROLLBACK');
 
  // WEB-055: actually COMMIT bounded evidence, let it expire, and run the
