@@ -46,7 +46,7 @@ jobs:
         run: |
           test "$(node --version)" = 'v24.20.0'
           test "$(pnpm --version)" = '11.23.0'
-          node --test scripts/verify-m04-qa-guard.test.mjs scripts/verify-m04-reset-order.test.mjs scripts/verify-m04-workflow-guard.test.mjs scripts/verify-m04-migration-contract.test.mjs
+          node --test scripts/verify-m04-qa-guard.test.mjs scripts/verify-m04-reset-order.test.mjs scripts/verify-m04-workflow-guard.test.mjs scripts/verify-m04-migration-contract.test.mjs scripts/verify-m04-0018-history.test.mjs
       - name: Full package TypeScript build, typecheck and native Vitest
         run: pnpm run quality:runtime
 
@@ -173,3 +173,7 @@ jobs:
         run: |
           export BROVEXA_M04_QA_PNPM_VERSION="$(pnpm --version)"
           node scripts/verify-m04-live-security.mjs
+      - name: Read-only QA-09 migration 0018 provenance and schema check
+        run: |
+          export BROVEXA_M04_QA_PNPM_VERSION="$(pnpm --version)"
+          node scripts/verify-m04-0018-history.mjs
