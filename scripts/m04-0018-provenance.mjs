@@ -1,11 +1,17 @@
 import {createHash} from 'node:crypto';
 
 export const M04_WEBSITE_MIGRATION_ID='0018_website_inspection_evidence';
-const requiredColumns=Object.freeze([
-  'max_pages','max_response_bytes','timeout_ms',
-  'retention_ttl_seconds','deletion_required',
-]);
-const requiredConstraints=Object.freeze(['website_runs_budget_check','website_runs_retention_check']);
+const requiredColumns=Object.freeze({
+  max_pages:'smallint',
+  max_response_bytes:'integer',
+  timeout_ms:'integer',
+  retention_ttl_seconds:'bigint',
+  deletion_required:'boolean',
+});
+const requiredConstraints=Object.freeze({
+  website_runs_budget_check:['max_pages','max_response_bytes','timeout_ms'],
+  website_runs_retention_check:['retention_ttl_seconds','deletion_required'],
+});
 
 export function migrationSqlChecksum(sql){
   if(typeof sql!=='string'||!sql.trim()) throw new TypeError('Migration SQL must be nonempty.');
@@ -27,13 +33,25 @@ export function classifyM040018History({
   const other0018=journalRows.filter(row=>typeof row?.id==='string' &&
     row.id.startsWith('0018_') && row.id!==M04_WEBSITE_MIGRATION_ID);
   const later=journalRows.some(row=>typeof row?.id==='string' &&
-    /^00(?:1[9]|2[0-9])_/.test(row.id));
-  const missingColumns=requiredColumns.filter(name=>!columns.includes(name));
-  const missingConstraints=requiredConstraints.filter(name=>!constraints.includes(name));
-  const schemaComplete=tablePresent && missingColumns.length===0 && missingConstraints.length===0;
+    /^\\d{4}_/.test(row.id) && Number(row.id.slice(0,4))>18);
+  const columnMap=new Map(columns.map(c=>[c.column_name,c]));
+  const constraintMap=new Map(constraints.map(c=>[c.name,c]));
+  const missingColumns=Object.keys(requiredColumns).filter(name=>!columnMap.has(name));
+  const invalidColumns=Object.entries(requiredColumns).filter(([name,type])=>{
+    const c=columnMap.get(name);
+    return c && (c.data_type!==type || c.is_nullable!=='NO');
+  }).map(([name])=>name);
+  const missingConstraints=Object.keys(requiredConstraints).filter(name=>!constraintMap.has(name));
+  const invalidConstraints=Object.entries(requiredConstraints).filter(([name,requiredTerms])=>{
+    const c=constraintMap.get(name);
+    return c && (c.type!=='c' || c.validated!==true ||
+      typeof c.definition!=='string' || !requiredTerms.every(term=>c.definition.includes(term)));
+  }).map(([name])=>name);
+  const schemaComplete=tablePresent &&
+    [missingColumns,invalidColumns,missingConstraints,invalidConstraints].every(items=>items.length===0);
   const fail=(status,reason,appliedChecksum=null)=>({
     status,canUseCheckpointHistory:false,canonicalChecksum:canonical,
-    appliedChecksum,reason,missingColumns,missingConstraints,
+    appliedChecksum,reason,missingColumns,invalidColumns,missingConstraints,invalidConstraints,
   });
 
   if(!journalPresent)
@@ -47,7 +65,7 @@ export function classifyM040018History({
     return {status:'CLEAN_UNAPPLIED',canUseCheckpointHistory:true,
       canonicalChecksum:canonical,appliedChecksum:null,
       reason:'No 0018 journal/table exists; bounded canonical migration is eligible only through approved migration workflow.',
-      missingColumns:[],missingConstraints:[]};
+      missingColumns:[],invalidColumns:[],missingConstraints:[],invalidConstraints:[]};
   }
   const appliedChecksum=rows[0].checksum;
   if(typeof appliedChecksum!=='string'||!(/^[a-f0-9]{64}$/).test(appliedChecksum))
@@ -62,5 +80,5 @@ export function classifyM040018History({
   return {status:'CANONICAL_APPLIED',canUseCheckpointHistory:true,
     canonicalChecksum:canonical,appliedChecksum,
     reason:'Applied 0018 checksum and bounded website_inspection_runs schema match this exact checkout.',
-    missingColumns:[],missingConstraints:[]};
+    missingColumns:[],invalidColumns:[],missingConstraints:[],invalidConstraints:[]};
 }
