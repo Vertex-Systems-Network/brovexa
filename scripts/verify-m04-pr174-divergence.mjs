@@ -431,6 +431,66 @@ try{
     [M04_WEBSITE_MIGRATION_ID],
   )).rows[0].checksum,expectedSha,
   'Raced persistence cannot alter the PR174 applied migration history');
+
+  // WEB-068: Neither workspace may pre-own an ID. Two distinct, fully
+  // verified tenants race for one globally unique inspection ID. This tests
+  // the actual database uniqueness/transaction boundary, not a sequential
+  // foreign-tenant lookup against an already-existing parent.
+  const twoTenantRaceId='m04.qa.parallel.tenants.'+randomUUID().slice(0,8);
+  const ownerRaceInput=makeResult(twoTenantRaceId);
+  const foreignRaceInput={
+    ...makeResult(twoTenantRaceId),
+    request:{
+      ...makeResult(twoTenantRaceId).request,
+      workspaceId:otherWorkspace,
+      canonicalBusinessId:otherBusiness,
+      sourceAdmissionDecisionRef:'m04.qa.other.admission',
+      domainVerification:{
+        verificationId:otherDecision,decision:'verified',evidenceIds:[otherEvidence],
+      },
+    },
+  };
+  const twoTenantResults=await Promise.allSettled([
+    persistWebsiteInspectionResult(pool,ownerRaceInput),
+    persistWebsiteInspectionResult(pool,foreignRaceInput),
+  ]);
+  const acceptedTenant=twoTenantResults.findIndex(x=>x.status==='fulfilled');
+  const deniedTenant=twoTenantResults.findIndex(x=>x.status==='rejected');
+  assert.ok([0,1].includes(acceptedTenant),'Exactly one valid tenant must win the fresh ID');
+  assert.ok([0,1].includes(deniedTenant),'Exactly one valid tenant must lose the fresh ID');
+  assert.notEqual(acceptedTenant,deniedTenant);
+  assert.deepEqual(twoTenantResults[acceptedTenant].value,{
+    inspectionId:twoTenantRaceId,replayed:false,
+  });
+  assert.equal(twoTenantResults[deniedTenant].reason?.code,
+    'WEBSITE_INSPECTION_ID_CONFLICT',
+    'Different verified tenant must receive deterministic global ID conflict');
+  const acceptedWorkspace=acceptedTenant===0?w:otherWorkspace;
+  const deniedWorkspace=acceptedTenant===0?otherWorkspace:w;
+  assert.deepEqual((await pool.query(
+    'SELECT workspace_id FROM website_inspection_runs WHERE id=$1',
+    [twoTenantRaceId],
+  )).rows,[{workspace_id:acceptedWorkspace}]);
+  assert.deepEqual((await pool.query(
+    'SELECT workspace_id,capability FROM website_capability_observations WHERE inspection_id=$1',
+    [twoTenantRaceId],
+  )).rows,[{workspace_id:acceptedWorkspace,capability:'contact_form'}]);
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:twoTenantRaceId,workspaceId:deniedWorkspace,
+  }),false,'Losing tenant must not delete the winning tenant evidence');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',
+    [twoTenantRaceId],
+  )).rows[0].total,1,'Losing tenant deletion cannot erase the winner');
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:twoTenantRaceId,workspaceId:acceptedWorkspace,
+  }),true,'Winning tenant must be able to delete its own fixture');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [twoTenantRaceId],
+  )).rows[0].total,0,'Winner-owned cleanup must cascade the only child');
+  console.log('M04 QA09 WEB-068: two verified tenants race for unowned inspection ID; only winner can delete PASS');
+
   console.log('M04 QA09 WEB-067: parallel identical replay, changed payload conflict and cross-tenant ID collision PASS');
   // These successful concurrent fixtures must not contaminate the subsequent
   // WEB-065 empty-table DDL acceptance. Delete only explicitly owned IDs;
