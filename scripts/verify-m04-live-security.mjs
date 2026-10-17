@@ -187,6 +187,19 @@ async function insertShortReviewRegistry(){
   return {policy,admission};
 }
 
+
+/** M04-WEB-059: immutable superseding domain verification, never an UPDATE
+ * to an existing M03 decision. Pass another PG client to exercise races.
+ */
+async function insertSupersedingDomainDecision(id,{db=client,decision='rejected'}={}){
+  await db.query(`INSERT INTO business_domain_verification_decisions
+    (id,workspace_id,canonical_business_id,normalized_domain,
+     decision,method,confidence,evidence_ids,reason_codes,evaluated_at)
+    VALUES($1,$2,$3,'example.com',$4,'deterministic',0.95,$5::jsonb,
+           '["m04.domain_reassessed"]'::jsonb,clock_timestamp())`,
+    [id,workspaceA,businessA,decision,JSON.stringify([evidenceA])]);
+}
+
 function grant(id,{workspace=workspaceA,business=businessA,domainId=domainA,host='example.com',admission=admissionA,
   approvalUser=userA,approvalMembership=membershipA,expiryMinutes=3,policy=POLICY,retentionTtlSeconds=3600}={}){
   return {id,workspace,business,domainId,host,admission,approvalUser,approvalMembership,expiryMinutes,policy,retentionTtlSeconds};
@@ -304,6 +317,28 @@ try{
    await insertLiveEvidence(id);
    await client.query('UPDATE website_live_inspection_runs SET timeout_ms=1500 WHERE id=$1',[id]);
  },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
+ // WEB-059: A newer append-only domain decision must revoke the older
+ // verified snapshot, even though its foreign key and evidence still exist.
+ await scenario('newer rejected domain decision denies historical verified grant',async()=>{
+   const id=`m04.qa.${slug}.domain.rejected.grant`;
+   await insertSupersedingDomainDecision(`m04.qa.${slug}.domain.newer.reject.1`);
+   await insertGrant(grant(id));
+ },{allowed:false,code:'23514',constraint:'website_live_current_domain_decision_guard'});
+
+ await scenario('newer rejected domain decision denies previously approved evidence',async()=>{
+   const id=`m04.qa.${slug}.domain.rejected.evidence`;
+   await insertGrant(grant(id));
+   await insertSupersedingDomainDecision(`m04.qa.${slug}.domain.newer.reject.2`);
+   await insertLiveEvidence(id);
+ },{allowed:false,code:'23514',constraint:'website_live_current_domain_decision_guard'});
+
+ await scenario('newer verified domain revision also requires a fresh grant',async()=>{
+   const id=`m04.qa.${slug}.domain.reverified.grant`;
+   await insertSupersedingDomainDecision(`m04.qa.${slug}.domain.newer.verified`,
+     {decision:'verified'});
+   await insertGrant(grant(id));
+ },{allowed:false,code:'23514',constraint:'website_live_current_domain_decision_guard'});
+
  // WEB-058: current append-only connector policy expires while the grant
  // is staged in an open transaction. A historical allow snapshot must not
  // authorize a COMMIT after the review window ends.
@@ -522,6 +557,72 @@ try{
  } finally {
    await client.query('ROLLBACK');
  }
+
+ // WEB-059: A deferred evidence fence owns the domain advisory lock
+ // until COMMIT. A concurrent append-only newer decision must wait.
+ const protectedDomainId=`m04.qa.${slug}.domain.fence-first`;
+ await client.query('BEGIN');
+ try {
+   await insertGrant(grant(protectedDomainId));
+   await client.query('COMMIT');
+ } catch(e){await client.query('ROLLBACK');throw e;}
+ await client.query('BEGIN');
+ try {
+   await insertLiveEvidence(protectedDomainId);
+   const domainRevoker=await pool.connect();
+   try {
+     await domainRevoker.query('BEGIN');
+     await domainRevoker.query("SET LOCAL lock_timeout='350ms'");
+     await assert.rejects(
+       ()=>insertSupersedingDomainDecision(
+         `m04.qa.${slug}.domain.newer.blocked`,{db:domainRevoker}),
+       error=>error?.code==='55P03',
+       'new domain decision cannot pass a live authorization COMMIT fence',
+     );
+   } finally {
+     await domainRevoker.query('ROLLBACK');
+     domainRevoker.release();
+   }
+   await client.query('COMMIT');
+   const preserved=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_runs WHERE id=$1',
+     [protectedDomainId],
+   );
+   assert.equal(preserved.rows[0].total,1);
+   checks++;
+   console.log('M04 native PG18 live security: current domain fence blocks concurrent supersession until COMMIT PASS');
+ } finally {await client.query('ROLLBACK');}
+
+ // Conversely, a newer rejected decision committed before the deferred
+ // evidence fence must reject the pending grant/evidence transaction.
+ const revokedDomainId=`m04.qa.${slug}.domain.supersession-wins`;
+ await client.query('BEGIN');
+ try {
+   await insertGrant(grant(revokedDomainId),{deferCommitFence:true});
+   await insertLiveEvidence(revokedDomainId,{deferCommitFence:true});
+   await pool.query(
+     `INSERT INTO business_domain_verification_decisions
+       (id,workspace_id,canonical_business_id,normalized_domain,
+        decision,method,confidence,evidence_ids,reason_codes,evaluated_at)
+       VALUES($1,$2,$3,'example.com','rejected','deterministic',0.95,
+              $4::jsonb,'["m04.domain_reassessed"]'::jsonb,clock_timestamp())`,
+     [`m04.qa.${slug}.domain.newer.committed`,
+       workspaceA,businessA,JSON.stringify([evidenceA])],
+   );
+   await assert.rejects(
+     ()=>client.query('SET CONSTRAINTS ALL IMMEDIATE'),
+     error=>error?.code==='23514' && error?.constraint==='website_live_current_domain_decision_guard',
+     'newest rejected domain decision must prevent stale grant/evidence COMMIT',
+   );
+   await client.query('ROLLBACK');
+   const missing=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_runs WHERE id=$1',
+     [revokedDomainId],
+   );
+   assert.equal(missing.rows[0].total,0);
+   checks++;
+   console.log('M04 native PG18 live security: concurrent newer rejected decision blocks pending evidence COMMIT PASS');
+ } finally {await client.query('ROLLBACK');}
 
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
  // retention work and persist only one idempotent receipt. The empty,
