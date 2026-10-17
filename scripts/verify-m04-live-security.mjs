@@ -249,6 +249,142 @@ try{
  },{allowed:false,code:'23514',constraint:'website_live_immutable_guard'});
  await client.query('ROLLBACK');
 
+ // WEB-055: actually COMMIT bounded evidence, let it expire, and run the
+ // maintenance function in a disposable child OS process which exits after
+ // COMMIT before responding. A completely different process must recover
+ // the durable nonzero receipt without deleting the next eligible row.
+ const expiringIds=[
+   `m04.qa.${slug}.retention.expired.1`,
+   `m04.qa.${slug}.retention.expired.2`,
+ ];
+ const freshId=`m04.qa.${slug}.retention.fresh`;
+ const droppedAckId=`m04.qa.${slug}.retention.lost-ack-nonzero`;
+ const nextWorkId=`m04.qa.${slug}.retention.next-batch`;
+ await client.query('BEGIN');
+ try {
+   await insertSeed();
+   for(const id of expiringIds){
+     await insertGrant(grant(id,{retentionTtlSeconds:1}));
+     await insertLiveEvidence(id,{retentionTtlSeconds:1});
+   }
+   await insertGrant(grant(freshId));
+   await insertLiveEvidence(freshId);
+   await client.query('COMMIT');
+ } catch (e) {
+   await client.query('ROLLBACK');
+   throw e;
+ }
+ try {
+   // Sleep outside the fixture transaction so these rows are really expired
+   // according to PostgreSQL's clock, not a mocked timestamp or fake cursor.
+   await pool.query('SELECT pg_sleep(1.5)');
+   const before=await pool.query(
+     'SELECT id FROM website_live_inspection_runs WHERE workspace_id=$1 ORDER BY id',
+     [workspaceA],
+   );
+   assert.deepEqual(before.rows.map(r=>r.id).sort(),[...expiringIds,freshId].sort());
+
+   function retentionChild(workId,budget,mode='return-ack'){
+     return spawnSync(process.execPath,[
+       resolve('scripts/verify-m04-retention-child.mjs'),
+       workspaceA,workId,String(budget),mode,
+     ],{env:process.env,encoding:'utf8',timeout:30000});
+   }
+   const lost=retentionChild(droppedAckId,1,'drop-ack');
+   assert.equal(lost.signal,null,`maintenance child unexpectedly signalled: ${lost.stderr}`);
+   assert.equal(lost.status,37,`maintenance child did not exit after COMMIT: ${lost.stderr}`);
+   const firstReceipt=await pool.query(
+     'SELECT workspace_id,max_rows,deleted_count FROM website_live_retention_work_receipts WHERE work_unit_id=$1',
+     [droppedAckId],
+   );
+   assert.equal(firstReceipt.rows.length,1);
+   assert.equal(firstReceipt.rows[0].workspace_id,workspaceA);
+   assert.equal(firstReceipt.rows[0].max_rows,1);
+   assert.equal(firstReceipt.rows[0].deleted_count,1);
+   const oneLeft=await pool.query(
+     'SELECT id FROM website_live_inspection_runs WHERE id=ANY($1::text[]) ORDER BY id',
+     [expiringIds],
+   );
+   assert.equal(oneLeft.rows.length,1);
+   checks++;
+   console.log('M04 native PG18 live security: nonzero bounded purge COMMIT survives dropped process ack PASS');
+
+   const replay=retentionChild(droppedAckId,1);
+   assert.equal(replay.status,0,`fresh replay process failed: ${replay.stderr}`);
+   assert.deepEqual(JSON.parse(replay.stdout.trim()),{deleted:1,replayed:true});
+   const afterReplay=await pool.query(
+     'SELECT id FROM website_live_inspection_runs WHERE id=ANY($1::text[]) ORDER BY id',
+     [expiringIds],
+   );
+   assert.deepEqual(afterReplay.rows,oneLeft.rows,
+     'replay must not advance into the next expired evidence row');
+   checks++;
+   console.log('M04 native PG18 live security: new process replays durable nonzero receipt PASS');
+
+   const next=retentionChild(nextWorkId,1);
+   assert.equal(next.status,0,`fresh follow-up process failed: ${next.stderr}`);
+   assert.deepEqual(JSON.parse(next.stdout.trim()),{deleted:1,replayed:false});
+   const remaining=await pool.query(
+     'SELECT id FROM website_live_inspection_runs WHERE workspace_id=$1 ORDER BY id',
+     [workspaceA],
+   );
+   assert.deepEqual(remaining.rows.map(r=>r.id),[freshId],
+     'retention must leave the nonexpired live inspection and its observations intact');
+   const childEvidence=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_capability_observations WHERE workspace_id=$1',
+     [workspaceA],
+   );
+   assert.equal(childEvidence.rows[0].total,1,
+     'expired children should cascade while the nonexpired observation stays');
+   checks++;
+   console.log('M04 native PG18 live security: fresh work ID purges next row, nonexpired evidence survives PASS');
+ } finally {
+   // Committed fixture cleanup in strict FK dependency order. It must also
+   // run on assertion failures, and must never truncate non-fixture tables.
+   await client.query('BEGIN');
+   try {
+     await client.query('DELETE FROM website_live_inspection_runs WHERE workspace_id=$1',[workspaceA]);
+     await client.query('DELETE FROM website_live_inspection_grants WHERE workspace_id=$1',[workspaceA]);
+     await client.query(
+       'DELETE FROM source_admission_snapshots WHERE id=ANY($1::text[])',
+       [[admissionA,admissionB,blockedAdmission]],
+     );
+     await client.query(
+       'DELETE FROM business_domain_verification_decisions WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query(
+       'DELETE FROM business_domain_evidence WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query(
+       'DELETE FROM canonical_businesses WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query(
+       'DELETE FROM workspace_membership_roles WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query(
+       'DELETE FROM workspace_roles WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query(
+       'DELETE FROM workspace_memberships WHERE workspace_id=ANY($1::uuid[])',
+       [[workspaceA,workspaceB]],
+     );
+     await client.query('DELETE FROM workspaces WHERE id=ANY($1::uuid[])',[[workspaceA,workspaceB]]);
+     await client.query('DELETE FROM connector_definitions WHERE id=ANY($1::uuid[])',[[connectorId,blockedConnectorId]]);
+     await client.query('DELETE FROM connector_policies WHERE id=ANY($1::uuid[])',[[policyId,blockedPolicyId]]);
+     await client.query('DELETE FROM source_capabilities WHERE id=$1',[capabilityId]);
+     await client.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[[userA,userB,otherMember]]);
+     await client.query('COMMIT');
+   } catch (e) {
+     await client.query('ROLLBACK');
+     throw e;
+   }
+ }
+
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
  // retention work and persist only one idempotent receipt. The empty,
  // disposable tenant is committed for visibility across both connections
