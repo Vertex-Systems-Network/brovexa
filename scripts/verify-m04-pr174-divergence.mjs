@@ -197,29 +197,22 @@ try{
     '["website.unavailable"]','a'.repeat(64),3600,true,
     new Date(Date.now()-1000).toISOString(),new Date().toISOString(),
   ];
+
   const insertLegacy=async withBudget=>{
     const names=withBudget?[...inputColumns,'max_pages','max_response_bytes','timeout_ms']:inputColumns;
     const vals=withBudget?[...inspectionValues,1,1024,500]:inspectionValues;
+    const placeholders=vals.map((_,i)=>String.fromCharCode(36)+(i+1)).join(',');
     return pool.query(
-      'INSERT INTO website_inspection_runs ('+names.join(',')+') VALUES ('+
-      vals.map((_,i)=>'
-
-  console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
-  console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
-  console.log('M04 QA09 PR174: canonical 0018 checksum collision rejected without journal mutation PASS');
-  console.log('M04 QA09 PR174: no 0019+ applied; forward-migration decision remains integration-owner gated PASS');
-}finally{
-  await pool.end();
-  await rm(scratch,{recursive:true,force:true});
-}
-+(i+1)).join(',')+')',vals);
+      'INSERT INTO website_inspection_runs ('+names.join(',')+') VALUES ('+placeholders+')',
+      vals,
+    );
   };
   await insertLegacy(true);
   await assert.rejects(()=>rollbackLatestMigration(pool,candidateDir),
     error=>error?.code==='23514' &&
       error?.constraint==='website_legacy_budget_rollback_requires_empty',
     'Cannot discard budget columns while valid website evidence is retained');
-  await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+  await pool.query('DELETE FROM website_inspection_runs WHERE id='+String.fromCharCode(36)+'1',[inspection]);
   assert.equal(await rollbackLatestMigration(pool,candidateDir),previewName);
   await insertLegacy(false);
   const journalBeforeBlocked=await pool.query(
@@ -233,12 +226,12 @@ try{
   assert.deepEqual(journalAfterBlocked.rows,journalBeforeBlocked.rows,
     'Blocked upgrade cannot write a new migration receipt or alter applied 0018');
   const unchangedLegacy=await pool.query(
-    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',[inspection]);
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id='+String.fromCharCode(36)+'1',
+    [inspection]);
   assert.equal(unchangedLegacy.rows[0].total,1,'A blocked repair must preserve historical evidence');
-  await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+  await pool.query('DELETE FROM website_inspection_runs WHERE id='+String.fromCharCode(36)+'1',[inspection]);
   assert.deepEqual(await applyPendingMigrations(pool,candidateDir),[previewName]);
   console.log('M04 QA09 PR174: populated-evidence upgrade and rollback both fail closed, journal unchanged PASS');
-
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
