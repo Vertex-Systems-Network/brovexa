@@ -10,7 +10,8 @@ import {createHash,randomUUID} from 'node:crypto';
 import {cp,mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {createPgPool,applyPendingMigrations,rollbackLatestMigration} from '../packages/db/dist/index.js';
+import {createPgPool,applyPendingMigrations,rollbackLatestMigration,
+  persistWebsiteInspectionResult,deleteWebsiteInspectionEvidence} from '../packages/db/dist/index.js';
 import {validateM04QaEnvironment} from './verify-m04-qa-guard.mjs';
 import {classifyM040018History,M04_WEBSITE_MIGRATION_ID,migrationSqlChecksum} from './m04-0018-provenance.mjs';
 
@@ -232,6 +233,105 @@ try{
   await pool.query('DELETE FROM website_inspection_runs WHERE id='+String.fromCharCode(36)+'1',[inspection]);
   assert.deepEqual(await applyPendingMigrations(pool,candidateDir),[previewName]);
   console.log('M04 QA09 PR174: populated-evidence upgrade and rollback both fail closed, journal unchanged PASS');
+
+  // WEB-064: Prove the actual *checkpoint* TypeScript persistence adapter
+  // works against a PR174-original 0018 journal repaired by scratch 0027.
+  // This is not a mock: every write runs normal PG transactions/triggers.
+  const adapterId='m04.qa.adapter.'+randomUUID().slice(0,8);
+  const requestedAt=new Date(Date.now()-12000).toISOString();
+  const completedAt=new Date(Date.now()-10000).toISOString();
+  const adapterInput={
+    version:'1.0.0',
+    request:{
+      version:'1.0.0',inspectionId:adapterId,workspaceId:w,canonicalBusinessId:b,
+      verifiedDomain:'example.com',
+      domainVerification:{verificationId:d,decision:'verified',evidenceIds:[e]},
+      targetUrl:'https://example.com/',
+      sourceKey:'source.m04.preview',
+      sourceAdmissionDecisionRef:'m04.qa.legacy.admission',
+      sourceAdmissionDecision:'allow',
+      sourcePolicySnapshot:{policyId:'policy.m04.preview',policyVersion:'1.0.0'},
+      transportPolicyId:'transport.m04.preview',transportPolicyVersion:'1.0.0',
+      limits:{maxPages:2,maxResponseBytes:50000,timeoutMs:2500},
+      executionMode:'test_only',networkRequested:false,
+      credentialedFetchRequested:false,rawPayloadRequested:false,
+      outreachRequested:false,requestedAt,
+    },
+    status:'assessed',coverage:'bounded',
+    transportReceiptIds:['m04.qa.receipt.one'],reasonCodes:[],
+    observations:[{
+      capability:'contact_form',observation:'observed_present',reason:'detected',
+      confidence:0.95,evidenceReferenceIds:['m04.qa.page.one'],
+      transportReceiptIds:['m04.qa.receipt.one'],
+    }],
+    completedAt,bodyIncluded:false,retentionTtlSeconds:3600,deletionRequired:true,
+  };
+  assert.deepEqual(await persistWebsiteInspectionResult(pool,adapterInput),
+    {inspectionId:adapterId,replayed:false});
+  const stored=await pool.query(
+    'SELECT max_pages,max_response_bytes,timeout_ms,network_requested,body_included,'+
+    'retention_ttl_seconds,deletion_required FROM website_inspection_runs WHERE id=$1',
+    [adapterId]);
+  assert.deepEqual(stored.rows,[{
+    max_pages:2,max_response_bytes:50000,timeout_ms:2500,
+    network_requested:false,body_included:false,
+    retention_ttl_seconds:'3600',deletion_required:true,
+  }]);
+  const observed=await pool.query(
+    'SELECT capability,observation,reason FROM website_capability_observations WHERE inspection_id=$1',
+    [adapterId]);
+  assert.deepEqual(observed.rows,[{
+    capability:'contact_form',observation:'observed_present',reason:'detected',
+  }]);
+  assert.deepEqual(await persistWebsiteInspectionResult(pool,adapterInput),
+    {inspectionId:adapterId,replayed:true});
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [adapterId])).rows[0].total,1,'Replaying same parent cannot duplicate child observations');
+
+  await assert.rejects(
+    ()=>persistWebsiteInspectionResult(pool,{
+      ...adapterInput,request:{...adapterInput.request,
+        limits:{...adapterInput.request.limits,maxPages:3}},
+    }),
+    error=>error?.code==='WEBSITE_INSPECTION_ID_CONFLICT',
+    'Same inspection ID with different safe budgets cannot replace immutable evidence',
+  );
+  for(const limits of [
+    {...adapterInput.request.limits,maxPages:6},
+    {...adapterInput.request.limits,maxResponseBytes:1000001},
+    {...adapterInput.request.limits,timeoutMs:99},
+  ]){
+    await assert.rejects(
+      ()=>persistWebsiteInspectionResult(pool,{
+        ...adapterInput,request:{...adapterInput.request,
+          inspectionId:'m04.qa.invalid.'+randomUUID().slice(0,8),limits},
+      }),
+      error=>error?.code==='WEBSITE_INSPECTION_INPUT_INVALID',
+      'Unsafe transport limits must be rejected before database insertion',
+    );
+  }
+  const missingTenant=randomUUID();
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:adapterId,workspaceId:missingTenant}),false,
+    'Another tenant cannot delete persisted inspection evidence');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',[adapterId])
+  ).rows[0].total,1,'Foreign deletion must leave original evidence intact');
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:adapterId,workspaceId:w}),true);
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [adapterId])).rows[0].total,0,'Scoped parent deletion must cascade observation evidence');
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:adapterId,workspaceId:w}),false);
+  assert.equal((await pool.query(
+    'SELECT checksum FROM brovexa_internal.schema_migrations WHERE id=$1',
+    [M04_WEBSITE_MIGRATION_ID])).rows[0].checksum,expectedSha,
+    'Successful adapter writes must never change historical PR174 0018 checksum');
+  console.log('M04 QA09 WEB-064: real adapter assessed observation, exact budget fields and idempotent replay PASS');
+  console.log('M04 QA09 WEB-064: conflicting replay, unsafe limits and tenant-isolated delete/cascade PASS');
+
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
