@@ -236,7 +236,7 @@ try{
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
   console.log('M04 QA09 PR174: canonical 0018 checksum collision rejected without journal mutation PASS');
-  console.log('M04 QA09 PR174: no 0019+ applied; forward-migration decision remains integration-owner gated PASS');
+  console.log('M04 QA09 PR174: initial mismatched lineage halted before 0019+, then scratch-only compatibility path verified PASS');
 }finally{
   await pool.end();
   await rm(scratch,{recursive:true,force:true});
