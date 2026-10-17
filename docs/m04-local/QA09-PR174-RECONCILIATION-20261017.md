@@ -26,16 +26,23 @@ The same 0018 migration number cannot represent two SQL bodies for one deployed 
 3. If neither divergent 0018 has been applied and a clean history is verified, adopt one budgeted, versioned 0018 implementation with a matching persistence adapter and its native regression tests. Do not silently use the unbounded draft.
 4. If the older 0018 already exists in a database migration ledger, **retain its applied checksum** and design an approved forward-only `0026+` repair (isolated M04 WEB-059 already reserves `0025`) with explicit compatibility/backfill semantics; do not edit an applied migration.
 5. Reconcile the shared `.agent/migrations.yaml` ledger (`next_unreserved_number: "0019"` in PR draft versus `"0026"` on checkpoint), under serialized migration ownership.
-6. Build an exact candidate combined tree and rerun protected native Node24/pnpm11 quality, PostgreSQL18 0000–0025 UP/DOWN/reapply and tenant/RBAC, Valkey, and M04 full-schema security. Validate current main and all required PR/resulting-main gates **before** a release/completion claim.
+6. Build an exact candidate combined tree and rerun protected native Node24/pnpm11 quality, PostgreSQL18 0000–0026 UP/DOWN/reapply and tenant/RBAC, Valkey, and M04 full-schema security. Validate current main and all required PR/resulting-main gates **before** a release/completion claim.
 
 ## Existing automated guard
 
-`scripts/verify-m04-migration-contract.test.mjs` guards canonical budget fields, v2 live table separation and unique migration 0018–0025 reservations. It passes on the verified checkpoint, but cannot independently prove PR #174 merged-tree compatibility.
+`scripts/verify-m04-migration-contract.test.mjs` guards canonical budget fields, v2 live table separation and unique migration 0018–0026 reservations. It passes on the verified checkpoint, but cannot independently prove PR #174 merged-tree compatibility.
 
 **Remaining QA-09 result:** source divergence independently confirmed; integration/migration-history reconciliation still OPEN. No main merge or production deployment performed.
 
 ## WEB-059 reservation impact — isolated checkpoint, not integrated
 - `0025_website_live_current_domain_decision_guard` is reserved/implemented **only** on `checkpoint/m04-local-web006-20261016` as M04-WEB-059, with a reversible DOWN and [4/4 native CI proof](https://github.com/Vertex-Systems-Network/brovexa/actions/runs/39026164817) (source SHA `1e58fc0f095cf04892d7b87a4e69dac847e837c6`; PG18 security 30/30).
 - This does not transfer migration-number ownership away from the occupied DATABASE slot or close 0018 divergence. Before integrated migration planning, the Supervisor/DB owner must reconcile all reservations and applied history; **do not allocate another 0025**, independently replay older PR 0018 or bypass the standing slot lease.
-- A potential historic 0018 remediation should use the next genuinely reserved forward migration (currently `0026+` on the isolated checkpoint; final assignment is owned by the serialized integration path), not overwrite WEB-059's isolated 0025 or edit any applied checksum.
+- A potential historic 0018 remediation should use the next genuinely reserved forward migration (currently `0027+` on the isolated checkpoint; final assignment is owned by the serialized integration path), not overwrite WEB-059's isolated 0025 or edit any applied checksum.
 - QA-09 remains **OPEN** until one exact reconciled integration-tree migration history is reviewed and fully verified.
+
+## WEB-060 reservation impact — connector revision fence, isolated checkpoint
+- The checkpoint now also reserves and implements `0026_website_live_current_connector_revision_guard`, with reversible DOWN and [4/4 native CI #39039079620](https://github.com/Vertex-Systems-Network/brovexa/actions/runs/39039079620), exact tested code `6821161f5294d7855d4c01adedc8a2f997adfc27`; real PG18 security **35/35 PASS**.
+- The checkpoint ledger currently has `next_unreserved_number: "0027"`, with isolated `0025` (domain) and `0026` (connector) `IMPLEMENTED`. The occupied DATABASE slot's draft PR #174 still carries a divergent `0018` and its own older reservation view; **do not merge or assign migration 0025/0026 elsewhere without serialized reconciliation**.
+- If historical `0018` was already applied with the different SQL body, preserve the exact applied checksum and use the next approved forward migration, after reconciling all existing reserved slots, to repair missing fixture budget enforcement. Never edit already-applied 0018.
+- Protected candidate merged-tree tests must cover 0000–0026 UP/DOWN/reapply, PG18 grants/evidence/domain+connector authorization and tenant RBAC, Node quality and Valkey at one exact tree SHA.
+- QA-09 remains OPEN; this only advances an isolated development checkpoint and does not certify any production/staging database history.
