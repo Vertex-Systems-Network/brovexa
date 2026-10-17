@@ -33,7 +33,7 @@ export function classifyM040018History({
   const other0018=journalRows.filter(row=>typeof row?.id==='string' &&
     row.id.startsWith('0018_') && row.id!==M04_WEBSITE_MIGRATION_ID);
   const later=journalRows.some(row=>typeof row?.id==='string' &&
-    /^\\d{4}_/.test(row.id) && Number(row.id.slice(0,4))>18);
+    /^[0-9]{4}_/.test(row.id) && Number(row.id.slice(0,4))>18);
   const columnMap=new Map(columns.map(c=>[c.column_name,c]));
   const constraintMap=new Map(constraints.map(c=>[c.name,c]));
   const missingColumns=Object.keys(requiredColumns).filter(name=>!columnMap.has(name));
