@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * Native M04 live authorization acceptance against full Brovexa PG18 schema.
- * Disposable localhost *_test database only. All fixture data is rolled back.
+ * Disposable localhost *_test database only. Transactional and committed fixtures are cleaned.
  * No HTTP/DNS, queue invocation, production secrets or live reads.
  */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import { createPgPool, applyPendingMigrations, purgeExpiredWebsiteLiveInspectionEvidenceForWork } from '../packages/db/dist/index.js';
 import { resolve } from 'node:path';
 import { validateM04QaEnvironment } from './verify-m04-qa-guard.mjs';
@@ -131,8 +132,8 @@ async function insertSeed(){
 }
 
 function grant(id,{workspace=workspaceA,business=businessA,domainId=domainA,host='example.com',admission=admissionA,
-  approvalUser=userA,approvalMembership=membershipA,expiryMinutes=3,policy=POLICY}={}){
-  return {id,workspace,business,domainId,host,admission,approvalUser,approvalMembership,expiryMinutes,policy};
+  approvalUser=userA,approvalMembership=membershipA,expiryMinutes=3,policy=POLICY,retentionTtlSeconds=3600}={}){
+  return {id,workspace,business,domainId,host,admission,approvalUser,approvalMembership,expiryMinutes,policy,retentionTtlSeconds};
 }
 async function insertGrant(g){
   await client.query(`INSERT INTO website_live_inspection_grants
@@ -140,16 +141,16 @@ async function insertGrant(g){
     source_key,source_policy_id,source_policy_version,transport_policy_id,transport_policy_version,target_url,
     max_response_bytes,timeout_ms,retention_ttl_seconds,m02_transport_policy,approved_by_user_id,approved_by_membership_id,
     expires_at,grant_hash)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,'1.0.0','transport.m04qa','1.0.0',$9,25000,1000,3600,
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,'1.0.0','transport.m04qa','1.0.0',$9,25000,1000,$13,
            '{"networkMode":"provider_network","transportPolicyId":"transport.m04qa","transportPolicyVersion":"1.0.0"}'::jsonb,
            $10,$11,clock_timestamp()+($12::numeric*interval '1 minute'),repeat('a',64))`,
-  [g.id,g.workspace,g.business,g.domainId,g.host,g.admission,SOURCE,g.policy,`https://${g.host}/`,g.approvalUser,g.approvalMembership,g.expiryMinutes]);
+  [g.id,g.workspace,g.business,g.domainId,g.host,g.admission,SOURCE,g.policy,`https://${g.host}/`,g.approvalUser,g.approvalMembership,g.expiryMinutes,g.retentionTtlSeconds]);
   // Trigger is deferred until COMMIT; force evaluation while savepoint remains rollback-safe.
   await client.query('SET CONSTRAINTS ALL IMMEDIATE');
 }
 
 /** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
-async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false}={}){
+async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false,retentionTtlSeconds=3600}={}){
   await client.query('SET CONSTRAINTS ALL DEFERRED');
   const sql=[
     'INSERT INTO website_live_inspection_runs',
@@ -162,11 +163,11 @@ async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,comp
     "'transport.m04qa','1.0.0',$8,1000,$9,$10,200,'text/html',100,",
     "repeat('b',64),clock_timestamp()+($11::int*interval '1 minute'),",
     "clock_timestamp()+($11::int*interval '1 minute'),",
-    "'[\"website.single_page_only\"]'::jsonb,repeat('c',64),3600)"
+    "'[\"website.single_page_only\"]'::jsonb,repeat('c',64),$12)"
   ].join(' ');
   await client.query(sql,[
     inspectionId,workspaceA,businessA,domainA,SOURCE,admissionA,POLICY,maxBytes,
-    inspectionId+'.receipt',ip,completedAfterMinutes
+    inspectionId+'.receipt',ip,completedAfterMinutes,retentionTtlSeconds
   ]);
   if(completedAfterMinutes===0 && ip==='8.8.8.8' && maxBytes===25000){
     await client.query([
