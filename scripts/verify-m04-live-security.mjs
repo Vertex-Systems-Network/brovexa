@@ -353,6 +353,13 @@ try{
  // deferred COMMIT authorization. Revocation from another PG connection
  // must win and fail closed; the writer must not persist unauthorized rows.
  const revokeRaceId=`m04.qa.${slug}.owner.revocation-wins`;
+ // Identity/RBAC requires at least one active owner. Promote the existing
+ // secondary QA member before attempting to suspend the primary owner.
+ // This is a valid owner handoff, not a bypass of the identity guard.
+ await pool.query(
+   'INSERT INTO workspace_membership_roles(membership_id,role_id,workspace_id) VALUES ($1,$2,$3)',
+   [nonOwnerMembership,roleA,workspaceA],
+ );
  await client.query('BEGIN');
  let ownerSuspended=false;
  try {
