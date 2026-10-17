@@ -2,8 +2,16 @@
 -- Valid only for PR174's original 0018 history with zero legacy fixture rows.
 -- Integration owner must separately reserve a forward migration number and
 -- review any populated legacy data before adopting this candidate.
-DO $$
+DO $
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM brovexa_internal.schema_migrations
+    WHERE id='0018_website_inspection_evidence'
+      AND checksum='877b161f7e95f58feb3ef00941721bf76488b546e50a8ab7d7da723a9fc17b12'
+  ) THEN
+    RAISE EXCEPTION 'This preview is only for exact unmodified PR174 migration 0018 history.'
+      USING ERRCODE='23514', CONSTRAINT='website_legacy_budget_original_history_required';
+  END IF;
   IF EXISTS (SELECT 1 FROM public.website_inspection_runs LIMIT 1) THEN
     RAISE EXCEPTION 'Cannot infer page/byte/timeout limits for historical website evidence; manual reconciliation required.'
       USING ERRCODE='23514', CONSTRAINT='website_legacy_budget_provenance_required';
