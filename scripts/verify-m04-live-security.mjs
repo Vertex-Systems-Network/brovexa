@@ -240,7 +240,7 @@ async function insertGrant(g,{deferCommitFence=false}={}){
 }
 
 /** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
-async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false,retentionTtlSeconds=3600,admission=admissionA,policy=POLICY}={}){
+async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,completedAfterMinutes=0,deferCommitFence=false,retentionTtlSeconds=3600,admission=admissionA,policy=POLICY,workspace=workspaceA,business=businessA,domainId=domainA,host='example.com'}={}){
   await client.query('SET CONSTRAINTS ALL DEFERRED');
   const sql=[
     'INSERT INTO website_live_inspection_runs',
@@ -249,22 +249,22 @@ async function insertLiveEvidence(inspectionId,{ip='8.8.8.8',maxBytes=25000,comp
     'transport_policy_id,transport_policy_version,max_response_bytes,timeout_ms,',
     'receipt_id,remote_ipv4,status_code,content_type,body_length,body_sha256,',
     'received_at,completed_at,reason_codes,payload_hash,retention_ttl_seconds)',
-    "VALUES($1,$2,$3,$4,'example.com','https://example.com/',$5,$6,$7,'1.0.0',",
+    "VALUES($1,$2,$3,$4,$13,$14,$5,$6,$7,'1.0.0',",
     "'transport.m04qa','1.0.0',$8,1000,$9,$10,200,'text/html',100,",
     "repeat('b',64),clock_timestamp()+($11::int*interval '1 minute'),",
     "clock_timestamp()+($11::int*interval '1 minute'),",
     "'[\"website.single_page_only\"]'::jsonb,repeat('c',64),$12)"
   ].join(' ');
   await client.query(sql,[
-    inspectionId,workspaceA,businessA,domainA,SOURCE,admission,policy,maxBytes,
-    inspectionId+'.receipt',ip,completedAfterMinutes,retentionTtlSeconds
+    inspectionId,workspace,business,domainId,SOURCE,admission,policy,maxBytes,
+    inspectionId+'.receipt',ip,completedAfterMinutes,retentionTtlSeconds,host,`https://${host}/`
   ]);
   if(completedAfterMinutes===0 && ip==='8.8.8.8' && maxBytes===25000){
     await client.query([
       'INSERT INTO website_live_capability_observations',
       '(inspection_id,workspace_id,receipt_id,capability,observation,reason,confidence,evidence_reference_ids)',
       "VALUES($1,$2,$3,'contact_form','observed_present','detected',0.9,'[\"dom.e2e.form\"]'::jsonb)"
-    ].join(' '),[inspectionId,workspaceA,inspectionId+'.receipt']);
+    ].join(' '),[inspectionId,workspace,inspectionId+'.receipt']);
   }
   // Force deferred authorization after children unless caller is testing an elapsed-time COMMIT fence.
   if (!deferCommitFence) await client.query('SET CONSTRAINTS ALL IMMEDIATE');
@@ -668,14 +668,18 @@ try{
  // an append-only later registry revision cannot become effective until the
  // authorized evidence transaction has completed.
  const registryFenceId=`m04.qa.${slug}.connector.fence-first`;
+ const workspaceBGrant={workspace:workspaceB,business:businessB,domainId:domainB,
+   host:'example.org',admission:admissionB,approvalUser:userB,approvalMembership:membershipB};
+ const workspaceBEvidence={workspace:workspaceB,business:businessB,domainId:domainB,
+   host:'example.org',admission:admissionB};
  await client.query('BEGIN');
  try {
-   await insertGrant(grant(registryFenceId));
+   await insertGrant(grant(registryFenceId,workspaceBGrant));
    await client.query('COMMIT');
  }catch(error){await client.query('ROLLBACK');throw error;}
  await client.query('BEGIN');
  try {
-   await insertLiveEvidence(registryFenceId);
+   await insertLiveEvidence(registryFenceId,workspaceBEvidence);
    const connectorRevoker=await pool.connect();
    try {
      await connectorRevoker.query('BEGIN');
@@ -704,8 +708,8 @@ try{
  const registryRevokeId=`m04.qa.${slug}.connector.revocation-first`;
  await client.query('BEGIN');
  try{
-   await insertGrant(grant(registryRevokeId),{deferCommitFence:true});
-   await insertLiveEvidence(registryRevokeId,{deferCommitFence:true});
+   await insertGrant(grant(registryRevokeId,workspaceBGrant),{deferCommitFence:true});
+   await insertLiveEvidence(registryRevokeId,{...workspaceBEvidence,deferCommitFence:true});
    await insertConnectorRevision({db:pool,version:'10.0.0'});
    await assert.rejects(
      ()=>client.query('SET CONSTRAINTS ALL IMMEDIATE'),
