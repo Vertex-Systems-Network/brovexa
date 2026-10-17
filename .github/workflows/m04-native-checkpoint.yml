@@ -12,6 +12,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/queue/**'
       - 'scripts/verify-m04-*.mjs'
+      - 'scripts/m04-0018-provenance.mjs'
       - 'scripts/verify-db.mjs'
       - 'scripts/verify-identity*.mjs'
       - 'scripts/verify-queue.mjs'
