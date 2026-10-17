@@ -45,12 +45,12 @@ test('v2 live evidence stays independent from test-only migration 0018',()=>{
 test('M04 migration ownership is serialized with unique 0018-0025 reservations',()=>{
  const names=readdirSync(resolve(root,'packages/db/migrations'))
   .filter(f=>/^\d{4}_.+\.up\.sql$/.test(f));
- for(const n of [18,19,20,21,22,23,24]){
+ for(const n of [18,19,20,21,22,23,24,25]){
   const prefix=String(n).padStart(4,'0')+'_';
   assert.equal(names.filter(f=>f.startsWith(prefix)).length,1,'Expected exactly one migration '+prefix);
  }
  const ledger=read('.agent/migrations.yaml');
- assert.match(ledger,/next_unreserved_number: "0025"/);
+ assert.match(ledger,/next_unreserved_number: "0026"/);
  for(let n=18;n<=25;n++){
   const id=String(n).padStart(4,'0');
   assert.equal((ledger.match(new RegExp('^  - number: "'+id+'"\\s*$','gm'))??[]).length,1,
