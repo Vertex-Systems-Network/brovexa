@@ -136,7 +136,7 @@ function grant(id,{workspace=workspaceA,business=businessA,domainId=domainA,host
   approvalUser=userA,approvalMembership=membershipA,expiryMinutes=3,policy=POLICY,retentionTtlSeconds=3600}={}){
   return {id,workspace,business,domainId,host,admission,approvalUser,approvalMembership,expiryMinutes,policy,retentionTtlSeconds};
 }
-async function insertGrant(g){
+async function insertGrant(g,{deferCommitFence=false}={}){
   await client.query(`INSERT INTO website_live_inspection_grants
    (inspection_id,workspace_id,canonical_business_id,domain_verification_id,verified_domain,source_admission_decision_ref,
     source_key,source_policy_id,source_policy_version,transport_policy_id,transport_policy_version,target_url,
@@ -146,8 +146,9 @@ async function insertGrant(g){
            '{"networkMode":"provider_network","transportPolicyId":"transport.m04qa","transportPolicyVersion":"1.0.0"}'::jsonb,
            $10,$11,clock_timestamp()+($12::numeric*interval '1 minute'),repeat('a',64))`,
   [g.id,g.workspace,g.business,g.domainId,g.host,g.admission,SOURCE,g.policy,`https://${g.host}/`,g.approvalUser,g.approvalMembership,g.expiryMinutes,g.retentionTtlSeconds]);
-  // Trigger is deferred until COMMIT; force evaluation while savepoint remains rollback-safe.
-  await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+  // Trigger is deferred until COMMIT; tests may stage a genuine concurrent
+  // revocation before triggering the final grant/evidence commit fence.
+  if(!deferCommitFence) await client.query('SET CONSTRAINTS ALL IMMEDIATE');
 }
 
 /** WEB-049: native v2 evidence DDL and deferred COMMIT guards, no network. */
@@ -346,6 +347,52 @@ try{
    // destroys its entire dedicated *_test PostgreSQL service after the job.
    // Unique QA source/policy/connector keys permit safe repeat local runs.
    console.log('WEB-055 durable fixture remains in disposable QA database until database teardown');
+ }
+
+ // WEB-056: an owner can be active at INSERT yet suspended before
+ // deferred COMMIT authorization. Revocation from another PG connection
+ // must win and fail closed; the writer must not persist unauthorized rows.
+ const revokeRaceId=`m04.qa.${slug}.owner.revocation-wins`;
+ await client.query('BEGIN');
+ let ownerSuspended=false;
+ try {
+   await insertGrant(grant(revokeRaceId),{deferCommitFence:true});
+   await insertLiveEvidence(revokeRaceId,{deferCommitFence:true});
+   const revoker=await pool.connect();
+   try {
+     await revoker.query("SET lock_timeout='1500ms'");
+     const changed=await revoker.query(
+       "UPDATE workspace_memberships SET status='suspended' WHERE id=$1 RETURNING id",
+       [membershipA],
+     );
+     assert.equal(changed.rowCount,1);
+     ownerSuspended=true;
+   } finally {
+     revoker.release();
+   }
+   await assert.rejects(
+     () => client.query('SET CONSTRAINTS ALL IMMEDIATE'),
+     error=>error?.code==='23514' &&
+       ['website_live_grant_commit_guard','website_live_evidence_active_grant_guard'].includes(error?.constraint),
+     'deferred owner authorization must reject revocation that committed before its fence',
+   );
+   await client.query('ROLLBACK');
+   const escaped=await pool.query(
+     'SELECT count(*)::int AS total FROM website_live_inspection_grants WHERE inspection_id=$1',
+     [revokeRaceId],
+   );
+   assert.equal(escaped.rows[0].total,0);
+   checks++;
+   console.log('M04 native PG18 live security: concurrent owner suspension before deferred fence rejects evidence PASS');
+ } finally {
+   await client.query('ROLLBACK');
+   if(ownerSuspended){
+     const restored=await pool.query(
+       "UPDATE workspace_memberships SET status='active' WHERE id=$1 RETURNING id",
+       [membershipA],
+     );
+     assert.equal(restored.rowCount,1);
+   }
  }
 
  // WEB-052: two real PostgreSQL pool connections must serialize duplicate
