@@ -1,5 +1,13 @@
 -- WEB-063 preview-only; may roll back solely while no inspection records
 -- exist. Never discard budget provenance after records were inserted.
+-- Transactional ACCESS EXCLUSIVE lock closes the race between the
+-- historical-evidence check and the ALTER/DROP operations. A concurrent
+-- writer either commits before this precondition check or waits until it
+-- finishes; its rows cannot appear between validation and destructive DDL.
+SET LOCAL lock_timeout = '2000ms';
+--> statement-breakpoint
+LOCK TABLE public.website_inspection_runs IN ACCESS EXCLUSIVE MODE;
+--> statement-breakpoint
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.website_inspection_runs LIMIT 1) THEN
