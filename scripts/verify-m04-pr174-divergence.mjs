@@ -606,6 +606,113 @@ try{
   )).rows,guardJournalBefore,'Unsafe DML attempts must not change applied migration journal');
   console.log('M04 QA09 WEB-069: 14 direct SQL bypasses + immutable/receipt triggers reject and preserve journal PASS');
 
+
+  // WEB-070: A malicious direct SQL writer must not escape composite
+  // tenant/business/domain-verification FKs or insert poisoned child evidence.
+  // Seed real independently verified workspaces, not fake or disabled keys.
+  const scopedParentId='m04.qa.sql.scope.'+randomUUID().slice(0,8);
+  assert.deepEqual(await persistWebsiteInspectionResult(pool,makeResult(scopedParentId)),
+    {inspectionId:scopedParentId,replayed:false});
+  const badScopeParents=[
+    {field:'workspace_id',value:otherWorkspace,
+      code:'23503',constraint:'website_runs_business_fk'},
+    {field:'canonical_business_id',value:otherBusiness,
+      code:'23503',constraint:'website_runs_business_fk'},
+    {field:'domain_verification_id',value:otherDecision,
+      code:'23503',constraint:'website_runs_verified_domain_fk'},
+    {field:'source_admission_decision',value:'deny',
+      code:'23514',constraint:'website_runs_source_check'},
+    {field:'source_key',value:'source:unverified',
+      code:'23514',constraint:'website_runs_source_check'},
+    {field:'verification_decision',value:'rejected',
+      code:'23514',constraint:'website_runs_verified_check'},
+  ];
+  for(const [i,test] of badScopeParents.entries()){
+    const rejectedId='m04.qa.sql.scope.denied.'+i+'.'+randomUUID().slice(0,8);
+    const parentColumns=guardCols.map(column=>
+      column==='id'?'$1':column===test.field?'$3':column);
+    const query='INSERT INTO website_inspection_runs ('+guardCols.join(',')+
+      ') SELECT '+parentColumns.join(',')+' FROM website_inspection_runs WHERE id=$2';
+    await assert.rejects(()=>pool.query(query,
+      [rejectedId,scopedParentId,test.value]),
+      err=>err?.code===test.code && err?.constraint===test.constraint,
+      'Raw parent SQL cannot bypass '+test.field+' composite binding');
+    assert.equal((await pool.query(
+      'SELECT count(*)::int AS n FROM website_inspection_runs WHERE id=$1',
+      [rejectedId],
+    )).rows[0].n,0,'Denied tenant/domain insert must not leave a parent');
+  }
+  const childColumns=[
+    'inspection_id','workspace_id','coverage','capability','observation',
+    'reason','confidence','evidence_reference_ids','transport_receipt_ids',
+  ];
+  const childValues=[
+    scopedParentId,w,'bounded','https','observed_present','detected',0.9,
+    JSON.stringify(['m04.qa.page.scope']),JSON.stringify(['m04.qa.receipt.one']),
+  ];
+  const badChildCases=[
+    {field:'workspace_id',value:otherWorkspace,
+      code:'23514',constraint:'website_observations_receipt_binding_guard'},
+    {field:'coverage',value:'partial',
+      code:'23503',constraint:'website_observations_inspection_fk'},
+    {field:'capability',value:'unsupported_capability',
+      code:'23514',constraint:'website_observations_capability_check'},
+    {field:'observation',value:'unknown',
+      code:'23514',constraint:'website_observations_shape_check'},
+    {field:'confidence',value:2.0,
+      code:'23514',constraint:'website_observations_shape_check'},
+    {field:'evidence_reference_ids',value:JSON.stringify([]),
+      code:'23514',constraint:'website_observations_shape_check'},
+  ];
+  for(const test of badChildCases){
+    const args=childValues.map((value,i)=>
+      childColumns[i]===test.field?test.value:value);
+    const childInsert='INSERT INTO website_capability_observations ('+
+      childColumns.join(',')+') VALUES ('+
+      args.map((_,i)=>'$'+(i+1)).join(',')+')';
+    await assert.rejects(()=>pool.query(childInsert,args),
+      err=>err?.code===test.code && err?.constraint===test.constraint,
+      'Database must reject direct child '+test.field+' poisoning');
+    assert.equal((await pool.query(
+      'SELECT count(*)::int AS n FROM website_capability_observations WHERE inspection_id=$1',
+      [scopedParentId],
+    )).rows[0].n,1,'Rejected child poison must not append evidence');
+  }
+  // Deferred assessed-result trigger must fire at actual COMMIT, not merely
+  // INSERT. This guards raw SQL paths which omit the required child evidence.
+  const emptyAssessedId='m04.qa.sql.empty.assessed.'+randomUUID().slice(0,8);
+  const tx=await pool.connect();
+  try{
+    await tx.query('BEGIN');
+    const fields=guardCols.map(c=>c==='id'?'$1':c);
+    await tx.query('INSERT INTO website_inspection_runs ('+guardCols.join(',')+
+      ') SELECT '+fields.join(',')+
+      ' FROM website_inspection_runs WHERE id=$2',
+      [emptyAssessedId,scopedParentId]);
+    await assert.rejects(()=>tx.query('COMMIT'),
+      err=>err?.code==='23514' &&
+        err?.constraint==='website_runs_assessed_observations_guard',
+      'Assessed without any child observation must fail at transaction COMMIT');
+  }finally{
+    try{await tx.query('ROLLBACK')}catch{}
+    tx.release();
+  }
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS n FROM website_inspection_runs WHERE id=$1',
+    [emptyAssessedId],
+  )).rows[0].n,0,'Deferred COMMIT rejection must roll back the entire parent');
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:scopedParentId,workspaceId:w,
+  }),true,'Owner must safely clean the tenant/domain guard fixture');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS n FROM website_capability_observations WHERE inspection_id=$1',
+    [scopedParentId],
+  )).rows[0].n,0,'Owner cleanup must cascade its trusted child');
+  assert.deepEqual((await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id',
+  )).rows,guardJournalBefore,'Direct tenant/child SQL probes must not mutate journal');
+  console.log('M04 QA09 WEB-070: composite tenant/domain bindings, poisoned children and deferred assessed COMMIT reject PASS');
+
   // WEB-066: Original PR174 adapter is a different code lineage, not just
   // alternate migration SQL. Freeze its *exact* Git blob and execute the
   // literal SQL it would send to a real repaired PostgreSQL schema.
