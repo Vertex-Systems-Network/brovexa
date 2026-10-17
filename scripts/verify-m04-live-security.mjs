@@ -253,10 +253,13 @@ try{
  // disposable tenant is committed for visibility across both connections
  // and deleted (with cascading receipt cleanup) regardless of outcome.
  const raceWorkspace = randomUUID();
+ const raceOtherWorkspace = randomUUID();
  const raceWorkId = `m04.qa.${slug}.retention.concurrent`;
  await pool.query(
-   'INSERT INTO workspaces(id,slug,display_name) VALUES ($1,$2,$3)',
-   [raceWorkspace,`m04-qa-retention-${slug}`,'M04 Disposable Retention Concurrency'],
+   'INSERT INTO workspaces(id,slug,display_name) VALUES ($1,$3,$5),($2,$4,$6)',
+   [raceWorkspace,raceOtherWorkspace,`m04-qa-retention-${slug}`,
+    `m04-qa-retention-other-${slug}`,
+    'M04 Disposable Retention Concurrency','M04 Disposable Other Workspace'],
  );
  try {
    const results = await Promise.all([
@@ -276,8 +279,44 @@ try{
    assert.equal(receipt.rows[0].deleted_count,0);
    checks++;
    console.log('M04 native PG18 live security: concurrent retention replay is idempotent PASS');
+
+   // WEB-053: a lost response after a real COMMIT must not replay the DELETE.
+   // Calling the same work-id on a fresh checkout is a durable receipt lookup,
+   // not a process-local deduplication cache.
+   const recovered = await purgeExpiredWebsiteLiveInspectionEvidenceForWork(
+     pool,raceWorkspace,raceWorkId,1,
+   );
+   assert.deepEqual(recovered,{deleted:0,replayed:true});
+   const stillOne = await pool.query(
+     'SELECT count(*)::int AS count FROM website_live_retention_work_receipts WHERE work_unit_id=$1',
+     [raceWorkId],
+   );
+   assert.equal(stillOne.rows[0].count,1);
+   checks++;
+   console.log('M04 native PG18 live security: lost-ack redelivery uses durable receipt PASS');
+
+   // A work-id is globally immutable in scope and budget. In particular,
+   // a different workspace must not adopt an existing idempotency receipt.
+   await assert.rejects(
+     () => purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceWorkspace,raceWorkId,2),
+     error => error?.code === 'M04_LIVE_DB_ID_CONFLICT',
+   );
+   checks++;
+   console.log('M04 native PG18 live security: changed retention budget cannot replay PASS');
+
+   await assert.rejects(
+     () => purgeExpiredWebsiteLiveInspectionEvidenceForWork(pool,raceOtherWorkspace,raceWorkId,1),
+     error => error?.code === 'M04_LIVE_DB_ID_CONFLICT',
+   );
+   const foreignRows = await pool.query(
+     'SELECT count(*)::int AS count FROM website_live_retention_work_receipts WHERE workspace_id=$1',
+     [raceOtherWorkspace],
+   );
+   assert.equal(foreignRows.rows[0].count,0);
+   checks++;
+   console.log('M04 native PG18 live security: cross-tenant retention receipt takeover denied PASS');
  } finally {
-   await pool.query('DELETE FROM workspaces WHERE id=$1',[raceWorkspace]);
+   await pool.query('DELETE FROM workspaces WHERE id=ANY($1::uuid[])',[[raceWorkspace,raceOtherWorkspace]]);
  }
  console.log(`Brovexa M04 native full-schema grant authorization PASS (${checks} scenarios; disposable fixtures cleaned)`);
 }catch(error){try{await client.query('ROLLBACK')}catch{} console.error(`Brovexa M04 native full-schema security FAILED after ${checks} passes: ${error?.message}`); process.exitCode=1;}
