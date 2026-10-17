@@ -29,7 +29,8 @@ const draftSql=await readFile(fixture,'utf8');
 // Git blob identity is pinned to PR #174 at head
 // 3728223f87dde287779fc456530b7b6be424dbe1.
 const gitBlob=createHash('sha1')
-  .update('blob '+Buffer.byteLength(draftSql)+'\\0'+draftSql).digest('hex');
+  .update('blob '+Buffer.byteLength(draftSql)).update(Buffer.from([0]))
+  .update(draftSql).digest('hex');
 assert.equal(gitBlob,'41696665e6422b3a161476fbb3f5b1f5f17ec149',
   'Peer SQL fixture differs from the reviewed immutable PR #174 Git blob');
 const expectedSha=migrationSqlChecksum(draftSql);
@@ -37,6 +38,7 @@ assert.notEqual(expectedSha,migrationSqlChecksum(canonicalSql),
   'Alternate PR174 0018 must never silently become canonical');
 
 const scratch=await mkdtemp(join(tmpdir(),'brovexa-m04-pr174-'));
+const peerDir=join(scratch,'migrations');
 const pool=createPgPool({connectionString:process.env.DATABASE_URL,max:2});
 try{
   // Fail instead of clearing any existing schema, even disposable. This job
@@ -47,14 +49,14 @@ try{
   assert.equal(preexisting.rows[0].journal,false,'This QA job requires a fresh uninitialized database');
   assert.equal(preexisting.rows[0].legacy_table,false,'Existing 0018 table cannot be overwritten');
 
-  await cp(official,scratch,{recursive:true});
-  for(const name of await readdir(scratch)){
-    if(/^\\d{4}_.+\\.up\\.sql$/.test(name) && Number(name.slice(0,4))>18){
-      await rm(join(scratch,name));
+  await cp(official,peerDir,{recursive:true});
+  for(const name of await readdir(peerDir)){
+    if(/^[0-9]{4}_.+[.]up[.]sql$/.test(name) && Number(name.slice(0,4))>18){
+      await rm(join(peerDir,name));
     }
   }
-  await writeFile(join(scratch,M04_WEBSITE_MIGRATION_ID+'.up.sql'),draftSql);
-  const peerApplied=await applyPendingMigrations(pool,scratch);
+  await writeFile(join(peerDir,M04_WEBSITE_MIGRATION_ID+'.up.sql'),draftSql);
+  const peerApplied=await applyPendingMigrations(pool,peerDir);
   assert.ok(peerApplied.includes(M04_WEBSITE_MIGRATION_ID),'Draft 0018 actually applied in real PostgreSQL');
   assert.ok(!peerApplied.some(id=>Number(id.slice(0,4))>18),'No future migrations can apply in peer phase');
 
