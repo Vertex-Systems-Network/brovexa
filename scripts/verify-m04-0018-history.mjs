@@ -37,15 +37,17 @@ try{
     "SELECT id,checksum FROM brovexa_internal.schema_migrations WHERE id LIKE '0018_%' OR id >= '0019_' ORDER BY id",
   )).rows:[];
   const columns=tablePresent?(await client.query(
-    `SELECT column_name FROM information_schema.columns
+    `SELECT column_name,data_type,is_nullable FROM information_schema.columns
      WHERE table_schema='public' AND table_name='website_inspection_runs'`,
-  )).rows.map(row=>row.column_name):[];
+  )).rows:[];
   const constraints=tablePresent?(await client.query(
-    `SELECT con.conname FROM pg_constraint con
+    `SELECT con.conname AS name,con.contype AS type,con.convalidated AS validated,
+            pg_get_constraintdef(con.oid) AS definition
+     FROM pg_constraint con
      JOIN pg_class rel ON rel.oid=con.conrelid
      JOIN pg_namespace ns ON ns.oid=rel.relnamespace
      WHERE ns.nspname='public' AND rel.relname='website_inspection_runs'`,
-  )).rows.map(row=>row.conname):[];
+  )).rows:[];
   const result=classifyM040018History({
     localSql,alternateSql,journalPresent,journalRows,tablePresent,columns,constraints,
   });
