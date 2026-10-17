@@ -510,6 +510,102 @@ try{
   )).rows[0].total,0,'No parallel observation fixture may leak into WEB-065 DDL');
 
 
+  // WEB-069: Assert that database constraints and immutable triggers still
+  // reject *direct SQL* when an application writer bypasses TypeScript input
+  // validation. Use a genuine assessed inspection as a source-of-truth row,
+  // and clone its persisted shape while changing exactly one unsafe field.
+  // Each direct-write probe runs in a separate real PostgreSQL transaction.
+  const guardParentId='m04.qa.sql.guard.'+randomUUID().slice(0,8);
+  assert.deepEqual(await persistWebsiteInspectionResult(pool,makeResult(guardParentId)),
+    {inspectionId:guardParentId,replayed:false});
+  const guardCols=[
+    'id','workspace_id','canonical_business_id','domain_verification_id',
+    'verified_domain','target_url','source_key','source_admission_decision_ref',
+    'source_policy_id','source_policy_version','transport_policy_id',
+    'transport_policy_version','max_pages','max_response_bytes','timeout_ms',
+    'status','coverage','transport_receipt_ids','reason_codes','payload_hash',
+    'retention_ttl_seconds','deletion_required','requested_at','completed_at',
+    'body_included','network_requested','credentialed_fetch_requested',
+    'outreach_requested',
+  ];
+  const guardJournalBefore=(await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id',
+  )).rows;
+  const unsafeParents=[
+    {field:'max_pages',value:0,constraint:'website_runs_budget_check'},
+    {field:'max_pages',value:6,constraint:'website_runs_budget_check'},
+    {field:'max_response_bytes',value:1000001,constraint:'website_runs_budget_check'},
+    {field:'timeout_ms',value:99,constraint:'website_runs_budget_check'},
+    {field:'retention_ttl_seconds',value:0,constraint:'website_runs_retention_check'},
+    {field:'retention_ttl_seconds',value:null,constraint:'not_null_violation'},
+    {field:'deletion_required',value:false,constraint:'website_runs_retention_check'},
+    {field:'body_included',value:true,constraint:'website_runs_safety_check'},
+    {field:'network_requested',value:true,constraint:'website_runs_safety_check'},
+    {field:'credentialed_fetch_requested',value:true,constraint:'website_runs_safety_check'},
+    {field:'outreach_requested',value:true,constraint:'website_runs_safety_check'},
+    {field:'target_url',value:'http://example.com/',constraint:'website_runs_url_check'},
+    {field:'payload_hash',value:'not-a-sha256',constraint:'website_runs_payload_hash_check'},
+    {field:'coverage',value:'none',constraint:'website_runs_result_check'},
+  ];
+  for(const [i,test] of unsafeParents.entries()){
+    const newId='m04.qa.sql.invalid.'+i+'.'+randomUUID().slice(0,8);
+    const selectFields=guardCols.map(column=>{
+      if(column==='id')return '$1';
+      if(column===test.field)return '$3';
+      return column;
+    });
+    const badInsert='INSERT INTO website_inspection_runs ('+
+      guardCols.join(',')+') SELECT '+selectFields.join(',')+
+      ' FROM website_inspection_runs WHERE id=$2';
+    await assert.rejects(()=>pool.query(badInsert,[newId,guardParentId,test.value]),
+      err=>test.constraint==='not_null_violation'
+        ? err?.code==='23502' && err?.column===test.field
+        : err?.code==='23514' && err?.constraint===test.constraint,
+      'Database must directly reject unsafe '+test.field+' probe #'+i);
+    assert.equal((await pool.query(
+      'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',
+      [newId],
+    )).rows[0].total,0,'Rejected direct SQL may never leave parent evidence');
+  }
+
+  await assert.rejects(
+    ()=>pool.query('UPDATE website_inspection_runs SET max_pages=3 WHERE id=$1',
+      [guardParentId]),
+    err=>err?.code==='23514' &&
+      err?.constraint==='website_inspection_evidence_immutable_guard',
+    'No existing approved budget may be changed through direct SQL');
+  await assert.rejects(
+    ()=>pool.query(`INSERT INTO website_capability_observations
+      (inspection_id,workspace_id,coverage,capability,observation,reason,confidence,
+       evidence_reference_ids,transport_receipt_ids)
+      VALUES ($1,$2,'bounded','https','observed_present','detected',0.9,
+        '["m04.qa.fake.reference"]'::jsonb,'["m04.qa.foreign.receipt"]'::jsonb)`,
+      [guardParentId,w]),
+    err=>err?.code==='23514' &&
+      err?.constraint==='website_observations_receipt_binding_guard',
+    'Foreign receipt evidence may not be injected directly into a valid parent');
+  await assert.rejects(
+    ()=>pool.query(`UPDATE website_capability_observations SET confidence=0.1
+       WHERE inspection_id=$1 AND capability='contact_form'`,[guardParentId]),
+    err=>err?.code==='23514' &&
+      err?.constraint==='website_inspection_evidence_immutable_guard',
+    'Direct SQL cannot mutate immutable child evidence');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [guardParentId],
+  )).rows[0].total,1);
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:guardParentId,workspaceId:w,
+  }),true,'Direct-DML guard parent must be deletable by its owner');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [guardParentId],
+  )).rows[0].total,0,'Guard parent deletion must cascade observation');
+  assert.deepEqual((await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id',
+  )).rows,guardJournalBefore,'Unsafe DML attempts must not change applied migration journal');
+  console.log('M04 QA09 WEB-069: 14 direct SQL bypasses + immutable/receipt triggers reject and preserve journal PASS');
+
   // WEB-066: Original PR174 adapter is a different code lineage, not just
   // alternate migration SQL. Freeze its *exact* Git blob and execute the
   // literal SQL it would send to a real repaired PostgreSQL schema.
