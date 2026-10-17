@@ -332,6 +332,51 @@ try{
   console.log('M04 QA09 WEB-064: real adapter assessed observation, exact budget fields and idempotent replay PASS');
   console.log('M04 QA09 WEB-064: conflicting replay, unsafe limits and tenant-isolated delete/cascade PASS');
 
+  // WEB-066: Original PR174 adapter is a different code lineage, not just
+  // alternate migration SQL. Freeze its *exact* Git blob and execute the
+  // literal SQL it would send to a real repaired PostgreSQL schema.
+  // The unbounded 21-column INSERT must fail; only the checkpoint adapter
+  // with explicit approved source budgets can write a 24-column record.
+  const peerAdapterSource=await readFile(
+    resolve('scripts/fixtures/m04-pr174-website-inspection-persistence.ts'),'utf8');
+  const peerAdapterGitBlob=createHash('sha1')
+    .update('blob '+Buffer.byteLength(peerAdapterSource))
+    .update(Buffer.from([0]))
+    .update(peerAdapterSource).digest('hex');
+  assert.equal(peerAdapterGitBlob,'d9e6e560f85a8361a643246312a862288e72d590',
+    'Original PR174 persistence adapter fixture diverged from audited source blob');
+  const peerInsert=peerAdapterSource.match(
+    /'(INSERT INTO website_inspection_runs \([^'\n]+\) VALUES \([^'\n]+\) ON CONFLICT \(id\) DO NOTHING RETURNING id)'/);
+  assert.ok(peerInsert?.[1],'Expected to find exact original PR174 adapter parent INSERT SQL');
+  const peerSql=peerInsert[1];
+  const peerColumns=peerSql.split('(')[1]?.split(')')[0]?.split(',');
+  assert.equal(peerColumns?.length,21,'Original PR174 SQL insert shape has changed; re-audit required');
+  for(const budgetField of ['max_pages','max_response_bytes','timeout_ms']){
+    assert.ok(!peerColumns.includes(budgetField),
+      'Legacy adapter unexpectedly contains '+budgetField+'; re-audit required');
+  }
+  const oldShapeId='m04.qa.legacy.sql.'+randomUUID().slice(0,8);
+  const oldShapeArgs=[
+    oldShapeId,w,b,d,'example.com','https://example.com/',
+    'source.m04.preview','m04.qa.legacy.admission',
+    'policy.m04.preview','1.0.0','transport.m04.preview','1.0.0',
+    'unavailable','none','[]','["website.unavailable"]',
+    createHash('sha256').update(oldShapeId).digest('hex'),3600,true,
+    requestedAt,completedAt,
+  ];
+  assert.equal(oldShapeArgs.length,21);
+  await assert.rejects(
+    ()=>pool.query(peerSql,oldShapeArgs),
+    error=>error?.code==='23502' && error?.column==='max_pages',
+    'Original PR174 adapter must never appear compatible with repaired NOT NULL budget schema',
+  );
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',
+    [oldShapeId])).rows[0].total,0,
+    'Rejected original PR174 adapter write must leave no website inspection row');
+  console.log('M04 QA09 WEB-066: exact PR174 legacy 21-column adapter write fails real PG18 NOT NULL budget guard PASS');
+
+
 
 
   // WEB-065: the transaction that writes a historical row must serialize
