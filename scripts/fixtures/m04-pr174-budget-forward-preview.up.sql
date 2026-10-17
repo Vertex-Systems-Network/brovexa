@@ -2,6 +2,16 @@
 -- Valid only for PR174's original 0018 history with zero legacy fixture rows.
 -- Integration owner must separately reserve a forward migration number and
 -- review any populated legacy data before adopting this candidate.
+-- Transactional ACCESS EXCLUSIVE lock closes the race between the
+-- historical-evidence check and the ALTER/DROP operations. A concurrent
+-- writer either commits before this precondition check or waits until it
+-- finishes; its rows cannot appear between validation and destructive DDL.
+SET LOCAL lock_timeout = '2000ms';
+--> statement-breakpoint
+LOCK TABLE public.website_inspection_runs IN ACCESS EXCLUSIVE MODE;
+--> statement-breakpoint
+LOCK TABLE public.website_capability_observations IN ACCESS EXCLUSIVE MODE;
+--> statement-breakpoint
 DO $$
 BEGIN
   IF NOT EXISTS (
