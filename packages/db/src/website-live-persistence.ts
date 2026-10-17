@@ -348,11 +348,14 @@ export async function purgeExpiredWebsiteLiveInspectionEvidenceForWork(
   if (!uuid.test(workspaceId) || typeof workUnitId !== 'string' || !id.test(workUnitId) ||
       !numberBetween(maxRows, 1, 500)) fail('Invalid retention work scope.');
   return withPgTransaction(pool, async client => {
-    // Collision on hashtext only serializes unrelated work; it never merges
-    // receipts, whose full IDs are checked in the database.
+    // Retention work_unit_id is globally unique in migration 0022. Lock by
+    // that global ID, not by workspace+ID: otherwise concurrent cross-tenant
+    // claims of the same ID bypass each other's locks and race the PRIMARY KEY.
+    // Hash collisions only serialize unrelated work. The exact ID and tenant
+    // are still independently compared against the durable receipt below.
     await client.query(
       'SELECT pg_advisory_xact_lock(23082699, hashtext($1::text))',
-      [workspaceId + ':' + workUnitId],
+      [workUnitId],
     );
     const existing = await client.query<{
       workspace_id: string; max_rows: number; deleted_count: number;
