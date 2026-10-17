@@ -432,6 +432,23 @@ try{
   )).rows[0].checksum,expectedSha,
   'Raced persistence cannot alter the PR174 applied migration history');
   console.log('M04 QA09 WEB-067: parallel identical replay, changed payload conflict and cross-tenant ID collision PASS');
+  // These successful concurrent fixtures must not contaminate the subsequent
+  // WEB-065 empty-table DDL acceptance. Delete only explicitly owned IDs;
+  // assert cascaded observations are gone before testing DOWN/UP races.
+  for(const completedId of [repeatId,raceId]){
+    assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+      inspectionId:completedId,workspaceId:w,
+    }),true,'WEB-067 owned fixture must be safely removable');
+  }
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id = ANY($1::text[])',
+    [[repeatId,raceId]],
+  )).rows[0].total,0,'No parallel parent fixture may leak into WEB-065 DDL');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id = ANY($1::text[])',
+    [[repeatId,raceId]],
+  )).rows[0].total,0,'No parallel observation fixture may leak into WEB-065 DDL');
+
 
   // WEB-066: Original PR174 adapter is a different code lineage, not just
   // alternate migration SQL. Freeze its *exact* Git blob and execute the
