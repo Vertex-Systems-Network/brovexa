@@ -10,7 +10,7 @@ import {createHash} from 'node:crypto';
 import {cp,mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {createPgPool,applyPendingMigrations} from '../packages/db/dist/index.js';
+import {createPgPool,applyPendingMigrations,rollbackLatestMigration} from '../packages/db/dist/index.js';
 import {validateM04QaEnvironment} from './verify-m04-qa-guard.mjs';
 import {classifyM040018History,M04_WEBSITE_MIGRATION_ID,migrationSqlChecksum} from './m04-0018-provenance.mjs';
 
@@ -92,6 +92,63 @@ try{
   const later=await pool.query(`SELECT count(*)::int AS total
     FROM brovexa_internal.schema_migrations WHERE id >= '0019_'`);
   assert.equal(later.rows[0].total,0,'Canonical 0019–0026 must not partially apply after 0018 mismatch');
+
+  // WEB-063: Construct an EPHEMERAL candidate combined-tree migration set
+  // without changing official 0018, draft PR #174, main or the shared ledger.
+  // The already-applied draft 0018 SQL stays byte-identical and journal-safe;
+  // all checkpoint 0019-0026 are then migrated through the normal runner.
+  const candidateDir=join(scratch,'candidate-migrations');
+  const previewName='0027_website_inspection_legacy_budget_compatibility';
+  await cp(official,candidateDir,{recursive:true});
+  await writeFile(join(candidateDir,M04_WEBSITE_MIGRATION_ID+'.up.sql'),draftSql);
+  for(const extension of ['up','down']){
+    await cp(resolve('scripts/fixtures/m04-pr174-budget-forward-preview.'+extension+'.sql'),
+      join(extension==='down'?join(candidateDir,'down'):candidateDir,
+        previewName+'.'+extension+'.sql'));
+  }
+  const continuation=await applyPendingMigrations(pool,candidateDir);
+  assert.equal(continuation.length,9,'Preview must apply checkpoint 0019-0026 plus 0027 candidate');
+  assert.equal(continuation[0].slice(0,4),'0019');
+  assert.equal(continuation.at(-1),previewName);
+  const upgraded=await pool.query(
+    'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id');
+  assert.equal(
+    upgraded.rows.find(row=>row.id===M04_WEBSITE_MIGRATION_ID)?.checksum,
+    expectedSha,'Original draft migration 0018 SHA256 must remain unchanged');
+  assert.equal(upgraded.rows.length,before.rows.length+9,
+    'Candidate must not skip or rewrite any earlier migrations');
+  const budgetCols=await pool.query(`SELECT column_name,data_type,is_nullable
+    FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='website_inspection_runs'
+      AND column_name IN ('max_pages','max_response_bytes','timeout_ms','retention_ttl_seconds')
+    ORDER BY column_name`);
+  assert.deepEqual(budgetCols.rows,[
+    {column_name:'max_pages',data_type:'smallint',is_nullable:'NO'},
+    {column_name:'max_response_bytes',data_type:'integer',is_nullable:'NO'},
+    {column_name:'retention_ttl_seconds',data_type:'bigint',is_nullable:'NO'},
+    {column_name:'timeout_ms',data_type:'integer',is_nullable:'NO'},
+  ]);
+  const budgetChecks=await pool.query(`SELECT con.conname,con.convalidated,
+       pg_get_constraintdef(con.oid) AS definition
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid=con.conrelid
+    WHERE rel.relname='website_inspection_runs'
+      AND con.conname IN ('website_runs_budget_check','website_runs_retention_check')
+    ORDER BY con.conname`);
+  assert.deepEqual(budgetChecks.rows.map(row=>row.conname),[
+    'website_runs_budget_check','website_runs_retention_check']);
+  assert.ok(budgetChecks.rows.every(row=>row.convalidated));
+  assert.ok(budgetChecks.rows.find(row=>row.conname==='website_runs_budget_check')
+    ?.definition.includes('max_response_bytes'));
+  assert.ok(budgetChecks.rows.find(row=>row.conname==='website_runs_retention_check')
+    ?.definition.includes('31536000'));
+  console.log('M04 QA09 PR174: draft 0018 checksum retained through normal 0019-0026 migrations PASS');
+  console.log('M04 QA09 PR174: scratch 0027 preview adds bounded NOT NULL columns and validated checks PASS');
+  const undone=await rollbackLatestMigration(pool,candidateDir);
+  assert.equal(undone,previewName,'Preview DOWN must reverse only candidate 0027');
+  const redone=await applyPendingMigrations(pool,candidateDir);
+  assert.deepEqual(redone,[previewName],'Only preview 0027 should reapply after rollback');
+  console.log('M04 QA09 PR174: empty-table 0027 DOWN/reapply is reversible without 0018 history rewrite PASS');
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
