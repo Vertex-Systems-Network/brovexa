@@ -199,11 +199,11 @@ try{
     new Date(Date.now()-1000).toISOString(),new Date().toISOString(),
   ];
 
-  const insertLegacy=async withBudget=>{
+  const insertLegacy=async (withBudget,{db=pool}={})=>{
     const names=withBudget?[...inputColumns,'max_pages','max_response_bytes','timeout_ms']:inputColumns;
     const vals=withBudget?[...inspectionValues,1,1024,500]:inspectionValues;
     const placeholders=vals.map((_,i)=>String.fromCharCode(36)+(i+1)).join(',');
-    return pool.query(
+    return db.query(
       'INSERT INTO website_inspection_runs ('+names.join(',')+') VALUES ('+placeholders+')',
       vals,
     );
@@ -332,6 +332,58 @@ try{
   console.log('M04 QA09 WEB-064: real adapter assessed observation, exact budget fields and idempotent replay PASS');
   console.log('M04 QA09 WEB-064: conflicting replay, unsafe limits and tenant-isolated delete/cascade PASS');
 
+
+
+  // WEB-065: the transaction that writes a historical row must serialize
+  // against the candidate's validation+DDL. A naive COUNT followed by ALTER
+  // without LOCK TABLE loses this race. Exercise both DDL directions using
+  // separate real PostgreSQL connections, without any unsafe trigger bypass.
+  const writer=await pool.connect();
+  try{
+    await writer.query('BEGIN');
+    await insertLegacy(true,{db:writer});
+    await assert.rejects(
+      ()=>rollbackLatestMigration(pool,candidateDir),
+      error=>error?.code==='55P03',
+      'Preview DOWN must block on an uncommitted concurrent evidence writer',
+    );
+    await writer.query('COMMIT');
+    await assert.rejects(
+      ()=>rollbackLatestMigration(pool,candidateDir),
+      error=>error?.code==='23514' &&
+        error?.constraint==='website_legacy_budget_rollback_requires_empty',
+      'A subsequently committed legacy row must prevent budget column removal',
+    );
+    await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+    assert.equal(await rollbackLatestMigration(pool,candidateDir),previewName);
+    await writer.query('BEGIN');
+    await insertLegacy(false,{db:writer});
+    await assert.rejects(
+      ()=>applyPendingMigrations(pool,candidateDir),
+      error=>error?.code==='55P03',
+      'Preview UP must block on an uncommitted concurrent legacy evidence writer',
+    );
+    await writer.query('COMMIT');
+    await assert.rejects(
+      ()=>applyPendingMigrations(pool,candidateDir),
+      error=>error?.code==='23514' &&
+        error?.constraint==='website_legacy_budget_provenance_required',
+      'A subsequently committed legacy row must prevent ungrounded budget repair',
+    );
+    const guardRows=await pool.query(
+      'SELECT id,checksum FROM brovexa_internal.schema_migrations ORDER BY id');
+    assert.equal(
+      guardRows.rows.find(row=>row.id===M04_WEBSITE_MIGRATION_ID)?.checksum,
+      expectedSha,'Concurrent writer and failed DDL must not alter PR174 0018 history');
+    assert.equal(guardRows.rows.some(row=>row.id===previewName),false,
+      'Failed concurrent UP must not write preview migration receipt');
+    await pool.query('DELETE FROM website_inspection_runs WHERE id=$1',[inspection]);
+    assert.deepEqual(await applyPendingMigrations(pool,candidateDir),[previewName]);
+    console.log('M04 QA09 WEB-065: both concurrent legacy-write/DDL orderings block, then reject safely PASS');
+  }finally{
+    try{await writer.query('ROLLBACK')}catch{}
+    writer.release();
+  }
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
