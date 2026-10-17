@@ -28,6 +28,15 @@ describe('WEB-038 durable, scoped retention replay',()=>{
   expect(statements.at(-1)).toBe('COMMIT');
   expect(db.release).toHaveBeenCalledOnce();
  });
+ it('locks the globally unique work ID independently of the workspace',async()=>{
+  const db=database(()=>({rows:[]}));
+  const otherWorkspace='00000000-0000-4000-8000-000000000000';
+  await purgeExpiredWebsiteLiveInspectionEvidenceForWork(db.pool,workspace,'work.global',1);
+  await purgeExpiredWebsiteLiveInspectionEvidenceForWork(db.pool,otherWorkspace,'work.global',1);
+  const locks=db.query.mock.calls.filter(c=>c[0].includes('pg_advisory_xact_lock'));
+  expect(locks).toHaveLength(2);
+  expect(locks.map(c=>c[1])).toEqual([['work.global'],['work.global']]);
+ });
  it('reuses committed count for an identical delivery without touching live evidence',async()=>{
   const db=database(sql=>sql.startsWith('SELECT workspace_id,max_rows,deleted_count')
     ?{rows:[{workspace_id:workspace,max_rows:20,deleted_count:2}]}:{rows:[]});
