@@ -520,7 +520,8 @@ try{
     {inspectionId:guardParentId,replayed:false});
   const guardCols=[
     'id','workspace_id','canonical_business_id','domain_verification_id',
-    'verified_domain','target_url','source_key','source_admission_decision_ref',
+    'verification_decision','verified_domain','target_url','source_key',
+    'source_admission_decision_ref','source_admission_decision',
     'source_policy_id','source_policy_version','transport_policy_id',
     'transport_policy_version','max_pages','max_response_bytes','timeout_ms',
     'status','coverage','transport_receipt_ids','reason_codes','payload_hash',
