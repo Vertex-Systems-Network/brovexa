@@ -14,6 +14,7 @@ on:
       - 'scripts/verify-m04-*.mjs'
       - 'scripts/m04-0018-provenance.mjs'
       - 'scripts/fixtures/m04-pr174-0018.up.sql'
+      - 'scripts/fixtures/m04-pr174-website-inspection-persistence.ts'
       - 'scripts/fixtures/m04-pr174-budget-forward-preview.*.sql'
       - 'scripts/verify-db.mjs'
       - 'scripts/verify-identity*.mjs'
