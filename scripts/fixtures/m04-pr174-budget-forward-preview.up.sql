@@ -2,7 +2,7 @@
 -- Valid only for PR174's original 0018 history with zero legacy fixture rows.
 -- Integration owner must separately reserve a forward migration number and
 -- review any populated legacy data before adopting this candidate.
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM brovexa_internal.schema_migrations
