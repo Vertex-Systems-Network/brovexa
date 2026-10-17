@@ -332,6 +332,107 @@ try{
   console.log('M04 QA09 WEB-064: real adapter assessed observation, exact budget fields and idempotent replay PASS');
   console.log('M04 QA09 WEB-064: conflicting replay, unsafe limits and tenant-isolated delete/cascade PASS');
 
+
+  // WEB-067: real two-connection persistence idempotency and tenant-ID
+  // collision on the PR174-preserving *bounded* candidate tree. Two workers
+  // may race for the same inspection; only one parent/child must be created.
+  const repeatId='m04.qa.parallel.same.'+randomUUID().slice(0,8);
+  const makeResult=(newId,limits=adapterInput.request.limits)=>({
+    ...adapterInput,
+    request:{...adapterInput.request,inspectionId:newId,limits},
+  });
+  const concurrentSame=await Promise.all([
+    persistWebsiteInspectionResult(pool,makeResult(repeatId)),
+    persistWebsiteInspectionResult(pool,makeResult(repeatId)),
+  ]);
+  assert.deepEqual(concurrentSame.map(v=>v.replayed).sort(),[false,true],
+    'Two independent inserts must resolve to one first write and one replay');
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_inspection_runs WHERE id=$1',[repeatId],
+  )).rows[0].total,1);
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [repeatId],
+  )).rows[0].total,1,'Concurrent identical replay cannot duplicate child observations');
+
+  const raceId='m04.qa.parallel.conflict.'+randomUUID().slice(0,8);
+  const raceInputs=[
+    makeResult(raceId,{maxPages:1,maxResponseBytes:50000,timeoutMs:2500}),
+    makeResult(raceId,{maxPages:3,maxResponseBytes:50000,timeoutMs:2500}),
+  ];
+  const raced=await Promise.allSettled(raceInputs.map(row=>persistWebsiteInspectionResult(pool,row)));
+  const winner=raced.findIndex(result=>result.status==='fulfilled');
+  const loser=raced.findIndex(result=>result.status==='rejected');
+  assert.ok(winner===0||winner===1,'One raced payload must win');
+  assert.ok(loser===0||loser===1,'One raced payload must be rejected');
+  assert.deepEqual(raced[winner].value,{inspectionId:raceId,replayed:false});
+  assert.equal(raced[loser].reason?.code,'WEBSITE_INSPECTION_ID_CONFLICT');
+  assert.deepEqual((await pool.query(
+    'SELECT max_pages FROM website_inspection_runs WHERE id=$1',[raceId],
+  )).rows,[{max_pages:raceInputs[winner].request.limits.maxPages}]);
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [raceId],
+  )).rows[0].total,1,'Rejected race cannot append foreign or conflicting observations');
+
+  // A separately verified business in a different *real* tenant attempts to
+  // reuse that same globally unique inspection ID. Storage must report an
+  // ID conflict, without exposing, changing or reassigning the first row.
+  const otherWorkspace=randomUUID();
+  const otherBusiness='m04.qa.other.biz.'+randomUUID().slice(0,8);
+  const otherEvidence='m04.qa.other.evidence.'+randomUUID().slice(0,8);
+  const otherDecision='m04.qa.other.verified.'+randomUUID().slice(0,8);
+  await pool.query(
+    "INSERT INTO workspaces(id,slug,display_name) VALUES ($1,$2,'M04 Parallel Other Workspace')",
+    [otherWorkspace,'m04-parallel-'+randomUUID().slice(0,8)],
+  );
+  await pool.query(
+    "INSERT INTO canonical_businesses(id,workspace_id,display_name) VALUES ($1,$2,'Other Business')",
+    [otherBusiness,otherWorkspace],
+  );
+  await pool.query(`INSERT INTO business_domain_evidence
+    (id,workspace_id,canonical_business_id,normalized_domain,kind,effect,source_key,
+     source_reference_ids,source_policy_id,source_policy_version,
+     source_admission_decision_ref,storage_class,retention_ttl_seconds,
+     deletion_required,observed_at,recorded_at)
+    VALUES ($1,$2,$3,'example.com','official_website','supports_domain',
+     'source.m04.preview','["m04.parallel.other.reference"]'::jsonb,
+     'policy.m04.preview','1.0.0','m04.qa.other.admission','EVIDENCE_MINIMAL',
+     3600,true,clock_timestamp()-interval '10 seconds',clock_timestamp()-interval '9 seconds')`,
+    [otherEvidence,otherWorkspace,otherBusiness],
+  );
+  await pool.query(`INSERT INTO business_domain_verification_decisions
+    (id,workspace_id,canonical_business_id,normalized_domain,decision,method,
+     confidence,evidence_ids,reason_codes,evaluated_at)
+    VALUES ($1,$2,$3,'example.com','verified','deterministic',0.99,$4::jsonb,
+    '["domain_independent_support"]'::jsonb,clock_timestamp())`,
+    [otherDecision,otherWorkspace,otherBusiness,JSON.stringify([otherEvidence])],
+  );
+  await assert.rejects(()=>persistWebsiteInspectionResult(pool,{
+    ...makeResult(repeatId),
+    request:{
+      ...makeResult(repeatId).request,
+      workspaceId:otherWorkspace,canonicalBusinessId:otherBusiness,
+      domainVerification:{
+        verificationId:otherDecision,decision:'verified',evidenceIds:[otherEvidence],
+      },
+    },
+  }),error=>error?.code==='WEBSITE_INSPECTION_ID_CONFLICT',
+  'A second valid tenant cannot use another tenant inspection ID');
+  assert.deepEqual((await pool.query(
+    'SELECT workspace_id FROM website_inspection_runs WHERE id=$1',[repeatId],
+  )).rows,[{workspace_id:w}]);
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS total FROM website_capability_observations WHERE inspection_id=$1',
+    [repeatId],
+  )).rows[0].total,1);
+  assert.equal((await pool.query(
+    'SELECT checksum FROM brovexa_internal.schema_migrations WHERE id=$1',
+    [M04_WEBSITE_MIGRATION_ID],
+  )).rows[0].checksum,expectedSha,
+  'Raced persistence cannot alter the PR174 applied migration history');
+  console.log('M04 QA09 WEB-067: parallel identical replay, changed payload conflict and cross-tenant ID collision PASS');
+
   // WEB-066: Original PR174 adapter is a different code lineage, not just
   // alternate migration SQL. Freeze its *exact* Git blob and execute the
   // literal SQL it would send to a real repaired PostgreSQL schema.
