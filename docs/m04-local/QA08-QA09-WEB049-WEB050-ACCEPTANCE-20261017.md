@@ -46,3 +46,12 @@ No changes to main, PR #174, production DB, or deployment. Guard/regression test
 - Changed max-row budget for a committed work ID failed with `M04_LIVE_DB_ID_CONFLICT`; different workspace reuse of the same work ID also failed, without creating a foreign receipt.
 - Two-connection same-work-ID replay remains covered by WEB-052. Test-created workspaces and receipts are cleaned up. No live external network or production operations.
 - **Scope warning:** This tests durable receipt replay of a zero-row maintenance work unit, **not** actual process termination after a nonzero cleanup COMMIT. Actual crash/restart with deleted evidence and owner/registry revocation races remain unverified release gates.
+
+## WEB-054 — globally serialized work IDs and cross-tenant race (2026-10-17)
+- Verified code SHA: `c92a1d660e9691982321c1593c3f28dfdfc1ea85`.
+- [GitHub native checkpoint run #38986347230](https://github.com/Vertex-Systems-Network/brovexa/actions/runs/38986347230): **SUCCESS 4/4** (Node24/pnpm11 native quality, PostgreSQL18 migrations/RBAC, Valkey, full-schema M04 security).
+- **Native PG18 security 18/18 PASS**, including simultaneous real PostgreSQL connections making the same globally unique retention work-ID claim from different workspaces; one claim COMMITs, the other fails with a bounded `M04_LIVE_DB_ID_CONFLICT` instead of a raw primary-key race. Exactly one persisted receipt remains.
+- `packages/db/src/website-live-persistence.ts` now locks by canonical `workUnitId` alone to match migration 0022's global `work_unit_id` primary key, while independently comparing workspace and budget against the durable receipt.
+- Native Vitest regression asserts the advisory lock argument is identical for the same work ID across different workspaces. The PostgreSQL test's disposable workspaces and their receipts are removed afterward.
+- **Still OPEN:** nonzero retained-evidence deletion followed by actual process termination/restart, concurrent owner/registry revocation during live write COMMIT, authorized real-network staging E2E, QA-09 migration 0018/PR #174 reconciliation and final protected merged-tree gates. None of these are proven by the 18/18 count.
+- No changes to protected `main`, PR #174, production database, external acquisition or deployment.
