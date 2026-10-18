@@ -834,6 +834,24 @@ try{
     inspectionId:preGuardId,workspaceId:w,
   }),true,'Owner must be able to clean the deliberately orphaned QA fixture');
 
+
+  // WEB-072: TRUNCATE bypasses BEFORE DELETE row triggers. Demonstrate the
+  // pre-fix orphan with a disposable single-child table (never external DB).
+  const preTruncateId='m04.qa.orphan.truncate.'+randomUUID().slice(0,8);
+  assert.deepEqual(await persistWebsiteInspectionResult(pool,makeResult(preTruncateId)),
+    {inspectionId:preTruncateId,replayed:false});
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS n FROM website_capability_observations',
+  )).rows[0].n,1,'Only the scratch TRUNCATE baseline child may be present');
+  await pool.query('TRUNCATE TABLE public.website_capability_observations');
+  assert.deepEqual((await pool.query(
+    'SELECT status FROM website_inspection_runs WHERE id=$1',[preTruncateId],
+  )).rows,[{status:'assessed'}],
+  'Unprotected child TRUNCATE must leave its assessed parent orphaned');
+  assert.equal(await deleteWebsiteInspectionEvidence(pool,{
+    inspectionId:preTruncateId,workspaceId:w,
+  }),true,'Owner must clean the orphaned TRUNCATE-only scratch record');
+
   const childGuardName='0028_website_observation_parent_scoped_delete_preview';
   for(const extension of ['up','down']){
     await cp(
@@ -854,6 +872,15 @@ try{
     tgname:'website_observations_parent_scoped_delete_guard',tgenabled:'O',
   }],'Child-only delete trigger must be enabled after experimental UP');
 
+
+  const truncateGuard=await pool.query(`SELECT tgname,tgenabled
+    FROM pg_trigger
+    WHERE tgrelid='public.website_capability_observations'::regclass
+      AND tgname='website_observations_truncate_guard' AND NOT tgisinternal`);
+  assert.deepEqual(truncateGuard.rows,[{
+    tgname:'website_observations_truncate_guard',tgenabled:'O',
+  }],'TRUNCATE guard must be installed and active in scratch 0028');
+
   const guardedId='m04.qa.orphan.guarded.'+randomUUID().slice(0,8);
   assert.deepEqual(await persistWebsiteInspectionResult(pool,makeResult(guardedId)),
     {inspectionId:guardedId,replayed:false});
@@ -868,6 +895,18 @@ try{
     'SELECT count(*)::int AS n FROM website_capability_observations WHERE inspection_id=$1',
     [guardedId],
   )).rows[0].n,1,'Blocked child deletion must preserve the original observation');
+
+  await assert.rejects(
+    ()=>pool.query('TRUNCATE TABLE public.website_capability_observations'),
+    err=>err?.code==='23514' &&
+      err?.constraint==='website_observations_truncate_guard',
+    'Direct child-table TRUNCATE must not bypass the row-level DELETE guard',
+  );
+  assert.equal((await pool.query(
+    'SELECT count(*)::int AS n FROM website_capability_observations WHERE inspection_id=$1',
+    [guardedId],
+  )).rows[0].n,1,'Rejected TRUNCATE must leave the child intact');
+
   assert.equal(await deleteWebsiteInspectionEvidence(pool,{
     inspectionId:guardedId,workspaceId:otherWorkspace,
   }),false,'Unrelated tenant cannot use legitimate parent-delete cascade');
@@ -899,7 +938,7 @@ try{
     [M04_WEBSITE_MIGRATION_ID],
   )).rows[0].checksum,expectedSha,
   'Experimental delete guard must not rewrite historical PR174 0018 checksum');
-  console.log('M04 QA09 WEB-071: baseline orphan reproduced; scratch 0028 blocks child-only DELETE and preserves legitimate FK cascade; DOWN/reapply PASS');
+  console.log('M04 QA09 WEB-071/072: baseline DELETE and TRUNCATE orphan reproduced; scratch 0028 blocks both and permits parent cascade; DOWN/reapply PASS');
 
   console.log('M04 native PG18 PR174 alternate 0018 applied SHA256: '+expectedSha);
   console.log('M04 QA09 PR174: actual divergent 0018 journal classified KNOWN_DIVERGENT_APPLIED PASS');
