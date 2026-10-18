@@ -16,6 +16,7 @@ on:
       - 'scripts/fixtures/m04-pr174-0018.up.sql'
       - 'scripts/fixtures/m04-pr174-website-inspection-persistence.ts'
       - 'scripts/fixtures/m04-pr174-budget-forward-preview.*.sql'
+      - 'scripts/fixtures/m04-pr174-observation-delete-forward-preview.*.sql'
       - 'scripts/verify-db.mjs'
       - 'scripts/verify-identity*.mjs'
       - 'scripts/verify-queue.mjs'
